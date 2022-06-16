@@ -1,0 +1,23 @@
+n_cell = 64 64 64
+max_grid_size = 32
+dt = 1.0e-13
+nsteps = 4
+plot_int = 4
+
+Phi_Bc_lo = 0.0
+Phi_Bc_hi = 0.0
+
+TimeIntegratorOrder = 1
+
+prob_lo = -16.e-9 -16.e-9 0.0e-9
+prob_hi = 16.e-9 16.e-9 32.e-9
+
+mag_lo = -12.e-9 -8.e-9 16.0e-9
+mag_hi = 12.e-9 8.e-9 20.e-9
+
+alpha_val = 10.0
+Ms_val = 20.0
+gamma_val = 30.0
+exchange_val = 40.0 
+anisotropy_val = 50.0
+

@@ -171,10 +171,10 @@ void main_main ()
 
     // Allocate multifabs
 
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield;
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield_old;
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Hfield; // H Demag
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> const &H_biasfield; // H bias
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> Mfield;
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> Mfield_old;
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> Hfield; // H Demag
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> const H_biasfield; // H bias
 
     MultiFab alpha(ba, dm, Ncomp, Nghost);
     MultiFab gamma(ba, dm, Ncomp, Nghost);
@@ -277,29 +277,29 @@ void main_main ()
     	    // Evolve M
 
 
-        for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
-        {
-        
-        // extract field data
-              Array4<Real> const &Hx = Hfield[0]->array(mfi);
-              Array4<Real> const &Hy = Hfield[1]->array(mfi);
-              Array4<Real> const &Hz = Hfield[2]->array(mfi);
-              Array4<Real> const &Mx = Mfield[0]->array(mfi);         
-              Array4<Real> const &My = Mfield[1]->array(mfi);         
-              Array4<Real> const &Mz = Mfield[2]->array(mfi);         
-              Array4<Real> const &Mx_old = Mfield_old[0]->array(mfi); 
-              Array4<Real> const &My_old = Mfield_old[1]->array(mfi); 
-              Array4<Real> const &Mz_old = Mfield_old[2]->array(mfi); 
-              Array4<Real> const &Hx_bias = H_biasfield[0]->array(mfi);
-              Array4<Real> const &Hy_bias = H_biasfield[1]->array(mfi);
-              Array4<Real> const &Hz_bias = H_biasfield[2]->array(mfi);
-          
-              const Array4<Real>& alpha_arr = alpha.array(mfi);
-              const Array4<Real>& gamma_arr = gamma.array(mfi);
-              const Array4<Real>& Ms_arr = Ms.array(mfi);
-              const Array4<Real>& exchange_arr = exchange.array(mfi);
-              const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
- 
+//        for (MFIter mfi(Ms_arr); mfi.isValid(); ++mfi)
+//        {
+//        
+//        // extract field data
+//              Array4<Real> const &Hx = Hfield[0]->array(mfi);
+//              Array4<Real> const &Hy = Hfield[1]->array(mfi);
+//              Array4<Real> const &Hz = Hfield[2]->array(mfi);
+//              Array4<Real> const &Mx = Mfield[0]->array(mfi);         
+//              Array4<Real> const &My = Mfield[1]->array(mfi);         
+//              Array4<Real> const &Mz = Mfield[2]->array(mfi);         
+//              Array4<Real> const &Mx_old = Mfield_old[0]->array(mfi); 
+//              Array4<Real> const &My_old = Mfield_old[1]->array(mfi); 
+//              Array4<Real> const &Mz_old = Mfield_old[2]->array(mfi); 
+//              Array4<Real> const &Hx_bias = H_biasfield[0]->array(mfi);
+//              Array4<Real> const &Hy_bias = H_biasfield[1]->array(mfi);
+//              Array4<Real> const &Hz_bias = H_biasfield[2]->array(mfi);
+//          
+//              const Array4<Real>& alpha_arr = alpha.array(mfi);
+//              const Array4<Real>& gamma_arr = gamma.array(mfi);
+//              const Array4<Real>& Ms_arr = Ms.array(mfi);
+//              const Array4<Real>& exchange_arr = exchange.array(mfi);
+//              const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
+// 
 //              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
 //              {
 //                 if (Ms_arr(i,j,k) > 0._rt)
@@ -313,8 +313,8 @@ void main_main ()
 //                    }
 //                 }
 //              }
-
-        }  
+//
+//        }  
 	
 //        // copy new solution into old solution
 //        MultiFab::Copy(P_old, P_new, 0, 0, 1, 0);
