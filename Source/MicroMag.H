@@ -19,7 +19,7 @@ void InitializeMagneticProperties(MultiFab&  alpha,
                    amrex::GpuArray<amrex::Real, 3> mag_lo,
                    amrex::GpuArray<amrex::Real, 3> mag_hi,
                    const       Geometry& geom);
-
+/*
 void ComputeRho(MultiFab&      PoissonPhi, 
 		MultiFab&      rho, 
 		MultiFab&      e_den, 
@@ -99,7 +99,7 @@ void InitializePermittivity(std::array< MultiFab, AMREX_SPACEDIM >& beta_face,
                 amrex::GpuArray<amrex::Real, 3> prob_lo,
                 amrex::GpuArray<amrex::Real, 3> prob_hi,
                 const Geometry&                 geom);
-
+*/
 void SetPhiBC_z(MultiFab& PossonPhi,
                 amrex::GpuArray<int, 3> n_cell,
                 Real                    Phi_Bc_lo,

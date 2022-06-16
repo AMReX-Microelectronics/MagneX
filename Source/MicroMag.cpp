@@ -20,7 +20,7 @@ void InitializeMagneticProperties(MultiFab&  alpha,
 
 
     // loop over boxes
-    for (MFIter mfi(rho); mfi.isValid(); ++mfi)
+    for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
 
@@ -50,11 +50,11 @@ void InitializeMagneticProperties(MultiFab&  alpha,
                   }
                }
             }
-        } 
+        }); 
      }
 } 
 
-
+/*
 // Compute rho in SC region for given phi
 void ComputeRho(MultiFab&      PoissonPhi,
                 MultiFab&      rho,
@@ -431,7 +431,7 @@ void InitializePermittivity(std::array< MultiFab, AMREX_SPACEDIM >& beta_face,
     }
 
 }
-
+*/
 void SetPhiBC_z(MultiFab& PoissonPhi,
                 amrex::GpuArray<int, 3> n_cell,
                 Real                    Phi_Bc_lo,

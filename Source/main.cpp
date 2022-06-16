@@ -54,7 +54,7 @@ void main_main ()
     int TimeIntegratorOrder;
 
     // Magnetic Properties
-    Real alpha_val, gamma_val, Ms_val, exchange_val, anistropy_val;
+    Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
 
     // inputs parameters
     {
@@ -171,10 +171,10 @@ void main_main ()
 
     // Allocate multifabs
 
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield,
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield_old,
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Hfield, // H Demag
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> const &H_biasfield, // H bias
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield;
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield_old;
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Hfield; // H Demag
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> const &H_biasfield; // H bias
 
     MultiFab alpha(ba, dm, Ncomp, Nghost);
     MultiFab gamma(ba, dm, Ncomp, Nghost);
@@ -191,7 +191,7 @@ void main_main ()
     MultiFab PoissonPhi(ba, dm, 1, 1);
 
 
-    MultiFab Plt(ba, dm, 9, 0);
+    MultiFab Plt(ba, dm, 5, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -241,7 +241,7 @@ void main_main ()
     // (A*alpha_cc - B * div beta grad) phi = rhs
     mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
     mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
-    mlabec.setBCoeffs(0, beta_face);  
+    mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));  
 
     //Declare MLMG object
     MLMG mlmg(mlabec);
@@ -257,22 +257,18 @@ void main_main ()
                                  alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
-//    // Write a plotfile of the initial data if plot_int > 0
-//    if (plot_int > 0)
-//    {
-//        int step = 0;
-//        const std::string& pltfile = amrex::Concatenate("plt",step,8);
-//        MultiFab::Copy(Plt, P_old, 0, 0, 1, 0);  
-//        MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
-//        MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
-//        MultiFab::Copy(Plt, Ex, 0, 3, 1, 0);
-//        MultiFab::Copy(Plt, Ey, 0, 4, 1, 0);
-//        MultiFab::Copy(Plt, Ez, 0, 5, 1, 0);
-//        MultiFab::Copy(Plt, hole_den, 0, 6, 1, 0);
-//        MultiFab::Copy(Plt, e_den, 0, 7, 1, 0);
-//        MultiFab::Copy(Plt, charge_den, 0, 8, 1, 0);
-//        WriteSingleLevelPlotfile(pltfile, Plt, {"P","Phi","PoissonRHS","Ex","Ey","Ez","holes","electrons","charge"}, geom, time, 0);
-//    }
+    // Write a plotfile of the initial data if plot_int > 0
+    if (plot_int > 0)
+    {
+        int step = 0;
+        const std::string& pltfile = amrex::Concatenate("plt",step,8);
+        MultiFab::Copy(Plt, alpha, 0, 0, 1, 0);  
+        MultiFab::Copy(Plt, Ms, 0, 1, 1, 0);
+        MultiFab::Copy(Plt, gamma, 0, 2, 1, 0);
+        MultiFab::Copy(Plt, exchange, 0, 3, 1, 0);
+        MultiFab::Copy(Plt, anisotropy, 0, 4, 1, 0);
+        WriteSingleLevelPlotfile(pltfile, Plt, {"alpha","Ms","gamma","exchange","anisotropy"}, geom, time, 0);
+    }
 
     for (int step = 1; step <= nsteps; ++step)
     {
@@ -281,7 +277,7 @@ void main_main ()
     	    // Evolve M
 
 
-        for (MFIter mfi(*Mfield[0], mfi.isValid(); ++mfi)
+        for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         {
         
         // extract field data
@@ -304,43 +300,43 @@ void main_main ()
               const Array4<Real>& exchange_arr = exchange.array(mfi);
               const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
  
-              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-              {
-                 if (Ms_arr(i,j,k) > 0._rt)
-                 {
-                    amrex::real Hx_eff = Hx_bias(i,j,k);
-                    amrex::real Hy_eff = Hy_bias(i,j,k);
-                    amrex::real Hz_eff = Hz_bias(i,j,k);
-                 
-                    if(demag_coupling == 1)
-                    {
-                    }
-                 }
-              }
+//              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+//              {
+//                 if (Ms_arr(i,j,k) > 0._rt)
+//                 {
+//                    amrex::real Hx_eff = Hx_bias(i,j,k);
+//                    amrex::real Hy_eff = Hy_bias(i,j,k);
+//                    amrex::real Hz_eff = Hz_bias(i,j,k);
+//                 
+//                    if(demag_coupling == 1)
+//                    {
+//                    }
+//                 }
+//              }
 
         }  
 	
-        // copy new solution into old solution
-        MultiFab::Copy(P_old, P_new, 0, 0, 1, 0);
-
-        // fill periodic ghost cells
-        P_old.FillBoundary(geom.periodicity());
-
-	//Compute RHS of Poisson equation
-	ComputePoissonRHS(PoissonRHS, P_old, charge_den, 
-			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-			P_BC_flag_lo, P_BC_flag_hi, lambda, 
-			prob_lo, prob_hi, 
-			geom);
-
-        //Initial guess for phi
-        PoissonPhi.setVal(0.);
-        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-
-        // Calculate H from Phi
-
-	ComputeEfromPhi(PoissonPhi, Ex, Ey, Ez, prob_lo, prob_hi, geom);
-
+//        // copy new solution into old solution
+//        MultiFab::Copy(P_old, P_new, 0, 0, 1, 0);
+//
+//        // fill periodic ghost cells
+//        P_old.FillBoundary(geom.periodicity());
+//
+//	//Compute RHS of Poisson equation
+//	ComputePoissonRHS(PoissonRHS, P_old, charge_den, 
+//			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
+//			P_BC_flag_lo, P_BC_flag_hi, lambda, 
+//			prob_lo, prob_hi, 
+//			geom);
+//
+//        //Initial guess for phi
+//        PoissonPhi.setVal(0.);
+//        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+//
+//        // Calculate H from Phi
+//
+//	ComputeEfromPhi(PoissonPhi, Ex, Ey, Ez, prob_lo, prob_hi, geom);
+//
 	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
 
@@ -349,22 +345,22 @@ void main_main ()
         // update time
         time = time + dt;
 
-        // Write a plotfile of the current data (plot_int was defined in the inputs file)
-        if (plot_int > 0 && step%plot_int == 0)
-        {
-            const std::string& pltfile = amrex::Concatenate("plt",step,8);
-            MultiFab::Copy(Plt, P_old, 0, 0, 1, 0);  
-            MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
-            MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
-            MultiFab::Copy(Plt, Ex, 0, 3, 1, 0);
-            MultiFab::Copy(Plt, Ey, 0, 4, 1, 0);
-            MultiFab::Copy(Plt, Ez, 0, 5, 1, 0);
-            MultiFab::Copy(Plt, hole_den, 0, 6, 1, 0);
-            MultiFab::Copy(Plt, e_den, 0, 7, 1, 0);
-            MultiFab::Copy(Plt, charge_den, 0, 8, 1, 0);
-            WriteSingleLevelPlotfile(pltfile, Plt, {"P","Phi","PoissonRHS","Ex","Ey","Ez","holes","electrons","charge"}, geom, time, step);
-        }
-
+//        // Write a plotfile of the current data (plot_int was defined in the inputs file)
+//        if (plot_int > 0 && step%plot_int == 0)
+//        {
+//            const std::string& pltfile = amrex::Concatenate("plt",step,8);
+//            MultiFab::Copy(Plt, P_old, 0, 0, 1, 0);  
+//            MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
+//            MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
+//            MultiFab::Copy(Plt, Ex, 0, 3, 1, 0);
+//            MultiFab::Copy(Plt, Ey, 0, 4, 1, 0);
+//            MultiFab::Copy(Plt, Ez, 0, 5, 1, 0);
+//            MultiFab::Copy(Plt, hole_den, 0, 6, 1, 0);
+//            MultiFab::Copy(Plt, e_den, 0, 7, 1, 0);
+//            MultiFab::Copy(Plt, charge_den, 0, 8, 1, 0);
+//            WriteSingleLevelPlotfile(pltfile, Plt, {"P","Phi","PoissonRHS","Ex","Ey","Ez","holes","electrons","charge"}, geom, time, step);
+//        }
+//
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 
