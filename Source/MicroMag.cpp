@@ -1,4 +1,4 @@
-#include "TDGL.H"
+#include "MicroMag.H"
 
 // INITIALIZE rho in SC region
 void InitializePandRho(MultiFab&   P_old,

@@ -6,7 +6,7 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 #include "myfunc.H"
-#include "TDGL.H"
+#include "MicroMag.H"
 
 using namespace amrex;
 
@@ -45,17 +45,13 @@ void main_main ()
     amrex::GpuArray<amrex::Real, 3> prob_lo; // physical lo coordinate
     amrex::GpuArray<amrex::Real, 3> prob_hi; // physical hi coordinate
 
-    int P_BC_flag_hi;
-    int P_BC_flag_lo;
     Real Phi_Bc_hi;
     Real Phi_Bc_lo;
 
     int TimeIntegratorOrder;
 
     // TDGL right hand side parameters
-    Real epsilon_0, epsilonX_fe, epsilonZ_fe, epsilon_de, epsilon_si, alpha, beta, gamma, BigGamma, g11, g44;
-    Real DE_lo, DE_hi, FE_lo, FE_hi, SC_lo, SC_hi;
-    Real lambda;
+    Real alpha, gamma, Ms, exchange, anistropy;
 
     // inputs parameters
     {
@@ -75,8 +71,6 @@ void main_main ()
         // The domain is broken into boxes of size max_grid_size
         pp.get("max_grid_size",max_grid_size);
 
-        pp.get("P_BC_flag_hi",P_BC_flag_hi); // 0 : P = 0, 1 : dp/dz = p/lambda, 2 : dp/dz = 0
-        pp.get("P_BC_flag_lo",P_BC_flag_hi); // 0 : P = 0, 1 : dp/dz = p/lambda, 2 : dp/dz = 0
         pp.get("Phi_Bc_hi",Phi_Bc_hi);
         pp.get("Phi_Bc_lo",Phi_Bc_lo);
 
@@ -84,28 +78,11 @@ void main_main ()
 
         // Material Properties
 	
-        pp.get("epsilon_0",epsilon_0); // epsilon_0
-        pp.get("epsilonX_fe",epsilonX_fe);// epsilon_r for FE
-        pp.get("epsilonZ_fe",epsilonZ_fe);// epsilon_r for FE
-        pp.get("epsilon_de",epsilon_de);// epsilon_r for DE
-        pp.get("epsilon_si",epsilon_si);// epsilon_r for SC
         pp.get("alpha",alpha);
-        pp.get("beta",beta);
         pp.get("gamma",gamma);
-        pp.get("BigGamma",BigGamma);
-        pp.get("g11",g11);
-        pp.get("g44",g44);
-
-	//stack thickness is assumed to be along z
-	
-        pp.get("DE_lo",DE_lo);
-        pp.get("DE_hi",DE_hi);
-        pp.get("FE_lo",FE_lo);
-        pp.get("FE_hi",FE_hi);
-        pp.get("SC_lo",SC_lo);
-        pp.get("SC_hi",SC_hi);
-
-        pp.get("lambda",lambda);
+        pp.get("Ms",Ms);
+        pp.get("exchange",exchange);
+        pp.get("anisotropy",anisotropy);
 
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
@@ -132,19 +109,6 @@ void main_main ()
         }
     }
 
-    // For Silicon:
-    // Nc = 2.8e25 m^-3
-    // Nv = 1.04e25 m^-3
-    // Ec = 1.12eV and Ev = 0, such that band gap Eg = 1.12eV
-    // 1eV = 1.602e-19 J
-
-    Real Nc = 2.8e25;
-    Real Nv = 1.04e25;
-    Real Ec = 0.56;//*1.602e-19;
-    Real Ev = -0.56;//*1.602e-19;
-    Real q = 1.602e-19; 
-    Real kb = 1.38e-23; // Boltzmann constant
-    Real T = 300; // Room Temp
 
     // **********************************
     // SIMULATION SETUP
@@ -191,28 +155,29 @@ void main_main ()
     // How Boxes are distrubuted among MPI processes
     DistributionMapping dm(ba);
 
-    // we allocate two P multifabs; one will store the old state, the other the new.
-    MultiFab P_old(ba, dm, Ncomp, Nghost);
-    MultiFab P_new(ba, dm, Ncomp, Nghost);
-    MultiFab P_new_pre(ba, dm, Ncomp, Nghost);
-    MultiFab Gamma(ba, dm, Ncomp, Nghost);
-    MultiFab GL_rhs(ba, dm, Ncomp, Nghost);
-    MultiFab GL_rhs_pre(ba, dm, Ncomp, Nghost);
-    MultiFab GL_rhs_avg(ba, dm, Ncomp, Nghost);
+    // Allocate multifabs
+
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield,
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Mfield_old,
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> &Hfield, // H Demag
+    std::array<std::unique_ptr<amrex::MultiFab>, 3> const &H_biasfield, // H bias
+
+    MultiFab alpha(ba, dm, Ncomp, Nghost);
+    MultiFab gamma(ba, dm, Ncomp, Nghost);
+    MultiFab Ms(ba, dm, Ncomp, Nghost);
+    MultiFab exchange(ba, dm, Ncomp, Nghost);
+    MultiFab anisotropy(ba, dm, Ncomp, Nghost);
+
+    int demag_coupling = 0;
+    int M_normalization = 1;
+    int exchange_coupling = 0;
+    int anisotropy_coupling = 1;
+
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1);
-    MultiFab PoissonPhi_Prev(ba, dm, 1, 1);
-    MultiFab PhiErr(ba, dm, 1, 1);
-    MultiFab Ex(ba, dm, 1, 0);
-    MultiFab Ey(ba, dm, 1, 0);
-    MultiFab Ez(ba, dm, 1, 0);
 
-    MultiFab hole_den(ba, dm, 1, 0);
-    MultiFab e_den(ba, dm, 1, 0);
-    MultiFab charge_den(ba, dm, 1, 0);
 
     MultiFab Plt(ba, dm, 9, 0);
-    MultiFab Plt_debug(ba, dm, 4, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -249,14 +214,9 @@ void main_main ()
     
     // set cell-centered alpha coefficient to zero
     alpha_cc.setVal(0.);
-
-    // set face-centered beta coefficient to 
-    // epsilon values in SC, FE, and DE layers
-    InitializePermittivity(beta_face,
-		        FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi,
-                        epsilon_0, epsilonX_fe, epsilonZ_fe, epsilon_de, epsilon_si,
-                        prob_lo, prob_hi,
-                        geom);
+    beta_face[0].setVal(1.);
+    beta_face[1].setVal(1.);
+    beta_face[2].setVal(1.);
 
     // Set Dirichlet BC for Phi in z
     SetPhiBC_z(PoissonPhi, n_cell, Phi_Bc_lo, Phi_Bc_hi); 
@@ -267,147 +227,83 @@ void main_main ()
     // (A*alpha_cc - B * div beta grad) phi = rhs
     mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
     mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
-    mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));  
+    mlabec.setBCoeffs(0, beta_face);  
 
     //Declare MLMG object
     MLMG mlmg(mlabec);
     mlmg.setVerbose(2);
 
     // time = starting time in the simulation
-    Real time = 0.0;
-
-    // INITIALIZE P in FE and rho in SC regions
-
-    InitializePandRho(P_old, Gamma, charge_den, e_den, hole_den, 
-		    SC_lo, SC_hi, DE_lo, DE_hi, 
-		    BigGamma, q, Ec, Ev, kb, T, Nc, Nv,
-		    prob_lo, prob_hi, 
-		    geom);
-
-    //Obtain self consisten Phi and rho
-    Real tol = 1.e-5;
-    Real err = 1.0;
-    int iter = 0;
-    //while(iter < 10){
-    while(err > tol){
+    Real time = 0.0;	
    
-	//Compute RHS of Poisson equation
-	ComputePoissonRHS(PoissonRHS, P_old, charge_den, 
-			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-			P_BC_flag_lo, P_BC_flag_hi, 
-			lambda, 
-			prob_lo, prob_hi, 
-			geom);
-        //Initial guess for phi
-        PoissonPhi.setVal(0.);
-        //Poisson Solve
-        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-	
-        // Calculate rho from Phi in SC region
 
-        ComputeRho(PoissonPhi, charge_den, e_den, hole_den, 
-                   SC_lo, SC_hi,
-                   q, Ec, Ev, kb, T, Nc, Nv,
-                   prob_lo, prob_hi, geom);
+    //Next steps (06/16/2022: Initialze M, slve Poisson's equation for Phi, Compute H from Phi, H_exchane and H_anisotropy from M)
+    //Modify the commented out block below to output initial states
 
-	// Calculate Error
 
-	if (iter > 0){
-	   MultiFab::Copy(PhiErr, PoissonPhi, 0, 0, 1, 0);
-	   MultiFab::Subtract(PhiErr, PoissonPhi_Prev, 0, 0, 1, 0);
-	   err = PhiErr.norm1(0, geom.periodicity())/PoissonPhi.norm1(0, geom.periodicity());
-        }
-
-	//Copy PoissonPhi to PoissonPhi_Prev to calculate error at the next iteration
-	
-        MultiFab::Copy(PoissonPhi_Prev, PoissonPhi, 0, 0, 1, 0);
-
-	iter = iter + 1;
-        std::cout << iter << " iterations :: err = " << err << std::endl;
-    }
-    
-    std::cout << "\n ========= Self-Consistent Initialization of P and Rho Done! ========== \n"<< iter << " iterations to obtain self consistent Phi with err = " << err << std::endl;
-    std::cout << "\n ========= Advance Steps  ========== \n"<< std::endl;
-
-    // Write a plotfile of the initial data if plot_int > 0
-    if (plot_int > 0)
-    {
-        int step = 0;
-        const std::string& pltfile = amrex::Concatenate("plt",step,8);
-        MultiFab::Copy(Plt, P_old, 0, 0, 1, 0);  
-        MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
-        MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
-        MultiFab::Copy(Plt, Ex, 0, 3, 1, 0);
-        MultiFab::Copy(Plt, Ey, 0, 4, 1, 0);
-        MultiFab::Copy(Plt, Ez, 0, 5, 1, 0);
-        MultiFab::Copy(Plt, hole_den, 0, 6, 1, 0);
-        MultiFab::Copy(Plt, e_den, 0, 7, 1, 0);
-        MultiFab::Copy(Plt, charge_den, 0, 8, 1, 0);
-        WriteSingleLevelPlotfile(pltfile, Plt, {"P","Phi","PoissonRHS","Ex","Ey","Ez","holes","electrons","charge"}, geom, time, 0);
-    }
+//    // Write a plotfile of the initial data if plot_int > 0
+//    if (plot_int > 0)
+//    {
+//        int step = 0;
+//        const std::string& pltfile = amrex::Concatenate("plt",step,8);
+//        MultiFab::Copy(Plt, P_old, 0, 0, 1, 0);  
+//        MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
+//        MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
+//        MultiFab::Copy(Plt, Ex, 0, 3, 1, 0);
+//        MultiFab::Copy(Plt, Ey, 0, 4, 1, 0);
+//        MultiFab::Copy(Plt, Ez, 0, 5, 1, 0);
+//        MultiFab::Copy(Plt, hole_den, 0, 6, 1, 0);
+//        MultiFab::Copy(Plt, e_den, 0, 7, 1, 0);
+//        MultiFab::Copy(Plt, charge_den, 0, 8, 1, 0);
+//        WriteSingleLevelPlotfile(pltfile, Plt, {"P","Phi","PoissonRHS","Ex","Ey","Ez","holes","electrons","charge"}, geom, time, 0);
+//    }
 
     for (int step = 1; step <= nsteps; ++step)
     {
         Real step_strt_time = ParallelDescriptor::second();
 
-    	    // Evolve P
+    	    // Evolve M
+
+
+        for (MFIter mfi(*Mfield[0], mfi.isValid(); ++mfi)
+        {
+        
+        // extract field data
+              Array4<Real> const &Hx = Hfield[0]->array(mfi);
+              Array4<Real> const &Hy = Hfield[1]->array(mfi);
+              Array4<Real> const &Hz = Hfield[2]->array(mfi);
+              Array4<Real> const &Mx = Mfield[0]->array(mfi);         
+              Array4<Real> const &My = Mfield[1]->array(mfi);         
+              Array4<Real> const &Mz = Mfield[2]->array(mfi);         
+              Array4<Real> const &Mx_old = Mfield_old[0]->array(mfi); 
+              Array4<Real> const &My_old = Mfield_old[1]->array(mfi); 
+              Array4<Real> const &Mz_old = Mfield_old[2]->array(mfi); 
+              Array4<Real> const &Hx_bias = H_biasfield[0]->array(mfi);
+              Array4<Real> const &Hy_bias = H_biasfield[1]->array(mfi);
+              Array4<Real> const &Hz_bias = H_biasfield[2]->array(mfi);
+          
+              const Array4<Real>& alpha_arr = alpha.array(mfi);
+              const Array4<Real>& gamma_arr = gamma.array(mfi);
+              const Array4<Real>& Ms_arr = Ms.array(mfi);
+              const Array4<Real>& exchange_arr = exchange.array(mfi);
+              const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
+ 
+              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+              {
+                 if (Ms_arr(i,j,k) > 0._rt)
+                 {
+                    amrex::real Hx_eff = Hx_bias(i,j,k);
+                    amrex::real Hy_eff = Hy_bias(i,j,k);
+                    amrex::real Hz_eff = Hz_bias(i,j,k);
+                 
+                    if(demag_coupling == 1)
+                    {
+                    }
+                 }
+              }
+
+        }  
 	
-	CalculateTDGL_RHS(GL_rhs, P_old, PoissonPhi, Gamma, 
-			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-			P_BC_flag_lo, P_BC_flag_hi, Phi_Bc_lo, Phi_Bc_hi, 
-			alpha, beta, gamma, g11, g44, lambda, 
-			prob_lo, prob_hi, 
-			geom);
-
-	/**
-    * \brief dst = a*x + b*y
-    */
-//    static void LinComb (MultiFab&       dst,
-//                         Real            a,
-//                         const MultiFab& x,
-//                         int             xcomp,
-//                         Real            b,
-//                         const MultiFab& y,
-//                         int             ycomp,
-//                         int             dstcomp,
-//                         int             numcomp,
-//                         int             nghost);
-	
-
-	if(TimeIntegratorOrder == 1)
-        //1st Order Forward Euler
-	{
-        	MultiFab::LinComb(P_new, 1.0, P_old, 0, dt, GL_rhs, 0, 0, 1, Nghost);   
-	} else
-	{	
-        //2nd Order Predictor-Corrector
-
-	        //Predictor
-	        MultiFab::LinComb(P_new_pre, 1.0, P_old, 0, dt, GL_rhs, 0, 0, 1, Nghost);    
-	        
-	        //New RHS	
-	        ComputePoissonRHS(PoissonRHS, P_new_pre, charge_den, 
-	        		FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-	        		P_BC_flag_lo, P_BC_flag_hi, lambda, 
-	        		prob_lo, prob_hi, 
-	        		geom);
-
-                PoissonPhi.setVal(0.);
-                mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-
-	        CalculateTDGL_RHS(GL_rhs_pre, P_new_pre, PoissonPhi, Gamma, 
-	        		FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-	        		P_BC_flag_lo, P_BC_flag_hi, Phi_Bc_lo, Phi_Bc_hi, 
-	        		alpha, beta, gamma, g11, g44, lambda, 
-	        		prob_lo, prob_hi, 
-	        		geom);
-
-	        //Get average of GL_rhs and GL_rhs_pre
-	        MultiFab::LinComb(GL_rhs_avg, 0.5, GL_rhs, 0, 0.5, GL_rhs_pre, 0, 0, 1, Nghost);    
-	        //Corrector
-	        MultiFab::LinComb(P_new, 1.0, P_old, 0, dt, GL_rhs_avg, 0, 0, 1, Nghost);
-
-        }
         // copy new solution into old solution
         MultiFab::Copy(P_old, P_new, 0, 0, 1, 0);
 
@@ -425,15 +321,7 @@ void main_main ()
         PoissonPhi.setVal(0.);
         mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 
-        // Calculate rho from Phi in SC region
-
-        ComputeRho(PoissonPhi, charge_den, e_den, hole_den, 
-                   SC_lo, SC_hi,
-                   q, Ec, Ev, kb, T, Nc, Nv,
-                   prob_lo, prob_hi, geom);
-
-
-        // Calculate E from Phi
+        // Calculate H from Phi
 
 	ComputeEfromPhi(PoissonPhi, Ex, Ey, Ez, prob_lo, prob_hi, geom);
 
