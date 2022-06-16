@@ -265,7 +265,7 @@ void main_main ()
     	    // Evolve M
 
 
-        for (MFIter mfi(*Mfield[0], mfi.isValid(); ++mfi)
+        for (MFIter mfi(*Mfield[0], mfi.isValid()); ++mfi)
         {
         
         // extract field data
