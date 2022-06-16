@@ -1,25 +1,20 @@
 #include "MicroMag.H"
 
-// INITIALIZE rho in SC region
-void InitializePandRho(MultiFab&   P_old,
-                   MultiFab&   Gamma,
-                   MultiFab&   rho,
-                   MultiFab&   e_den,
-                   MultiFab&   p_den,
-                   Real        SC_lo,
-                   Real        SC_hi,
-                   Real        DE_lo,
-                   Real        DE_hi,
-		   Real        BigGamma,
-                   Real        q,
-                   Real        Ec,
-                   Real        Ev,
-                   Real        kb,
-                   Real        T,
-                   Real        Nc,
-                   Real        Nv,
+
+void InitializeMagneticProperties(MultiFab&  alpha,
+                   MultiFab&   Ms,
+                   MultiFab&   gamma,
+                   MultiFab&   exchange,
+                   MultiFab&   anisotropy,
+                   Real        alpha_val,
+                   Real        Ms_val,
+                   Real        gamma_val,
+                   Real        exchange_val,
+		   Real        anisotropy_val,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
+                   amrex::GpuArray<amrex::Real, 3> mag_lo,
+                   amrex::GpuArray<amrex::Real, 3> mag_hi,
                    const       Geometry& geom)
 {
 
@@ -32,58 +27,32 @@ void InitializePandRho(MultiFab&   P_old,
         // extract dx from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
         
-	const Array4<Real>& pOld = P_old.array(mfi);
-        const Array4<Real>& Gam = Gamma.array(mfi);
+        const Array4<Real>& alpha_arr = alpha.array(mfi);
+        const Array4<Real>& gamma_arr = gamma.array(mfi);
+        const Array4<Real>& Ms_arr = Ms.array(mfi);
+        const Array4<Real>& exchange_arr = exchange.array(mfi);
+        const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
 
-	Real pi = 3.141592653589793238;
-        // set P
-        amrex::ParallelForRNG(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
+        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
         {
             Real x = prob_lo[0] + (i+0.5) * dx[0];
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
-            if (z <= DE_hi) {
-               pOld(i,j,k) = 0.0;
-               Gam(i,j,k) = 0.0;
-            } else {
-               double tmp = (i%3 + j%2 + k%4)/6.;
-               //pOld(i,j,k) = (-1.0 + 2.0*tmp)*0.002;
-               //pOld(i,j,k) = (-1.0 + 2.0*Random())*0.002;
-	       pOld(i,j,k) = 0.002*exp(-(x*x/(2.0*5.e-9*5.e-9) + y*y/(2.0*5.e-9*5.e-9) + (z-1.5*DE_hi)*(z - 1.5*DE_hi)/(2.0*2.0e-9*2.0e-9)));
-	       //pOld(i,j,k) = 0.002*cos(2*pi*x/(prob_hi[0] - prob_lo[0]))*cos(2*pi*y/(prob_hi[1] - prob_lo[1]))*sin(2*pi*(z-DE_hi)/(prob_hi[2] - DE_hi));
-               Gam(i,j,k) = BigGamma;
+        
+            if (x > mag_lo[0] && x < mag_hi[0]){
+               if (y > mag_lo[1] && y < mag_hi[1]){
+                  if (z > mag_lo[2] && z < mag_hi[2]){
+                     alpha_arr(i,j,k) = alpha_val;
+                     gamma_arr(i,j,k) = gamma_val;
+                     Ms_arr(i,j,k) = Ms_val;
+                     exchange_arr(i,j,k) = exchange_val;
+                     anisotropy_arr(i,j,k) = anisotropy_val;
+                  }
+               }
             }
-        });
-
-        // Calculate charge density from Phi, Nc, Nv, Ec, and Ev 
-
-        const Array4<Real>& hole_den_arr = p_den.array(mfi);
-        const Array4<Real>& e_den_arr = e_den.array(mfi);
-        const Array4<Real>& charge_den_arr = rho.array(mfi);
-
-        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-        {
-             Real z = prob_lo[2] + (k+0.5) * dx[2];
-
-             if(z <= SC_hi){ //SC region
-
-                //Real qPhi = 0.5*(Ec + Ev); //eV
-                Real qPhi = 0.5*(Ec + Ev) - 0.56; //eV
-                hole_den_arr(i,j,k) = Nv*exp(-(qPhi - Ev)*1.602e-19/(kb*T));
-                e_den_arr(i,j,k) = Nc*exp(-(Ec - qPhi)*1.602e-19/(kb*T));
-                charge_den_arr(i,j,k) = q*(hole_den_arr(i,j,k) - e_den_arr(i,j,k));
-                //if(e_den_arr(i,j,k) > 0) std::cout << "e_den(" <<i << "," <<  j << ", " << k <<" ) = "<< e_den_arr(i,j,k) << ", coeff = " << coeff << std::endl; 
-	     } else {
-
-                charge_den_arr(i,j,k) = 0.0;
-
-             }
-        });
-    }
-    // fill periodic ghost cells
-    P_old.FillBoundary(geom.periodicity());
-
- }
+        } 
+     }
+} 
 
 
 // Compute rho in SC region for given phi

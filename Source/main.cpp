@@ -45,13 +45,16 @@ void main_main ()
     amrex::GpuArray<amrex::Real, 3> prob_lo; // physical lo coordinate
     amrex::GpuArray<amrex::Real, 3> prob_hi; // physical hi coordinate
 
+    amrex::GpuArray<amrex::Real, 3> mag_lo; // physical lo coordinate of magnetic region
+    amrex::GpuArray<amrex::Real, 3> mag_hi; // physical hi coordinate of magnetic region
+
     Real Phi_Bc_hi;
     Real Phi_Bc_lo;
 
     int TimeIntegratorOrder;
 
-    // TDGL right hand side parameters
-    Real alpha, gamma, Ms, exchange, anistropy;
+    // Magnetic Properties
+    Real alpha_val, gamma_val, Ms_val, exchange_val, anistropy_val;
 
     // inputs parameters
     {
@@ -78,11 +81,11 @@ void main_main ()
 
         // Material Properties
 	
-        pp.get("alpha",alpha);
-        pp.get("gamma",gamma);
-        pp.get("Ms",Ms);
-        pp.get("exchange",exchange);
-        pp.get("anisotropy",anisotropy);
+        pp.get("alpha_val",alpha_val);
+        pp.get("gamma_val",gamma_val);
+        pp.get("Ms_val",Ms_val);
+        pp.get("exchange_val",exchange_val);
+        pp.get("anisotropy_val",anisotropy_val);
 
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
@@ -105,6 +108,17 @@ void main_main ()
         if (pp.queryarr("prob_hi",temp)) {
             for (int i=0; i<AMREX_SPACEDIM; ++i) {
                 prob_hi[i] = temp[i];
+            }
+        }
+
+        if (pp.queryarr("mag_lo",temp)) {
+            for (int i=0; i<AMREX_SPACEDIM; ++i) {
+                mag_lo[i] = temp[i];
+            }
+        }
+        if (pp.queryarr("mag_hi",temp)) {
+            for (int i=0; i<AMREX_SPACEDIM; ++i) {
+                mag_hi[i] = temp[i];
             }
         }
     }
@@ -236,10 +250,12 @@ void main_main ()
     // time = starting time in the simulation
     Real time = 0.0;	
    
-
     //Next steps (06/16/2022: Initialze M, slve Poisson's equation for Phi, Compute H from Phi, H_exchane and H_anisotropy from M)
     //Modify the commented out block below to output initial states
 
+    InitializeMagneticProperties(alpha, Ms, gamma, exchange, anisotropy,
+                                 alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
+                                 prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
 //    // Write a plotfile of the initial data if plot_int > 0
 //    if (plot_int > 0)
