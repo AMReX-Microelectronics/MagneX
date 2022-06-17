@@ -16,9 +16,9 @@ mag_lo = -12.e-9 -8.e-9 16.0e-9
 mag_hi = 12.e-9 8.e-9 20.e-9
 
 mu0 = 1.25663706212e-6 
-alpha_val = 10.0
-Ms_val = 20.0
-gamma_val = 30.0
-exchange_val = 40.0 
-anisotropy_val = 50.0
+alpha_val = 0.5
+Ms_val = 1.4e5
+gamma_val = -1.759e11
+exchange_val = 3.76e-12
+anisotropy_val = 50.0 #unused
 

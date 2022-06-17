@@ -306,15 +306,14 @@ void main_main ()
           amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
              Hx_bias(i,j,k) = 0._rt;         
-             Hy_bias(i,j,k) = 1.e4;
+             Hy_bias(i,j,k) = 3.7e4;
              Hz_bias(i,j,k) = 0._rt;
 
              if (Ms_arr(i,j,k) > 0._rt)
              {
-                Mx(i,j,k) = 1.e4;
+                Mx(i,j,k) = 1.4e5;
                 My(i,j,k) = 0._rt;
                 Mz(i,j,k) = 0._rt;
-
              }
 
              if(demag_coupling == 1)
