@@ -55,6 +55,7 @@ void main_main ()
 
     // Magnetic Properties
     Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
+    Real mu0;
 
     // inputs parameters
     {
@@ -81,6 +82,7 @@ void main_main ()
 
         // Material Properties
 	
+        pp.get("mu0",mu0);
         pp.get("alpha_val",alpha_val);
         pp.get("gamma_val",gamma_val);
         pp.get("Ms_val",Ms_val);
@@ -171,10 +173,29 @@ void main_main ()
 
     // Allocate multifabs
 
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> Mfield;
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> Mfield_old;
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> Hfield; // H Demag
-    std::array<std::unique_ptr<amrex::MultiFab>, 3> const H_biasfield; // H bias
+    Array<MultiFab, AMREX_SPACEDIM> Mfield;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    {
+        Mfield[dir].define(ba, dm, Ncomp, Nghost);
+    }
+
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    {
+        Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
+    }
+
+    Array<MultiFab, AMREX_SPACEDIM> Hfield;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    {
+        Hfield[dir].define(ba, dm, Ncomp, Nghost);
+    }
+
+    Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    {
+        H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
+    }
 
     MultiFab alpha(ba, dm, Ncomp, Nghost);
     MultiFab gamma(ba, dm, Ncomp, Nghost);
@@ -190,8 +211,7 @@ void main_main ()
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1);
 
-
-    MultiFab Plt(ba, dm, 5, 0);
+    MultiFab Plt(ba, dm, 11, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -250,13 +270,64 @@ void main_main ()
     // time = starting time in the simulation
     Real time = 0.0;	
    
-    //Next steps (06/16/2022: Initialze M, slve Poisson's equation for Phi, Compute H from Phi, H_exchane and H_anisotropy from M)
-    //Modify the commented out block below to output initial states
+    //Next steps (06/16/2022: Initialze M, solve Poisson's equation for Phi, Compute H from Phi, H_exchane and H_anisotropy from M)
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, anisotropy,
                                  alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
+    //Initialize fields
+
+    //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
+    for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
+    {
+    
+          const Box& bx = mfi.growntilebox(1); 
+
+    // extract field data
+          Array4<Real> const &Mx = Mfield[0].array(mfi);         
+          Array4<Real> const &My = Mfield[1].array(mfi);         
+          Array4<Real> const &Mz = Mfield[2].array(mfi);
+         
+          Array4<Real> const &Hx_bias = H_biasfield[0].array(mfi);
+          Array4<Real> const &Hy_bias = H_biasfield[1].array(mfi);
+          Array4<Real> const &Hz_bias = H_biasfield[2].array(mfi);
+      
+          Array4<Real> const &Hx = Hfield[0].array(mfi);
+          Array4<Real> const &Hy = Hfield[1].array(mfi);
+          Array4<Real> const &Hz = Hfield[2].array(mfi);
+      
+          const Array4<Real>& alpha_arr = alpha.array(mfi);
+          const Array4<Real>& gamma_arr = gamma.array(mfi);
+          const Array4<Real>& Ms_arr = Ms.array(mfi);
+          const Array4<Real>& exchange_arr = exchange.array(mfi);
+          const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
+ 
+          amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+          {
+             Hx_bias(i,j,k) = 0._rt;         
+             Hy_bias(i,j,k) = 1.e4;
+             Hz_bias(i,j,k) = 0._rt;
+
+             if (Ms_arr(i,j,k) > 0._rt)
+             {
+                Mx(i,j,k) = 1.e4;
+                My(i,j,k) = 0._rt;
+                Mz(i,j,k) = 0._rt;
+
+             }
+
+             if(demag_coupling == 1)
+             { 
+             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+               //amrex::Real Hx = ;
+               //amrex::Real Hy = ;
+               //amrex::Real Hz = ;
+             }
+          });
+
+    } 
+ 
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
     {
@@ -267,7 +338,13 @@ void main_main ()
         MultiFab::Copy(Plt, gamma, 0, 2, 1, 0);
         MultiFab::Copy(Plt, exchange, 0, 3, 1, 0);
         MultiFab::Copy(Plt, anisotropy, 0, 4, 1, 0);
-        WriteSingleLevelPlotfile(pltfile, Plt, {"alpha","Ms","gamma","exchange","anisotropy"}, geom, time, 0);
+        MultiFab::Copy(Plt, Mfield[0], 0, 5, 1, 0);
+        MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
+        MultiFab::Copy(Plt, Mfield[2], 0, 7, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[0], 0, 8, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[1], 0, 9, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[2], 0, 10, 1, 0);
+        WriteSingleLevelPlotfile(pltfile, Plt, {"alpha","Ms","gamma","exchange","anisotropy","Mx", "My", "Mz", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, 0);
     }
 
     for (int step = 1; step <= nsteps; ++step)
@@ -277,51 +354,100 @@ void main_main ()
     	    // Evolve M
 
 
-//        for (MFIter mfi(Ms_arr); mfi.isValid(); ++mfi)
-//        {
-//        
-//        // extract field data
-//              Array4<Real> const &Hx = Hfield[0]->array(mfi);
-//              Array4<Real> const &Hy = Hfield[1]->array(mfi);
-//              Array4<Real> const &Hz = Hfield[2]->array(mfi);
-//              Array4<Real> const &Mx = Mfield[0]->array(mfi);         
-//              Array4<Real> const &My = Mfield[1]->array(mfi);         
-//              Array4<Real> const &Mz = Mfield[2]->array(mfi);         
-//              Array4<Real> const &Mx_old = Mfield_old[0]->array(mfi); 
-//              Array4<Real> const &My_old = Mfield_old[1]->array(mfi); 
-//              Array4<Real> const &Mz_old = Mfield_old[2]->array(mfi); 
-//              Array4<Real> const &Hx_bias = H_biasfield[0]->array(mfi);
-//              Array4<Real> const &Hy_bias = H_biasfield[1]->array(mfi);
-//              Array4<Real> const &Hz_bias = H_biasfield[2]->array(mfi);
-//          
-//              const Array4<Real>& alpha_arr = alpha.array(mfi);
-//              const Array4<Real>& gamma_arr = gamma.array(mfi);
-//              const Array4<Real>& Ms_arr = Ms.array(mfi);
-//              const Array4<Real>& exchange_arr = exchange.array(mfi);
-//              const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
-// 
-//              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-//              {
-//                 if (Ms_arr(i,j,k) > 0._rt)
-//                 {
-//                    amrex::real Hx_eff = Hx_bias(i,j,k);
-//                    amrex::real Hy_eff = Hy_bias(i,j,k);
-//                    amrex::real Hz_eff = Hz_bias(i,j,k);
-//                 
-//                    if(demag_coupling == 1)
-//                    {
-//                    }
-//                 }
-//              }
-//
-//        }  
+        //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
+        for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
+        {
+       
+              const Box& bx = mfi.growntilebox(1); 
+
+        // extract field data
+              Array4<Real> const &Hx = Hfield[0].array(mfi);
+              Array4<Real> const &Hy = Hfield[1].array(mfi);
+              Array4<Real> const &Hz = Hfield[2].array(mfi);
+              Array4<Real> const &Mx = Mfield[0].array(mfi);         
+              Array4<Real> const &My = Mfield[1].array(mfi);         
+              Array4<Real> const &Mz = Mfield[2].array(mfi);         
+              Array4<Real> const &Mx_old = Mfield_old[0].array(mfi); 
+              Array4<Real> const &My_old = Mfield_old[1].array(mfi); 
+              Array4<Real> const &Mz_old = Mfield_old[2].array(mfi); 
+              Array4<Real> const &Hx_bias = H_biasfield[0].array(mfi);
+              Array4<Real> const &Hy_bias = H_biasfield[1].array(mfi);
+              Array4<Real> const &Hz_bias = H_biasfield[2].array(mfi);
+          
+              const Array4<Real>& alpha_arr = alpha.array(mfi);
+              const Array4<Real>& gamma_arr = gamma.array(mfi);
+              const Array4<Real>& Ms_arr = Ms.array(mfi);
+              const Array4<Real>& exchange_arr = exchange.array(mfi);
+              const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
+ 
+              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+              {
+                 if (Ms_arr(i,j,k) > 0._rt)
+                 {
+                    amrex::Real Hx_eff = Hx_bias(i,j,k);
+                    amrex::Real Hy_eff = Hy_bias(i,j,k);
+                    amrex::Real Hz_eff = Hz_bias(i,j,k);
+                 
+                    if(demag_coupling == 1)
+                    {
+                      Hx_eff += Hx(i,j,k);
+                      Hy_eff += Hy(i,j,k);
+                      Hz_eff += Hz(i,j,k);
+                    }
+
+                    if(exchange_coupling == 1)
+                    { 
+                    //Add exchange term
+                      //amrex::Real Hx_eff += ;
+                      //amrex::Real Hy_eff += ;
+                      //amrex::Real Hz_eff += ;
+                    }
+                 
+                    if(anisotropy_coupling == 1)
+                    { 
+                    //Add anisotropy term
+                      //amrex::Real Hx_eff += ;
+                      //amrex::Real Hy_eff += ;
+                      //amrex::Real Hz_eff += ;
+                    }
+
+                   amrex::Real mag_gammaL = gamma_arr(i,j,k) / (1._rt + std::pow(alpha_arr(i,j,k), 2._rt));
+
+                   // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s 
+                   amrex::Real M_magnitude = (M_normalization == 0) ? std::sqrt(std::pow(Mx(i, j, k), 2._rt) + std::pow(My(i, j, k), 2._rt) + std::pow(Mz(i, j, k), 2._rt))
+                                                             : Ms_arr(i,j,k);
+                   amrex::Real Gil_damp = mu0 * mag_gammaL * alpha_arr(i,j,k) / M_magnitude;
+
+                   // x component on cell-centers
+                   Mx(i, j, k) += dt * (mu0 * mag_gammaL) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff)
+                                        + dt * Gil_damp * (My_old(i, j, k) * (Mx_old(i, j, k) * Hy_eff - My_old(i, j, k) * Hx_eff)
+                                        - Mz_old(i, j, k) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff));
+
+                   // y component on cell-centers
+                   My(i, j, k) += dt * (mu0 * mag_gammaL) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff)
+                                        + dt * Gil_damp * (Mz_old(i, j, k) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff)
+                                        - Mx_old(i, j, k) * (Mx_old(i, j, k) * Hy_eff - My_old(i, j, k) * Hx_eff));
+
+                   // z component on cell-centers
+                   Mz(i, j, k) += dt * (mu0 * mag_gammaL) * (Mx_old(i, j, k) * Hy_eff - My_old(i, j, k) * Hx_eff)
+                                        + dt * Gil_damp * (Mx_old(i, j, k) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff)
+                                        - My_old(i, j, k) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff));
+  
+                 }    
+              });     
+                      
+        }  
 	
-//        // copy new solution into old solution
-//        MultiFab::Copy(P_old, P_new, 0, 0, 1, 0);
-//
-//        // fill periodic ghost cells
-//        P_old.FillBoundary(geom.periodicity());
-//
+        // copy new solution into old solution
+        for(int comp = 0; comp < 3; comp++)
+        {
+           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
+
+           // fill periodic ghost cells
+           Mfield_old[comp].FillBoundary(geom.periodicity());
+
+        }
+
 //	//Compute RHS of Poisson equation
 //	ComputePoissonRHS(PoissonRHS, P_old, charge_den, 
 //			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
@@ -345,22 +471,23 @@ void main_main ()
         // update time
         time = time + dt;
 
-//        // Write a plotfile of the current data (plot_int was defined in the inputs file)
-//        if (plot_int > 0 && step%plot_int == 0)
-//        {
-//            const std::string& pltfile = amrex::Concatenate("plt",step,8);
-//            MultiFab::Copy(Plt, P_old, 0, 0, 1, 0);  
-//            MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
-//            MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
-//            MultiFab::Copy(Plt, Ex, 0, 3, 1, 0);
-//            MultiFab::Copy(Plt, Ey, 0, 4, 1, 0);
-//            MultiFab::Copy(Plt, Ez, 0, 5, 1, 0);
-//            MultiFab::Copy(Plt, hole_den, 0, 6, 1, 0);
-//            MultiFab::Copy(Plt, e_den, 0, 7, 1, 0);
-//            MultiFab::Copy(Plt, charge_den, 0, 8, 1, 0);
-//            WriteSingleLevelPlotfile(pltfile, Plt, {"P","Phi","PoissonRHS","Ex","Ey","Ez","holes","electrons","charge"}, geom, time, step);
-//        }
-//
+        if (plot_int > 0 && step%plot_int == 0)
+        {
+            const std::string& pltfile = amrex::Concatenate("plt",step,8);
+            MultiFab::Copy(Plt, alpha, 0, 0, 1, 0);  
+            MultiFab::Copy(Plt, Ms, 0, 1, 1, 0);
+            MultiFab::Copy(Plt, gamma, 0, 2, 1, 0);
+            MultiFab::Copy(Plt, exchange, 0, 3, 1, 0);
+            MultiFab::Copy(Plt, anisotropy, 0, 4, 1, 0);
+            MultiFab::Copy(Plt, Mfield[0], 0, 5, 1, 0);
+            MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
+            MultiFab::Copy(Plt, Mfield[2], 0, 7, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[0], 0, 8, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[1], 0, 9, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[2], 0, 10, 1, 0);
+            WriteSingleLevelPlotfile(pltfile, Plt, {"alpha","Ms","gamma","exchange","anisotropy","Mx", "My", "Mz", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, step);
+        }
+
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 
