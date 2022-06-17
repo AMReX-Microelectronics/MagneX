@@ -448,7 +448,7 @@ void main_main ()
                      {
                          amrex::Abort("Exceed the normalized error of the Mx field");
                      }
-                     // normalize the M_xface field
+                     // normalize the M field
                      Mx(i, j, k) /= M_magnitude_normalized;
                      My(i, j, k) /= M_magnitude_normalized;
                      Mz(i, j, k) /= M_magnitude_normalized;
@@ -462,7 +462,7 @@ void main_main ()
                      }
                      else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
                      {
-                         // normalize the M_xface field
+                         // normalize the M field
                          Mx(i, j, k) /= M_magnitude_normalized;
                          My(i, j, k) /= M_magnitude_normalized;
                          Mz(i, j, k) /= M_magnitude_normalized;
