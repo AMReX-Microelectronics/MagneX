@@ -432,7 +432,43 @@ void main_main ()
                                         + dt * Gil_damp * (Mx_old(i, j, k) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff)
                                         - My_old(i, j, k) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff));
   
-                 }    
+                 }   
+
+                 // temporary normalized magnitude of M_xface field at the fixed point
+                 amrex::Real M_magnitude_normalized = std::sqrt(std::pow(Mx(i, j, k), 2._rt) + std::pow(My(i, j, k), 2._rt) + std::pow(Mz(i, j, k), 2._rt)) / Ms_arr(i,j,k);
+
+                     
+                 amrex::Real normalized_error = 0.1;
+
+                 if (M_normalization > 0)
+                 {
+                     // saturated case; if |M| has drifted from M_s too much, abort.  Otherwise, normalize
+                     // check the normalized error
+                     if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
+                     {
+                         amrex::Abort("Exceed the normalized error of the Mx field");
+                     }
+                     // normalize the M_xface field
+                     Mx(i, j, k) /= M_magnitude_normalized;
+                     My(i, j, k) /= M_magnitude_normalized;
+                     Mz(i, j, k) /= M_magnitude_normalized;
+                 }
+                 else if (M_normalization == 0)
+                 {
+                     // check the normalized error
+                     if (M_magnitude_normalized > (1._rt + normalized_error))
+                     {
+                         amrex::Abort("Caution: Unsaturated material has M_xface exceeding the saturation magnetization");
+                     }
+                     else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
+                     {
+                         // normalize the M_xface field
+                         Mx(i, j, k) /= M_magnitude_normalized;
+                         My(i, j, k) /= M_magnitude_normalized;
+                         Mz(i, j, k) /= M_magnitude_normalized;
+                     }
+                 }
+ 
               });     
                       
         }  

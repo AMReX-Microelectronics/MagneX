@@ -1,6 +1,6 @@
 n_cell = 64 64 64
 max_grid_size = 32
-dt = 1.0e-10
+dt = 1.0e-13
 nsteps = 100
 plot_int = 10
 
