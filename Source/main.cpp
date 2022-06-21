@@ -57,6 +57,13 @@ void main_main ()
     Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
     Real mu0;
 
+
+    int demag_coupling;
+    int M_normalization;
+    int exchange_coupling;
+    int anisotropy_coupling;
+
+
     // inputs parameters
     {
         // ParmParse is way of reading inputs from the inputs file
@@ -88,6 +95,12 @@ void main_main ()
         pp.get("Ms_val",Ms_val);
         pp.get("exchange_val",exchange_val);
         pp.get("anisotropy_val",anisotropy_val);
+
+        pp.get("demag_coupling",demag_coupling);
+        pp.get("M_normalization", M_normalization);
+        pp.get("exchange_coupling", exchange_coupling);
+        pp.get("anisotropy_coupling", anisotropy_coupling);
+
 
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
@@ -203,10 +216,16 @@ void main_main ()
     MultiFab exchange(ba, dm, Ncomp, Nghost);
     MultiFab anisotropy(ba, dm, Ncomp, Nghost);
 
-    int demag_coupling = 0;
-    int M_normalization = 1;
-    int exchange_coupling = 0;
-    int anisotropy_coupling = 1;
+    amrex::Print() << "==================== Initial Setup ====================\n";
+    amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
+    amrex::Print() << " M_normalization     = " << M_normalization     << "\n";
+    amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
+    amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
+    amrex::Print() << " alpha               = " << alpha_val           << "\n";
+    amrex::Print() << " gamma               = " << gamma_val           << "\n";
+    amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
+    amrex::Print() << " anisotropy_value    = " << anisotropy_val      << "\n";
+    amrex::Print() << "=======================================================\n";
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1);

@@ -1,8 +1,8 @@
 n_cell = 64 64 64
 max_grid_size = 32
-dt = 1.0e-13
-nsteps = 100
-plot_int = 10
+dt = 1.0e-12
+nsteps = 1000
+plot_int = 20
 
 Phi_Bc_lo = 0.0
 Phi_Bc_hi = 0.0
@@ -21,4 +21,9 @@ Ms_val = 1.4e5
 gamma_val = -1.759e11
 exchange_val = 3.76e-12
 anisotropy_val = 50.0 #unused
+
+demag_coupling = 0
+M_normalization = 1
+exchange_coupling = 0
+anisotropy_coupling = 1
 
