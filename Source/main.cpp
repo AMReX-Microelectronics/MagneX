@@ -321,7 +321,7 @@ void main_main ()
           const Array4<Real>& Ms_arr = Ms.array(mfi);
           const Array4<Real>& exchange_arr = exchange.array(mfi);
           const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
- 
+
           amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
              Hx_bias(i,j,k) = 0._rt;         
@@ -337,7 +337,21 @@ void main_main ()
 
              if(demag_coupling == 1)
              { 
-             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+//             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+//       	//Compute RHS of Poisson equation
+//      	ComputePoissonRHS(PoissonRHS, Mfield, 
+//      			mag_lo, mag_hi, 
+//      			prob_lo, prob_hi, 
+//      			geom);
+//
+//              //Initial guess for phi
+//              PoissonPhi.setVal(0.);
+//              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+//      
+//              // Calculate H from Phi
+//      
+//      	ComputeHfromPhi(PoissonPhi, Hx, Hy, Hz, prob_lo, prob_hi, geom);
+//      
                //amrex::Real Hx = ;
                //amrex::Real Hy = ;
                //amrex::Real Hz = ;
@@ -502,21 +516,22 @@ void main_main ()
 
         }
 
-//	//Compute RHS of Poisson equation
-//	ComputePoissonRHS(PoissonRHS, P_old, charge_den, 
-//			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-//			P_BC_flag_lo, P_BC_flag_hi, lambda, 
-//			prob_lo, prob_hi, 
-//			geom);
+//             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+//       	//Compute RHS of Poisson equation
+//      	ComputePoissonRHS(PoissonRHS, Mfield, 
+//      			mag_lo, mag_hi, 
+//      			prob_lo, prob_hi, 
+//      			geom);
 //
-//        //Initial guess for phi
-//        PoissonPhi.setVal(0.);
-//        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-//
-//        // Calculate H from Phi
-//
-//	ComputeEfromPhi(PoissonPhi, Ex, Ey, Ez, prob_lo, prob_hi, geom);
-//
+//              //Initial guess for phi
+//              PoissonPhi.setVal(0.);
+//              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+//      
+//              // Calculate H from Phi
+//      
+//      	ComputeHfromPhi(PoissonPhi, Hx, Hy, Hz, prob_lo, prob_hi, geom);
+//      
+
 	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
 
