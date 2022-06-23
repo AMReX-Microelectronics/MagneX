@@ -28,3 +28,8 @@ M_normalization = 1
 exchange_coupling = 0
 anisotropy_coupling = 0
 
+demag_coupling = 0
+M_normalization = 1
+exchange_coupling = 0
+anisotropy_coupling = 1
+

@@ -58,6 +58,13 @@ void main_main ()
     Real mu0;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
+
+    int demag_coupling;
+    int M_normalization;
+    int exchange_coupling;
+    int anisotropy_coupling;
+
+
     // inputs parameters
     {
         // ParmParse is way of reading inputs from the inputs file
@@ -89,6 +96,12 @@ void main_main ()
         pp.get("Ms_val",Ms_val);
         pp.get("exchange_val",exchange_val);
         pp.get("anisotropy_val",anisotropy_val);
+
+        pp.get("demag_coupling",demag_coupling);
+        pp.get("M_normalization", M_normalization);
+        pp.get("exchange_coupling", exchange_coupling);
+        pp.get("anisotropy_coupling", anisotropy_coupling);
+
 
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
@@ -209,10 +222,16 @@ void main_main ()
     MultiFab exchange(ba, dm, Ncomp, Nghost);
     MultiFab anisotropy(ba, dm, Ncomp, Nghost);
 
-    int demag_coupling = 0;
-    int M_normalization = 1;
-    int exchange_coupling = 0;
-    int anisotropy_coupling = 1;
+    amrex::Print() << "==================== Initial Setup ====================\n";
+    amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
+    amrex::Print() << " M_normalization     = " << M_normalization     << "\n";
+    amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
+    amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
+    amrex::Print() << " alpha               = " << alpha_val           << "\n";
+    amrex::Print() << " gamma               = " << gamma_val           << "\n";
+    amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
+    amrex::Print() << " anisotropy_value    = " << anisotropy_val      << "\n";
+    amrex::Print() << "=======================================================\n";
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1);
@@ -304,7 +323,7 @@ void main_main ()
           Array4<Real> const &Hz = Hfield[2].array(mfi);
               
           const Array4<Real>& Ms_arr = Ms.array(mfi);
-      
+
           amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
              Hx_bias(i,j,k) = 0._rt;         
@@ -320,7 +339,21 @@ void main_main ()
 
              if(demag_coupling == 1)
              { 
-             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+//             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+//       	//Compute RHS of Poisson equation
+//      	ComputePoissonRHS(PoissonRHS, Mfield, 
+//      			mag_lo, mag_hi, 
+//      			prob_lo, prob_hi, 
+//      			geom);
+//
+//              //Initial guess for phi
+//              PoissonPhi.setVal(0.);
+//              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+//      
+//              // Calculate H from Phi
+//      
+//      	ComputeHfromPhi(PoissonPhi, Hx, Hy, Hz, prob_lo, prob_hi, geom);
+//      
                //Hx = ;
                //Hy = ;
                //Hz = ;
@@ -493,21 +526,22 @@ void main_main ()
 
         }
 
-//	//Compute RHS of Poisson equation
-//	ComputePoissonRHS(PoissonRHS, P_old, charge_den, 
-//			FE_lo, FE_hi, DE_lo, DE_hi, SC_lo, SC_hi, 
-//			P_BC_flag_lo, P_BC_flag_hi, lambda, 
-//			prob_lo, prob_hi, 
-//			geom);
+//             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
+//       	//Compute RHS of Poisson equation
+//      	ComputePoissonRHS(PoissonRHS, Mfield, 
+//      			mag_lo, mag_hi, 
+//      			prob_lo, prob_hi, 
+//      			geom);
 //
-//        //Initial guess for phi
-//        PoissonPhi.setVal(0.);
-//        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-//
-//        // Calculate H from Phi
-//
-//	ComputeEfromPhi(PoissonPhi, Ex, Ey, Ez, prob_lo, prob_hi, geom);
-//
+//              //Initial guess for phi
+//              PoissonPhi.setVal(0.);
+//              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+//      
+//              // Calculate H from Phi
+//      
+//      	ComputeHfromPhi(PoissonPhi, Hx, Hy, Hz, prob_lo, prob_hi, geom);
+//      
+
 	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
 
