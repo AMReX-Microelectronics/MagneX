@@ -56,6 +56,7 @@ void main_main ()
     // Magnetic Properties
     Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
     Real mu0;
+    amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
     // inputs parameters
     {
@@ -121,6 +122,11 @@ void main_main ()
         if (pp.queryarr("mag_hi",temp)) {
             for (int i=0; i<AMREX_SPACEDIM; ++i) {
                 mag_hi[i] = temp[i];
+            }
+        }
+        if (pp.queryarr("anisotropy_axis",temp)) {
+            for (int i=0; i<AMREX_SPACEDIM; ++i) {
+                anisotropy_axis[i] = temp[i];
             }
         }
     }
@@ -296,13 +302,9 @@ void main_main ()
           Array4<Real> const &Hx = Hfield[0].array(mfi);
           Array4<Real> const &Hy = Hfield[1].array(mfi);
           Array4<Real> const &Hz = Hfield[2].array(mfi);
-      
-          const Array4<Real>& alpha_arr = alpha.array(mfi);
-          const Array4<Real>& gamma_arr = gamma.array(mfi);
+              
           const Array4<Real>& Ms_arr = Ms.array(mfi);
-          const Array4<Real>& exchange_arr = exchange.array(mfi);
-          const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
- 
+      
           amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
              Hx_bias(i,j,k) = 0._rt;         
@@ -319,9 +321,9 @@ void main_main ()
              if(demag_coupling == 1)
              { 
              //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
-               //amrex::Real Hx = ;
-               //amrex::Real Hy = ;
-               //amrex::Real Hz = ;
+               //Hx = ;
+               //Hy = ;
+               //Hz = ;
              }
           });
 
@@ -403,11 +405,19 @@ void main_main ()
                     }
                  
                     if(anisotropy_coupling == 1)
-                    { 
-                    //Add anisotropy term
-                      //amrex::Real Hx_eff += ;
-                      //amrex::Real Hy_eff += ;
-                      //amrex::Real Hz_eff += ;
+                    {
+                     //Add anisotropy term
+ 
+                     if (anisotropy_arr(i,j,k) == 0._rt) amrex::Abort("The anisotropy_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
+
+                      // H_anisotropy - use M^(old_time)
+                      amrex::Real M_dot_anisotropy_axis = 0.0;
+                      M_dot_anisotropy_axis = Mx(i, j, k) * anisotropy_axis[0] + My(i, j, k) * anisotropy_axis[1] + Mz(i, j, k) * anisotropy_axis[2];
+                      amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
+                      Hx_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
+                      Hy_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
+                      Hz_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+
                     }
 
                    amrex::Real mag_gammaL = gamma_arr(i,j,k) / (1._rt + std::pow(alpha_arr(i,j,k), 2._rt));
