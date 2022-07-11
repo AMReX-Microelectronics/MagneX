@@ -7,6 +7,7 @@
 #include <AMReX_VisMF.H>
 #include "myfunc.H"
 #include "MicroMag.H"
+#include "MagLaplacian.H"
 
 using namespace amrex;
 
@@ -227,6 +228,7 @@ void main_main ()
     amrex::Print() << " M_normalization     = " << M_normalization     << "\n";
     amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
     amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
+    amrex::Print() << " Ms                  = " << Ms_val              << "\n";
     amrex::Print() << " alpha               = " << alpha_val           << "\n";
     amrex::Print() << " gamma               = " << gamma_val           << "\n";
     amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
@@ -324,17 +326,28 @@ void main_main ()
               
           const Array4<Real>& Ms_arr = Ms.array(mfi);
 
+          GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+
           amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
              Hx_bias(i,j,k) = 0._rt;         
              Hy_bias(i,j,k) = 3.7e4;
              Hz_bias(i,j,k) = 0._rt;
 
+
              if (Ms_arr(i,j,k) > 0._rt)
              {
-                Mx(i,j,k) = 1.4e5;
+
+//               Mx(i,j,k) = 1.4e5;
+//               My(i,j,k) = 0.;
+//               Mz(i,j,k) = 0.;
+                Real x = prob_lo[0] + (i+0.5) * dx[0];
+                Real y = prob_lo[1] + (j+0.5) * dx[1];
+                Real z = prob_lo[2] + (k+0.5) * dx[2];
+                
+                Mx(i,j,k) = (y < 0) ? 1.4e5 : 0.;
                 My(i,j,k) = 0._rt;
-                Mz(i,j,k) = 0._rt;
+                Mz(i,j,k) = (y >= 0) ? 1.4e5 : 0.;
              }
 
              if(demag_coupling == 1)
@@ -383,6 +396,16 @@ void main_main ()
 
     for (int step = 1; step <= nsteps; ++step)
     {
+        // copy new solution into old solution
+        for(int comp = 0; comp < 3; comp++)
+        {
+           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
+
+           // fill periodic ghost cells
+           Mfield_old[comp].FillBoundary(geom.periodicity());
+
+        }
+
         Real step_strt_time = ParallelDescriptor::second();
 
     	    // Evolve M
@@ -432,9 +455,22 @@ void main_main ()
                     if(exchange_coupling == 1)
                     { 
                     //Add exchange term
-                      //amrex::Real Hx_eff += ;
-                      //amrex::Real Hy_eff += ;
-                      //amrex::Real Hz_eff += ;
+                      if (exchange_arr(i,j,k) == 0._rt) amrex::Abort("The exchange_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
+
+                      // H_exchange - use M^(old_time)
+                      amrex::Real const H_exchange_coeff = 2.0 * exchange_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
+
+                      amrex::Real Ms_lo_x = Ms_arr(i-1, j, k); 
+                      amrex::Real Ms_hi_x = Ms_arr(i+1, j, k); 
+                      amrex::Real Ms_lo_y = Ms_arr(i, j-1, k); 
+                      amrex::Real Ms_hi_y = Ms_arr(i, j+1, k); 
+                      amrex::Real Ms_lo_z = Ms_arr(i, j, k-1);
+                      amrex::Real Ms_hi_z = Ms_arr(i, j, k+1);
+
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(My_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(Mz_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom);
+
                     }
                  
                     if(anisotropy_coupling == 1)
@@ -452,6 +488,8 @@ void main_main ()
                       Hz_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
 
                     }
+
+                   //Update M
 
                    amrex::Real mag_gammaL = gamma_arr(i,j,k) / (1._rt + std::pow(alpha_arr(i,j,k), 2._rt));
 
@@ -489,6 +527,7 @@ void main_main ()
                      // check the normalized error
                      if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                      {
+                         amrex::Print() << "M_magnitude_normalized = " << M_magnitude_normalized << "\n";
                          amrex::Abort("Exceed the normalized error of the Mx field");
                      }
                      // normalize the M field
@@ -516,15 +555,15 @@ void main_main ()
                       
         }  
 	
-        // copy new solution into old solution
-        for(int comp = 0; comp < 3; comp++)
-        {
-           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
-
-           // fill periodic ghost cells
-           Mfield_old[comp].FillBoundary(geom.periodicity());
-
-        }
+//        // copy new solution into old solution
+//        for(int comp = 0; comp < 3; comp++)
+//        {
+//           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
+//
+//           // fill periodic ghost cells
+//           Mfield_old[comp].FillBoundary(geom.periodicity());
+//
+//        }
 
 //             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
 //       	//Compute RHS of Poisson equation
