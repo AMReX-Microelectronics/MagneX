@@ -18,6 +18,11 @@ void InitializeMagneticProperties(MultiFab&  alpha,
                    const       Geometry& geom)
 {
 
+    alpha.setVal(0.);
+    Ms.setVal(0.);
+    gamma.setVal(0.);
+    exchange.setVal(0.);
+    anisotropy.setVal(0.);
 
     // loop over boxes
     for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
@@ -38,7 +43,7 @@ void InitializeMagneticProperties(MultiFab&  alpha,
             Real x = prob_lo[0] + (i+0.5) * dx[0];
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
-        
+             
             if (x > mag_lo[0] && x < mag_hi[0]){
                if (y > mag_lo[1] && y < mag_hi[1]){
                   if (z > mag_lo[2] && z < mag_hi[2]){
@@ -52,6 +57,13 @@ void InitializeMagneticProperties(MultiFab&  alpha,
             }
         }); 
      }
+     // fill periodic ghost cells
+     alpha.FillBoundary(geom.periodicity());
+     Ms.FillBoundary(geom.periodicity());
+     gamma.FillBoundary(geom.periodicity());
+     exchange.FillBoundary(geom.periodicity());
+     anisotropy.FillBoundary(geom.periodicity());
+
 } 
 
 /*

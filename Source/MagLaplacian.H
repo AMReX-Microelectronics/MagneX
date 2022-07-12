@@ -10,7 +10,7 @@ static amrex::Real UpwardDx (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dx = dx[0];
+    amrex::Real const inv_dx = 1./dx[0];
     return inv_dx*( F(i+1,j,k) - F(i,j,k) );
 }
 
@@ -25,7 +25,7 @@ static amrex::Real DownwardDx (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dx = dx[0];
+    amrex::Real const inv_dx = 1./dx[0];
     return inv_dx*( F(i,j,k) - F(i-1,j,k) );
 }
 
@@ -40,7 +40,7 @@ static amrex::Real UpwardDy (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dy = dx[1];
+    amrex::Real const inv_dy = 1./dx[1];
     return inv_dy*( F(i,j+1,k) - F(i,j,k) );
 }
 
@@ -55,7 +55,7 @@ static amrex::Real DownwardDy (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dy = dx[1];
+    amrex::Real const inv_dy = 1./dx[1];
     return inv_dy*( F(i,j,k) - F(i,j-1,k) );
 }
 
@@ -71,7 +71,7 @@ static amrex::Real UpwardDz (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dz = dx[2];
+    amrex::Real const inv_dz = 1./dx[2];
     return inv_dz*( F(i,j,k+1) - F(i,j,k) );
 }
 
@@ -86,7 +86,7 @@ static amrex::Real DownwardDz (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dz = dx[2];
+    amrex::Real const inv_dz = 1./dx[2];
     return inv_dz*( F(i,j,k) - F(i,j,k-1) );
 }
 
@@ -101,7 +101,7 @@ static amrex::Real DownwardDz (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dx = dx[0];
+    amrex::Real const inv_dx = 1./dx[0];
     if (Ms_hi_x == 0.){
         return inv_dx*(0. - DownwardDx(F, i, j, k, geom));
     } else if (Ms_lo_x == 0.){
@@ -123,7 +123,7 @@ static amrex::Real DownwardDz (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dy = dx[1];
+    amrex::Real const inv_dy = 1./dx[1];
     if (Ms_hi_y == 0.){
         return inv_dy*(0. - DownwardDy(F, i, j, k, geom));
     } else if (Ms_lo_y == 0.){
@@ -145,7 +145,7 @@ static amrex::Real DownwardDz (
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-    amrex::Real const inv_dz = dx[2];
+    amrex::Real const inv_dz = 1./dx[2];
     if (Ms_hi_z == 0.){
         return inv_dz*(0. - DownwardDz(F, i, j, k, geom));
     } else if (Ms_lo_z == 0.){
