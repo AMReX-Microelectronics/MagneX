@@ -5,10 +5,7 @@
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real UpwardDx (
     amrex::Array4<amrex::Real> const& F,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dx = 1./dx[0];
     return inv_dx*( F(i+1,j,k) - F(i,j,k) );
@@ -20,10 +17,7 @@ static amrex::Real UpwardDx (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real DownwardDx (
     amrex::Array4<amrex::Real> const& F,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dx = 1./dx[0];
     return inv_dx*( F(i,j,k) - F(i-1,j,k) );
@@ -35,10 +29,7 @@ static amrex::Real DownwardDx (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real UpwardDy (
     amrex::Array4<amrex::Real> const& F,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dy = 1./dx[1];
     return inv_dy*( F(i,j+1,k) - F(i,j,k) );
@@ -50,10 +41,7 @@ static amrex::Real UpwardDy (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real DownwardDy (
     amrex::Array4<amrex::Real> const& F,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dy = 1./dx[1];
     return inv_dy*( F(i,j,k) - F(i,j-1,k) );
@@ -66,10 +54,7 @@ static amrex::Real DownwardDy (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real UpwardDz (
     amrex::Array4<amrex::Real> const& F,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dz = 1./dx[2];
     return inv_dz*( F(i,j,k+1) - F(i,j,k) );
@@ -81,10 +66,7 @@ static amrex::Real UpwardDz (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real DownwardDz (
     amrex::Array4<amrex::Real> const& F,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dz = 1./dx[2];
     return inv_dz*( F(i,j,k) - F(i,j,k-1) );
@@ -96,18 +78,15 @@ static amrex::Real DownwardDz (
  static amrex::Real LaplacianDx_Mag (
     amrex::Array4<amrex::Real> const& F,
     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dx = 1./dx[0];
     if (Ms_hi_x == 0.){
-        return inv_dx*(0. - DownwardDx(F, i, j, k, geom));
+        return inv_dx*(0. - DownwardDx(F, i, j, k, dx));
     } else if (Ms_lo_x == 0.){
-        return inv_dx*(UpwardDx(F, i, j, k, geom) - 0.);
+        return inv_dx*(UpwardDx(F, i, j, k, dx) - 0.);
     } else {
-        return inv_dx*(UpwardDx(F, i, j, k, geom) - DownwardDx(F, i, j, k, geom));
+        return inv_dx*(UpwardDx(F, i, j, k, dx) - DownwardDx(F, i, j, k, dx));
     }
  }
 
@@ -118,18 +97,15 @@ static amrex::Real DownwardDz (
  static amrex::Real LaplacianDy_Mag (
     amrex::Array4<amrex::Real> const& F,
     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dy = 1./dx[1];
     if (Ms_hi_y == 0.){
-        return inv_dy*(0. - DownwardDy(F, i, j, k, geom));
+        return inv_dy*(0. - DownwardDy(F, i, j, k, dx));
     } else if (Ms_lo_y == 0.){
-        return inv_dy*(UpwardDy(F, i, j, k, geom) - 0.);
+        return inv_dy*(UpwardDy(F, i, j, k, dx) - 0.);
     } else {
-        return inv_dy*(UpwardDy(F, i, j, k, geom) - DownwardDy(F, i, j, k, geom));
+        return inv_dy*(UpwardDy(F, i, j, k, dx) - DownwardDy(F, i, j, k, dx));
     }
  }
 
@@ -140,18 +116,15 @@ static amrex::Real DownwardDz (
  static amrex::Real LaplacianDz_Mag (
     amrex::Array4<amrex::Real> const& F,
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
-    int const i, int const j, int const k, const Geometry& geom) {
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dz = 1./dx[2];
     if (Ms_hi_z == 0.){
-        return inv_dz*(0. - DownwardDz(F, i, j, k, geom));
+        return inv_dz*(0. - DownwardDz(F, i, j, k, dx));
     } else if (Ms_lo_z == 0.){
-        return inv_dz*(UpwardDz(F, i, j, k, geom) - 0.);
+        return inv_dz*(UpwardDz(F, i, j, k, dx) - 0.);
     } else {
-        return inv_dz*(UpwardDz(F, i, j, k, geom) - DownwardDz(F, i, j, k, geom));
+        return inv_dz*(UpwardDz(F, i, j, k, dx) - DownwardDz(F, i, j, k, dx));
     }
  }
 
@@ -161,9 +134,9 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real Laplacian_Mag (
      amrex::Array4<amrex::Real> const& F,
      amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
-     int const i, int const j, int const k, const Geometry& geom) {
+     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
      //amrex::Print() << "This is called " << Ms_lo_x << "\n";
-     return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, i, j, k, geom) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, i, j, k, geom) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, i, j, k, geom);
+     return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, i, j, k, dx) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, i, j, k, dx) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, i, j, k, dx);
  }
 

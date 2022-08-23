@@ -87,7 +87,7 @@ void main_main ()
         pp.get("Phi_Bc_hi",Phi_Bc_hi);
         pp.get("Phi_Bc_lo",Phi_Bc_lo);
 
-	pp.get("TimeIntegratorOrder",TimeIntegratorOrder);
+        pp.get("TimeIntegratorOrder",TimeIntegratorOrder);
 
         // Material Properties
 	
@@ -348,9 +348,9 @@ void main_main ()
                 My(i,j,k) = 0._rt;
                 Mz(i,j,k) = (y >= 0) ? 1.4e5 : 0.;
              } else {
-	       Mx(i,j,k) = 0.0;
-	       My(i,j,k) = 0.0;
-	       Mz(i,j,k) = 0.0;
+                Mx(i,j,k) = 0.0;
+                My(i,j,k) = 0.0;
+                Mz(i,j,k) = 0.0;
 	     }
 
              if(demag_coupling == 1)
@@ -470,10 +470,10 @@ void main_main ()
                       amrex::Real Ms_lo_z = Ms_arr(i, j, k-1);
                       amrex::Real Ms_hi_z = Ms_arr(i, j, k+1);
 
-		      if(i == 31 && j == 31 && k == 31) amrex::Print() << "Laplacia_x = " <<  Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom) << "/n";
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(My_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(Mz_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, geom);
+		      if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx));
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(My_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(Mz_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx);
 
                     }
                  
@@ -530,7 +530,7 @@ void main_main ()
                        // check the normalized error
                        if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                        {
-                           amrex::Print() << "M_magnitude_normalized = " << M_magnitude_normalized << "\n";
+                           printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
                            amrex::Abort("Exceed the normalized error of the Mx field");
                        }
                        // normalize the M field
@@ -540,7 +540,7 @@ void main_main ()
                    }
                    else if (M_normalization == 0)
                    {   
-		       if(i == 1 && j == 1 && k == 1)amrex::Print() << "Here ????" << "\n";
+		       if(i == 1 && j == 1 && k == 1) printf("Here ??? \n");
                        // check the normalized error
                        if (M_magnitude_normalized > (1._rt + normalized_error))
                        {
