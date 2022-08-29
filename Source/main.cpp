@@ -427,9 +427,12 @@ void main_main ()
                     amrex::Real Hy_eff = Hy_bias(i,j,k);
                     amrex::Real Hz_eff = Hz_bias(i,j,k);
 
-                    Hx_eff += (-1.0 + 2.0*Random(engine))*0.002; // add random noise
-                    Hy_eff += (-1.0 + 2.0*Random(engine))*0.002; // add random noise
-                    Hz_eff += (-1.0 + 2.0*Random(engine))*0.002; // add random noise
+                    if (step == 1){
+                        Hx_eff += (-1.0 + 2.0*Random(engine))*0.000002; // add random noise
+                        Hy_eff += (-1.0 + 2.0*Random(engine))*0.000002; // add random noise
+                        Hz_eff += (-1.0 + 2.0*Random(engine))*0.000002; // add random noise
+                    }
+                    
                     
                     if(demag_coupling == 1)
                     {
