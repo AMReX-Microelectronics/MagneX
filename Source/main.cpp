@@ -238,7 +238,6 @@ void main_main ()
     //Solver for Poisson equation
     LPInfo info;
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
-    openbc.setVerbose(2);
     // openbc.setVerbose(2);
 
     // time = starting time in the simulation
@@ -289,13 +288,13 @@ void main_main ()
                 // My(i,j,k) = 0._rt;
                 // Mz(i,j,k) = (y >= 0) ? Ms_arr(i,j,k) : 0.;
 
-                Mx(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
-                My(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
-                Mz(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
+                // Mx(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
+                // My(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
+                // Mz(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
 
-                // Mx(i,j,k) = 0._rt;
-                // My(i,j,k) = Ms_arr(i,j,k);
-                // Mz(i,j,k) = 0._rt;
+                Mx(i,j,k) = 0._rt;
+                My(i,j,k) = Ms_arr(i,j,k);
+                Mz(i,j,k) = 0._rt;
 
              } else {
                 Mx(i,j,k) = 0.0;
@@ -403,21 +402,21 @@ void main_main ()
                  if (Ms_arr(i,j,k) > 0._rt)
                  {
 
-                    if (time <= t0){
-                        Hx_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
-                        Hy_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
-                        Hz_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
-                    } else {
-                        Hx_bias(i,j,k) = 0.0 ;
-                        Hy_bias(i,j,k) = 0.0 ;
-                        Hz_bias(i,j,k) = 0.0 ;
-                    }
+                    // if (time <= t0){
+                    //     Hx_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
+                    //     Hy_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
+                    //     Hz_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
+                    // } else {
+                    //     Hx_bias(i,j,k) = 0.0 ;
+                    //     Hy_bias(i,j,k) = 0.0 ;
+                    //     Hz_bias(i,j,k) = 0.0 ;
+                    // }
 
-                    // amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
                     
-                    // Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*pi*frequency*time)) * cos(z / 345.0e-9 * pi);
-                    // Hy_bias(i,j,k) = 2.4e4;
-                    // Hz_bias(i,j,k) = 0.;
+                    Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*pi*frequency*time)) * cos(z / 345.0e-9 * pi);
+                    Hy_bias(i,j,k) = 2.4e4;
+                    Hz_bias(i,j,k) = 0.;
 
                     // Hx_bias(i,j,k) = (j < 32) ? 1.0e5 : 0.;
                     // Hy_bias(i,j,k) = (j < 32) ? 0. : 1.0e5;

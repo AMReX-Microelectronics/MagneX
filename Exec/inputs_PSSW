@@ -1,0 +1,34 @@
+n_cell = 32 32 64
+max_grid_size = 128
+dt = 1.0e-14
+nsteps = 5000000
+plot_int = 500
+
+TimeIntegratorOrder = 1
+
+# ######### this is my original setup ###########
+# prob_lo = -3450.e-9 -3450.0e-9 -345.0e-9
+# prob_hi =  3450.e-9  3450.0e-9  345.0e-9
+
+# mag_lo = -2587.e-9 -2587.0e-9 -172.5e-9
+# mag_hi =  2587.e-9  2587.0e-9  172.5e-9
+
+# ######### this is the modified case that worked ##########
+prob_lo = -3450.e-9 -3450.0e-9 -3450.0e-9
+prob_hi =  3450.e-9  3450.0e-9  3450.0e-9
+
+mag_lo = -2587.e-9 -2587.0e-9 -172.5e-9
+mag_hi =  2587.e-9  2587.0e-9  172.5e-9
+
+mu0 = 1.25663706212e-6 
+alpha_val = 0.005
+Ms_val = 1.4e5
+gamma_val = -1.759e11
+exchange_val = 3.1e-12
+anisotropy_val = -139.26
+anisotropy_axis = 0.0 1.0 0.0
+
+demag_coupling = 1
+M_normalization = 1
+exchange_coupling = 1
+anisotropy_coupling = 0
