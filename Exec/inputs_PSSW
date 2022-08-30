@@ -1,8 +1,8 @@
-n_cell = 32 32 64
-max_grid_size = 128
-dt = 1.0e-14
-nsteps = 5000000
-plot_int = 500
+n_cell = 128 128 256
+max_grid_size = 256
+dt = 1.0e-12
+nsteps = 50000
+plot_int = 5
 
 TimeIntegratorOrder = 1
 
