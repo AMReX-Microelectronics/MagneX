@@ -212,10 +212,10 @@ void main_main ()
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
-    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-    {
-        H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
-    }
+    // face-centered H_biasfield
+    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
 
     //Face-centered magnetic properties
     std::array< MultiFab, AMREX_SPACEDIM > alpha;
@@ -336,9 +336,9 @@ void main_main ()
           Array4<Real> const &M_yface = Mfield[1].array(mfi);         
           Array4<Real> const &M_zface = Mfield[2].array(mfi);
          
-          Array4<Real> const &Hx_bias = H_biasfield[0].array(mfi);
-          Array4<Real> const &Hy_bias = H_biasfield[1].array(mfi);
-          Array4<Real> const &Hz_bias = H_biasfield[2].array(mfi);
+          Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
+          Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
+          Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
       
           Array4<Real> const &Hx = Hfield[0].array(mfi);
           Array4<Real> const &Hy = Hfield[1].array(mfi);
@@ -355,11 +355,6 @@ void main_main ()
 
           amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
-             Hx_bias(i,j,k) = 0._rt;         
-             Hy_bias(i,j,k) = 3.7e4;
-             Hz_bias(i,j,k) = 0._rt;
-
-
 
              if(demag_coupling == 1)
              { 
@@ -386,6 +381,11 @@ void main_main ()
 
           amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
+
+             H_bias_xface(i,j,k,0) = 0._rt;         
+             H_bias_xface(i,j,k,1) = 3.7e4;
+             H_bias_xface(i,j,k,2) = 0._rt;
+
              if (Ms_xface_arr(i,j,k) > 0._rt)
              {
 
@@ -411,6 +411,11 @@ void main_main ()
 
           amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
+
+             H_bias_yface(i,j,k,0) = 0._rt;         
+             H_bias_yface(i,j,k,1) = 3.7e4;
+             H_bias_yface(i,j,k,2) = 0._rt;
+
              if (Ms_yface_arr(i,j,k) > 0._rt)
              {
 
@@ -436,6 +441,11 @@ void main_main ()
 
           amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
+
+             H_bias_zface(i,j,k,0) = 0._rt;         
+             H_bias_zface(i,j,k,1) = 3.7e4;
+             H_bias_zface(i,j,k,2) = 0._rt;
+
              if (Ms_zface_arr(i,j,k) > 0._rt)
              {
 
@@ -511,15 +521,18 @@ void main_main ()
               Array4<Real> const &Hx = Hfield[0].array(mfi);
               Array4<Real> const &Hy = Hfield[1].array(mfi);
               Array4<Real> const &Hz = Hfield[2].array(mfi);
+
               Array4<Real> const &M_xface = Mfield[0].array(mfi);         
               Array4<Real> const &M_yface = Mfield[1].array(mfi);         
               Array4<Real> const &M_zface = Mfield[2].array(mfi);         
+
               Array4<Real> const &M_xface_old = Mfield_old[0].array(mfi); 
               Array4<Real> const &M_yface_old = Mfield_old[1].array(mfi); 
               Array4<Real> const &M_zface_old = Mfield_old[2].array(mfi); 
-              Array4<Real> const &Hx_bias = H_biasfield[0].array(mfi);
-              Array4<Real> const &Hy_bias = H_biasfield[1].array(mfi);
-              Array4<Real> const &Hz_bias = H_biasfield[2].array(mfi);
+
+              Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
+              Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
+              Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
           
               const Array4<Real>& alpha_xface_arr = alpha[0].array(mfi);
               const Array4<Real>& alpha_yface_arr = alpha[1].array(mfi);
@@ -552,9 +565,9 @@ void main_main ()
               {
                  if (Ms_xface_arr(i,j,k) > 0._rt)
                  {
-                    amrex::Real Hx_eff = Hx_bias(i,j,k);
-                    amrex::Real Hy_eff = Hy_bias(i,j,k);
-                    amrex::Real Hz_eff = Hz_bias(i,j,k);
+                    amrex::Real Hx_eff = H_bias_xface(i,j,k,0);
+                    amrex::Real Hy_eff = H_bias_xface(i,j,k,1);
+                    amrex::Real Hz_eff = H_bias_xface(i,j,k,2);
                  
                     if(demag_coupling == 1)
                     {
@@ -671,9 +684,9 @@ void main_main ()
               {
                  if (Ms_yface_arr(i,j,k) > 0._rt)
                  {
-                    amrex::Real Hx_eff = Hx_bias(i,j,k);
-                    amrex::Real Hy_eff = Hy_bias(i,j,k);
-                    amrex::Real Hz_eff = Hz_bias(i,j,k);
+                    amrex::Real Hx_eff = H_bias_yface(i,j,k,0);
+                    amrex::Real Hy_eff = H_bias_yface(i,j,k,1);
+                    amrex::Real Hz_eff = H_bias_yface(i,j,k,2);
                  
                     if(demag_coupling == 1)
                     {
@@ -790,9 +803,9 @@ void main_main ()
               {
                  if (Ms_zface_arr(i,j,k) > 0._rt)
                  {
-                    amrex::Real Hx_eff = Hx_bias(i,j,k);
-                    amrex::Real Hy_eff = Hy_bias(i,j,k);
-                    amrex::Real Hz_eff = Hz_bias(i,j,k);
+                    amrex::Real Hx_eff = H_bias_zface(i,j,k,0);
+                    amrex::Real Hy_eff = H_bias_zface(i,j,k,1);
+                    amrex::Real Hz_eff = H_bias_zface(i,j,k,2);
                  
                     if(demag_coupling == 1)
                     {
