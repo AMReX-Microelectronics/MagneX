@@ -264,7 +264,7 @@ void main_main ()
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1);
 
-    MultiFab Plt(ba, dm, 21, 1);
+    MultiFab Plt(ba, dm, 21, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -489,7 +489,7 @@ void main_main ()
         for (MFIter mfi(Plt); mfi.isValid(); ++mfi)
         {
         
-              const Box& bx = mfi.growntilebox(1); 
+              const Box& bx = mfi.tilebox(); 
 
         // extract field data
               Array4<Real> const &M_xface = Mfield[0].array(mfi);         
@@ -1045,15 +1045,14 @@ void main_main ()
         time = time + dt;
 
         // Write a plotfile of the initial data if plot_int > 0
-        if (plot_int > 0)
+        if (plot_int > 0 && step%plot_int == 0)
         {
-            int step = 0;
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
             //Averaging face-centerd Multifabs to cell-centers for plotting 
             for (MFIter mfi(Plt); mfi.isValid(); ++mfi)
             {
             
-                  const Box& bx = mfi.growntilebox(1); 
+                  const Box& bx = mfi.tilebox(); 
 
             // extract field data
                   Array4<Real> const &M_xface = Mfield[0].array(mfi);         
