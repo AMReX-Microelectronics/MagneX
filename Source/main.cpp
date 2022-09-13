@@ -362,10 +362,6 @@ void main_main ()
           amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
 
-             H_bias_xface(i,j,k,0) = 0._rt;         
-             H_bias_xface(i,j,k,1) = 3.7e4;
-             H_bias_xface(i,j,k,2) = 0._rt;
-
              if (Ms_xface_arr(i,j,k) > 0._rt)
              {
 
@@ -378,12 +374,20 @@ void main_main ()
                 M_xface(i,j,k,1) = 0._rt;
                 M_xface(i,j,k,2) = (y >= 0) ? 1.4e5 : 0.;
 
+                H_bias_xface(i,j,k,0) = 0._rt;         
+                H_bias_xface(i,j,k,1) = 3.7e4;
+                H_bias_xface(i,j,k,2) = 0._rt;
+
              } else {
              
                 //x_face 
                 M_xface(i,j,k,0) = 0.0; 
                 M_xface(i,j,k,1) = 0.0;
                 M_xface(i,j,k,2) = 0.0;
+
+                H_bias_xface(i,j,k,0) = 0.0;         
+                H_bias_xface(i,j,k,1) = 0.0;
+                H_bias_xface(i,j,k,2) = 0.0;
 
 	     }
  
@@ -392,10 +396,6 @@ void main_main ()
 
           amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
-
-             H_bias_yface(i,j,k,0) = 0._rt;         
-             H_bias_yface(i,j,k,1) = 3.7e4;
-             H_bias_yface(i,j,k,2) = 0._rt;
 
              if (Ms_yface_arr(i,j,k) > 0._rt)
              {
@@ -409,6 +409,10 @@ void main_main ()
                 M_yface(i,j,k,1) = 0._rt;
                 M_yface(i,j,k,2) = (y >= 0) ? 1.4e5 : 0.;
 
+                H_bias_yface(i,j,k,0) = 0._rt;         
+                H_bias_yface(i,j,k,1) = 3.7e4;
+                H_bias_yface(i,j,k,2) = 0._rt;
+
              } else {
              
                 //y_face
@@ -416,16 +420,16 @@ void main_main ()
                 M_yface(i,j,k,1) = 0.0;
                 M_yface(i,j,k,2) = 0.0;
 
+                H_bias_yface(i,j,k,0) = 0.0;         
+                H_bias_yface(i,j,k,1) = 0.0;
+                H_bias_yface(i,j,k,2) = 0.0;
+
 	     }
 
           });
 
           amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
-
-             H_bias_zface(i,j,k,0) = 0._rt;         
-             H_bias_zface(i,j,k,1) = 3.7e4;
-             H_bias_zface(i,j,k,2) = 0._rt;
 
              if (Ms_zface_arr(i,j,k) > 0._rt)
              {
@@ -439,12 +443,20 @@ void main_main ()
                 M_zface(i,j,k,1) = 0._rt;
                 M_zface(i,j,k,2) = (y >= 0) ? 1.4e5 : 0.;
 
+                H_bias_zface(i,j,k,0) = 0._rt;         
+                H_bias_zface(i,j,k,1) = 3.7e4;
+                H_bias_zface(i,j,k,2) = 0._rt;
+
              } else {
              
                 //z_face
                 M_zface(i,j,k,0) = 0.0;
                 M_zface(i,j,k,1) = 0.0;
                 M_zface(i,j,k,2) = 0.0;
+
+                H_bias_zface(i,j,k,0) = 0.0;         
+                H_bias_zface(i,j,k,1) = 0.0;
+                H_bias_zface(i,j,k,2) = 0.0;
 
 	     }
 
@@ -557,7 +569,7 @@ void main_main ()
                                                 "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                 "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
                                                 "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface"},
-                                                 geom, time, 0);
+                                                 geom, time, step);
 
     }
 /*
@@ -802,9 +814,9 @@ void main_main ()
                       amrex::Real Ms_hi_z = Ms_yface_arr(i, j, k+1);
 
 		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
 
                     }
                  
@@ -921,9 +933,9 @@ void main_main ()
                       amrex::Real Ms_hi_z = Ms_zface_arr(i, j, k+1);
 
 		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
 
                     }
                  
