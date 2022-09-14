@@ -1,0 +1,31 @@
+n_cell = 64 64 64
+max_grid_size = 32
+dt = 1.0e-15
+nsteps = 100
+plot_int = 10
+
+Phi_Bc_hi = 0.0
+Phi_Bc_lo = 0.0
+
+TimeIntegratorOrder = 1
+
+prob_lo = -16.e-9 -16.e-9 -16.e-9
+prob_hi =  16.e-9  16.e-9  16.e-9
+
+mag_lo = -8.e-9 -8.e-9 -8.e-9
+mag_hi =  8.e-9  8.e-9  8.e-9
+
+mu0 = 1.25663706212e-6 
+alpha_val = 0.058
+Ms_val = 1.4e5
+gamma_val = -1.759e11
+exchange_val = 3.76e-12
+anisotropy_val = -139.26
+anisotropy_axis = 0.0 1.0 0.0
+
+demag_coupling = 0
+M_normalization = 1
+exchange_coupling = 1
+anisotropy_coupling = 0
+
+
