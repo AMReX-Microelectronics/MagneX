@@ -219,9 +219,9 @@ void main_main ()
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
     // face-centered H_biasfield
-    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
 
     //Face-centered magnetic properties
     std::array< MultiFab, AMREX_SPACEDIM > alpha;
@@ -235,9 +235,9 @@ void main_main ()
                  gamma[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
     std::array< MultiFab, AMREX_SPACEDIM > Ms;
-    AMREX_D_TERM(Ms[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 Ms[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 Ms[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+    AMREX_D_TERM(Ms[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, Nghost);,
+                 Ms[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, Nghost);,
+                 Ms[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, Nghost););
 
     std::array< MultiFab, AMREX_SPACEDIM > exchange;
     AMREX_D_TERM(exchange[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
