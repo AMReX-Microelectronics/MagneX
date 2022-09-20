@@ -10,7 +10,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    Real        Ms_val,
                    Real        gamma_val,
                    Real        exchange_val,
-		             Real        anisotropy_val,
+                   Real        anisotropy_val,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
                    amrex::GpuArray<amrex::Real, 3> mag_lo,
@@ -118,9 +118,10 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             }
         }); 
      }
-     // fill periodic ghost cells for Ms. Used to calculate Ms_lo(hi)_x(y,z) for exchange field calculation
+
+    // fill periodic and interior ghost cells
     for(int i = 0; i < 3; i++){
-       Ms[i].FillBoundary(geom.periodicity());
+        Ms[i].FillBoundary(geom.periodicity());
     }
 
 } 
@@ -136,12 +137,10 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-            Array4<Real> const &M_xface = Mfield[0].array(mfi);         
-            Array4<Real> const &M_yface = Mfield[1].array(mfi);         
-            Array4<Real> const &M_zface = Mfield[2].array(mfi);   
-            const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
-            const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
-            const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+            const Array4<Real>& M_xface = Mfield[0].array(mfi);         
+            const Array4<Real>& M_yface = Mfield[1].array(mfi);         
+            const Array4<Real>& M_zface = Mfield[2].array(mfi);   
+
             const Array4<Real>& rhs = PoissonRHS.array(mfi);
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -156,11 +155,11 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
    
 }
 
-void ComputeHfromPhi(MultiFab&                         PoissonPhi,
-                      Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                      amrex::GpuArray<amrex::Real, 3> prob_lo,
-                      amrex::GpuArray<amrex::Real, 3> prob_hi,
-                      const Geometry&                 geom)
+void ComputeHfromPhi(MultiFab&                        PoissonPhi,
+                     Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                     amrex::GpuArray<amrex::Real, 3>  prob_lo,
+                     amrex::GpuArray<amrex::Real, 3>  prob_hi,
+                     const Geometry&                  geom)
 {
        // Calculate H from Phi
 
