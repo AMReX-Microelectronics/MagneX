@@ -184,13 +184,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-    if (Ms_hi_x == 0.){
-        return (0. + DownwardDx(F, i, j, k, dx))/2.;
-    } else if (Ms_lo_x == 0.){
-        return (UpwardDx(F, i, j, k, dx) + 0.)/2.;
-    } else {
-        return (UpwardDx(F, i, j, k, dx) + DownwardDx(F, i, j, k, dx))/2.;
-    }
+    return (UpwardDx(F, i, j, k, dx) + DownwardDx(F, i, j, k, dx))/2.;
  }
 
 
@@ -202,13 +196,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-    if (Ms_hi_y == 0.){
-        return (0. + DownwardDy(F, i, j, k, dx))/2.;
-    } else if (Ms_lo_y == 0.){
-        return (UpwardDy(F, i, j, k, dx) + 0.)/2.;
-    } else {
-        return (UpwardDy(F, i, j, k, dx) + DownwardDy(F, i, j, k, dx))/2.;
-    }
+    return (UpwardDy(F, i, j, k, dx) + DownwardDy(F, i, j, k, dx))/2.;
  }
 
  /**
@@ -219,11 +207,5 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-    if (Ms_hi_z == 0.){
-        return (0. + DownwardDz(F, i, j, k, dx))/2.;
-    } else if (Ms_lo_z == 0.){
-        return (UpwardDz(F, i, j, k, dx) + 0.)/2.;
-    } else {
-        return (UpwardDz(F, i, j, k, dx) + DownwardDz(F, i, j, k, dx))/2.;
-    }
+    return (UpwardDz(F, i, j, k, dx) + DownwardDz(F, i, j, k, dx))/2.;
  }
