@@ -118,15 +118,11 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             }
         }); 
      }
-//     // fill periodic ghost cells
-//    for(int i = 0; i < 3; i++){
-//       alpha[i].FillBoundary(geom.periodicity());
-//       Ms[i].FillBoundary(geom.periodicity());
-//       gamma[i].FillBoundary(geom.periodicity());
-//       exchange[i].FillBoundary(geom.periodicity());
-//       anisotropy[i].FillBoundary(geom.periodicity());
-//    }
-//
+     // fill periodic ghost cells for Ms. Used to calculate Ms_lo(hi)_x(y,z) for exchange field calculation
+    for(int i = 0; i < 3; i++){
+       Ms[i].FillBoundary(geom.periodicity());
+    }
+
 } 
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
