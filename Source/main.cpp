@@ -3,6 +3,8 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_MLABecLaplacian.H>
 #include <AMReX_MLMG.H> 
+#include <AMReX_OpenBC.H>
+#include <AMReX_MLPoisson.H>
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 #include "myfunc.H"
@@ -49,16 +51,12 @@ void main_main ()
     amrex::GpuArray<amrex::Real, 3> mag_lo; // physical lo coordinate of magnetic region
     amrex::GpuArray<amrex::Real, 3> mag_hi; // physical hi coordinate of magnetic region
 
-    Real Phi_Bc_hi;
-    Real Phi_Bc_lo;
-
     int TimeIntegratorOrder;
 
     // Magnetic Properties
     Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
     Real mu0;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
-
 
     int demag_coupling;
     int M_normalization;
@@ -83,9 +81,6 @@ void main_main ()
 
         // The domain is broken into boxes of size max_grid_size
         pp.get("max_grid_size",max_grid_size);
-
-        pp.get("Phi_Bc_hi",Phi_Bc_hi);
-        pp.get("Phi_Bc_lo",Phi_Bc_lo);
 
         pp.get("TimeIntegratorOrder",TimeIntegratorOrder);
 
@@ -174,7 +169,7 @@ void main_main ()
                      {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
 
     // periodic in x and y directions
-    Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(1,1,0)};
+    Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
 
     // This defines a Geometry object
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
@@ -211,10 +206,10 @@ void main_main ()
         Mfield_cc[dir].define(ba, dm, Ncomp, Nghost);
     }
 
-    Array<MultiFab, AMREX_SPACEDIM> Hfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
     {
-        Hfield[dir].define(ba, dm, Ncomp, Nghost);
+        H_demagfield[dir].define(ba, dm, Ncomp, Nghost);
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
@@ -262,63 +257,14 @@ void main_main ()
     amrex::Print() << "=======================================================\n";
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
-    MultiFab PoissonPhi(ba, dm, 1, 1);
+    MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
 
     MultiFab Plt(ba, dm, 21, 0);
 
     //Solver for Poisson equation
     LPInfo info;
-    MLABecLaplacian mlabec({geom}, {ba}, {dm}, info);
-
-    //Force singular system to be solvable
-    mlabec.setEnforceSingularSolvable(false); 
-
-    // order of stencil
-    int linop_maxorder = 2;
-    mlabec.setMaxOrder(linop_maxorder);  
-
-    // build array of boundary conditions needed by MLABecLaplacian
-    std::array<LinOpBCType, AMREX_SPACEDIM> lo_mlmg_bc;
-    std::array<LinOpBCType, AMREX_SPACEDIM> hi_mlmg_bc; 
-
-    //Periodic 
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        if(is_periodic[idim]){
-          lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
-        } else {
-          lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Dirichlet;
-        }
-    } 
-
-    mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
-
-    // coefficients for solver
-    MultiFab alpha_cc(ba, dm, 1, 0);
-    std::array< MultiFab, AMREX_SPACEDIM > beta_face;
-    AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 beta_face[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 beta_face[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-    
-    // set cell-centered alpha coefficient to zero
-    alpha_cc.setVal(0.);
-    beta_face[0].setVal(1.);
-    beta_face[1].setVal(1.);
-    beta_face[2].setVal(1.);
-
-    // Set Dirichlet BC for Phi in z
-    SetPhiBC_z(PoissonPhi, n_cell, Phi_Bc_lo, Phi_Bc_hi); 
-    
-    // set Dirichlet BC by reading in the ghost cell values
-    mlabec.setLevelBC(0, &PoissonPhi);
-    
-    // (A*alpha_cc - B * div beta grad) phi = rhs
-    mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
-    mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
-    mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));  
-
-    //Declare MLMG object
-    MLMG mlmg(mlabec);
-    mlmg.setVerbose(2);
+    OpenBCSolver openbc({geom}, {ba}, {dm}, info);
+    // openbc.setVerbose(2);
 
     // time = starting time in the simulation
     Real time = 0.0;	
@@ -334,36 +280,31 @@ void main_main ()
     //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
     for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
     {
-    
-          const Box& bx = mfi.growntilebox(1); 
+        const Box& bx = mfi.growntilebox(1); 
 
-    // extract field data
-          Array4<Real> const &M_xface = Mfield[0].array(mfi);         
-          Array4<Real> const &M_yface = Mfield[1].array(mfi);         
-          Array4<Real> const &M_zface = Mfield[2].array(mfi);
+        // extract field data
+        const Array4<Real>& M_xface = Mfield[0].array(mfi);         
+        const Array4<Real>& M_yface = Mfield[1].array(mfi);         
+        const Array4<Real>& M_zface = Mfield[2].array(mfi);
          
-          Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
-          Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
-          Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
+        const Array4<Real>& H_bias_xface = H_biasfield[0].array(mfi);
+        const Array4<Real>& H_bias_yface = H_biasfield[1].array(mfi);
+        const Array4<Real>& H_bias_zface = H_biasfield[2].array(mfi);
       
-          Array4<Real> const &Hx = Hfield[0].array(mfi);
-          Array4<Real> const &Hy = Hfield[1].array(mfi);
-          Array4<Real> const &Hz = Hfield[2].array(mfi);
-              
-          const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
-          const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
-          const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+        const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+        const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+        const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
 
-          // extract tileboxes for which to loop
-          Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
-          Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
-          Box const &tbz = mfi.tilebox(Mfield[2].ixType().toIntVect());
+        // extract tileboxes for which to loop
+        Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
+        Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
+        Box const &tbz = mfi.tilebox(Mfield[2].ixType().toIntVect());
 
-          amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-          {
+        amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
 
-             if (Ms_xface_arr(i,j,k) > 0._rt)
-             {
+            if (Ms_xface_arr(i,j,k) > 0._rt)
+            {
 
                 Real x = prob_lo[0] + i * dx[0];
                 Real y = prob_lo[1] + (j+0.5) * dx[1];
@@ -392,13 +333,13 @@ void main_main ()
 	     }
  
 
-          });
+        });
 
-          amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-          {
+        amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
 
-             if (Ms_yface_arr(i,j,k) > 0._rt)
-             {
+            if (Ms_yface_arr(i,j,k) > 0._rt)
+            {
 
                 Real x = prob_lo[0] + (i+0.5) * dx[0];
                 Real y = prob_lo[1] + j * dx[1];
@@ -426,13 +367,13 @@ void main_main ()
 
 	     }
 
-          });
+        });
 
-          amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-          {
+        amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
 
-             if (Ms_zface_arr(i,j,k) > 0._rt)
-             {
+            if (Ms_zface_arr(i,j,k) > 0._rt)
+            {
 
                 Real x = prob_lo[0] + (i+0.5) * dx[0];
                 Real y = prob_lo[1] + (j+0.5) * dx[1];
@@ -460,37 +401,21 @@ void main_main ()
 
 	     }
 
-          });
+        });
+    }
 
-          amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-          {
+    if(demag_coupling == 1){ 
+        //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+        //Compute RHS of Poisson equation
+        ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
+        
+        //Initial guess for phi
+        PoissonPhi.setVal(0.);
+        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1); 
 
-             if(demag_coupling == 1)
-             { 
-//             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
-//       	//Compute RHS of Poisson equation
-//      	ComputePoissonRHS(PoissonRHS, Mfield, 
-//      			mag_lo, mag_hi, 
-//      			prob_lo, prob_hi, 
-//      			geom);
-//
-//              //Initial guess for phi
-//              PoissonPhi.setVal(0.);
-//              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-//      
-//              // Calculate H from Phi
-//      
-//      	ComputeHfromPhi(PoissonPhi, Hx, Hy, Hz, prob_lo, prob_hi, geom);
-//      
-               //Hx = ;
-               //Hy = ;
-               //Hz = ;
-             }
- 
-          });
-
-
-    } 
+        // Calculate H from Phi
+        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+    }
 
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
@@ -500,66 +425,61 @@ void main_main ()
         //Averaging face-centerd Multifabs to cell-centers for plotting 
         for (MFIter mfi(Plt); mfi.isValid(); ++mfi)
         {
-        
-              const Box& bx = mfi.tilebox(); 
+            const Box& bx = mfi.tilebox(); 
 
-        // extract field data
-              Array4<Real> const &M_xface = Mfield[0].array(mfi);         
-              Array4<Real> const &M_yface = Mfield[1].array(mfi);         
-              Array4<Real> const &M_zface = Mfield[2].array(mfi);
+            // extract field data
+            const Array4<Real>& M_xface = Mfield[0].array(mfi);         
+            const Array4<Real>& M_yface = Mfield[1].array(mfi);         
+            const Array4<Real>& M_zface = Mfield[2].array(mfi);
              
-              Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
-              Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
-              Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
+            const Array4<Real>& H_bias_xface = H_biasfield[0].array(mfi);
+            const Array4<Real>& H_bias_yface = H_biasfield[1].array(mfi);
+            const Array4<Real>& H_bias_zface = H_biasfield[2].array(mfi);
           
-              Array4<Real> const &Hx = Hfield[0].array(mfi);
-              Array4<Real> const &Hy = Hfield[1].array(mfi);
-              Array4<Real> const &Hz = Hfield[2].array(mfi);
-                  
-              const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
-              const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
-              const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+            const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+            const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+            const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
 
-              const Array4<Real>& plt = Plt.array(mfi);
+            const Array4<Real>& plt = Plt.array(mfi);
 
-              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-              {
-                   //Ms at xface, yface, zface
-                   plt(i,j,k,0) = 0.5 * ( Ms_xface_arr(i,j,k) + Ms_xface_arr(i+1,j,k) );   
-                   plt(i,j,k,1) = 0.5 * ( Ms_yface_arr(i,j,k) + Ms_yface_arr(i,j+1,k) );   
-                   plt(i,j,k,2) = 0.5 * ( Ms_zface_arr(i,j,k) + Ms_zface_arr(i,j,k+1) );   
+            amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                //Ms at xface, yface, zface
+                plt(i,j,k,0) = 0.5 * ( Ms_xface_arr(i,j,k) + Ms_xface_arr(i+1,j,k) );   
+                plt(i,j,k,1) = 0.5 * ( Ms_yface_arr(i,j,k) + Ms_yface_arr(i,j+1,k) );   
+                plt(i,j,k,2) = 0.5 * ( Ms_zface_arr(i,j,k) + Ms_zface_arr(i,j,k+1) );   
+
+                //Mx at xface, yface, zface
+                plt(i,j,k,3) = 0.5 * ( M_xface(i,j,k,0) + M_xface(i+1,j,k,0) );   
+                plt(i,j,k,4) = 0.5 * ( M_yface(i,j,k,0) + M_yface(i,j+1,k,0) );   
+                plt(i,j,k,5) = 0.5 * ( M_zface(i,j,k,0) + M_zface(i,j,k+1,0) );  
  
-                   //Mx at xface, yface, zface
-                   plt(i,j,k,3) = 0.5 * ( M_xface(i,j,k,0) + M_xface(i+1,j,k,0) );   
-                   plt(i,j,k,4) = 0.5 * ( M_yface(i,j,k,0) + M_yface(i,j+1,k,0) );   
-                   plt(i,j,k,5) = 0.5 * ( M_zface(i,j,k,0) + M_zface(i,j,k+1,0) );  
+                //My at xface, yface, zface
+                plt(i,j,k,6) = 0.5 * ( M_xface(i,j,k,1) + M_xface(i+1,j,k,1) );   
+                plt(i,j,k,7) = 0.5 * ( M_yface(i,j,k,1) + M_yface(i,j+1,k,1) );   
+                plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
  
-                   //My at xface, yface, zface
-                   plt(i,j,k,6) = 0.5 * ( M_xface(i,j,k,1) + M_xface(i+1,j,k,1) );   
-                   plt(i,j,k,7) = 0.5 * ( M_yface(i,j,k,1) + M_yface(i,j+1,k,1) );   
-                   plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
+                //Mz at xface, yface, zface
+                plt(i,j,k,9)  = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
+                plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
+                plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
  
-                   //Mz at xface, yface, zface
-                   plt(i,j,k,9)  = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
-                   plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
-                   plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
+                //Hx_bias at xface, yface, zface
+                plt(i,j,k,12) = 0.5 * ( H_bias_xface(i,j,k,0) + H_bias_xface(i+1,j,k,0) );   
+                plt(i,j,k,13) = 0.5 * ( H_bias_yface(i,j,k,0) + H_bias_yface(i,j+1,k,0) );   
+                plt(i,j,k,14) = 0.5 * ( H_bias_zface(i,j,k,0) + H_bias_zface(i,j,k+1,0) );  
  
-                   //Hx_bias at xface, yface, zface
-                   plt(i,j,k,12) = 0.5 * ( H_bias_xface(i,j,k,0) + H_bias_xface(i+1,j,k,0) );   
-                   plt(i,j,k,13) = 0.5 * ( H_bias_yface(i,j,k,0) + H_bias_yface(i,j+1,k,0) );   
-                   plt(i,j,k,14) = 0.5 * ( H_bias_zface(i,j,k,0) + H_bias_zface(i,j,k+1,0) );  
+                //Hy_bias at xface, yface, zface
+                plt(i,j,k,15) = 0.5 * ( H_bias_xface(i,j,k,1) + H_bias_xface(i+1,j,k,1) );   
+                plt(i,j,k,16) = 0.5 * ( H_bias_yface(i,j,k,1) + H_bias_yface(i,j+1,k,1) );   
+                plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
  
-                   //Hy_bias at xface, yface, zface
-                   plt(i,j,k,15) = 0.5 * ( H_bias_xface(i,j,k,1) + H_bias_xface(i+1,j,k,1) );   
-                   plt(i,j,k,16) = 0.5 * ( H_bias_yface(i,j,k,1) + H_bias_yface(i,j+1,k,1) );   
-                   plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
+                //Hz_bias at xface, yface, zface
+                plt(i,j,k,18) = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
+                plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
+                plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
  
-                   //Hz_bias at xface, yface, zface
-                   plt(i,j,k,18) = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
-                   plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
-                   plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
- 
-              });
+            });
 
         } 
         WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
@@ -572,31 +492,7 @@ void main_main ()
                                                  geom, time, step);
 
     }
-/*
-    // Write a plotfile of the initial data if plot_int > 0
-    if (plot_int > 0)
-    {
-        int step = 0;
-        const std::string& pltfile = amrex::Concatenate("plt",step,8);
-        
-        MultiFab::Copy(Plt, Ms[0], 0, 0, 1, 0);
-        MultiFab::Copy(Plt, Ms[1], 0, 1, 1, 0);
-        MultiFab::Copy(Plt, Ms[2], 0, 2, 1, 0);
-        MultiFab::Copy(Plt, Mfield[0], 0, 3, 1, 0);
-        MultiFab::Copy(Plt, Mfield[0], 1, 4, 1, 0);
-        MultiFab::Copy(Plt, Mfield[0], 2, 5, 1, 0);
-        MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
-        MultiFab::Copy(Plt, Mfield[1], 1, 7, 1, 0);
-        MultiFab::Copy(Plt, Mfield[1], 2, 8, 1, 0);
-        MultiFab::Copy(Plt, Mfield[2], 0, 9, 1, 0);
-        MultiFab::Copy(Plt, Mfield[2], 1, 10, 1, 0);
-        MultiFab::Copy(Plt, Mfield[2], 2, 11, 1, 0);
-        MultiFab::Copy(Plt, H_biasfield[0], 0, 12, 1, 0);
-        MultiFab::Copy(Plt, H_biasfield[1], 0, 13, 1, 0);
-        MultiFab::Copy(Plt, H_biasfield[2], 0, 14, 1, 0);
-        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface","Mx_xface","My_xface","Mz_xface", "Mx_yface", "My_yface", "Mz_yface", "Mx_zface", "My_zface", "Mz_zface", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, 0);
-    }
-*/
+
     for (int step = 1; step <= nsteps; ++step)
     {
         // copy new solution into old solution
@@ -611,72 +507,93 @@ void main_main ()
 
         Real step_strt_time = ParallelDescriptor::second();
 
-    	    // Evolve M
-
+    	// Evolve M
+        if(demag_coupling == 1)
+        {
+            //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+            //Compute RHS of Poisson equation
+            ComputePoissonRHS(PoissonRHS, Mfield_old, Ms, geom);
+            
+            //Initial guess for phi
+            PoissonPhi.setVal(0.);
+            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+    
+            // Calculate H from Phi
+            ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+        }
 
         //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
         {
-       
-              const Box& bx = mfi.growntilebox(1); 
+            const Box& bx = mfi.growntilebox(1); 
 
-        // extract field data
-              Array4<Real> const &Hx = Hfield[0].array(mfi);
-              Array4<Real> const &Hy = Hfield[1].array(mfi);
-              Array4<Real> const &Hz = Hfield[2].array(mfi);
+            // extract field data
+            const Array4<Real>& Hx_demag= H_demagfield[0].array(mfi);
+            const Array4<Real>& Hy_demag= H_demagfield[1].array(mfi);
+            const Array4<Real>& Hz_demag= H_demagfield[2].array(mfi);
 
-              Array4<Real> const &M_xface = Mfield[0].array(mfi);         
-              Array4<Real> const &M_yface = Mfield[1].array(mfi);         
-              Array4<Real> const &M_zface = Mfield[2].array(mfi);         
+            const Array4<Real>& M_xface = Mfield[0].array(mfi);         
+            const Array4<Real>& M_yface = Mfield[1].array(mfi);         
+            const Array4<Real>& M_zface = Mfield[2].array(mfi);         
 
-              Array4<Real> const &M_xface_old = Mfield_old[0].array(mfi); 
-              Array4<Real> const &M_yface_old = Mfield_old[1].array(mfi); 
-              Array4<Real> const &M_zface_old = Mfield_old[2].array(mfi); 
+            const Array4<Real>& M_xface_old = Mfield_old[0].array(mfi); 
+            const Array4<Real>& M_yface_old = Mfield_old[1].array(mfi); 
+            const Array4<Real>& M_zface_old = Mfield_old[2].array(mfi); 
 
-              Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
-              Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
-              Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
+            const Array4<Real>& H_bias_xface = H_biasfield[0].array(mfi);
+            const Array4<Real>& H_bias_yface = H_biasfield[1].array(mfi);
+            const Array4<Real>& H_bias_zface = H_biasfield[2].array(mfi);
           
-              const Array4<Real>& alpha_xface_arr = alpha[0].array(mfi);
-              const Array4<Real>& alpha_yface_arr = alpha[1].array(mfi);
-              const Array4<Real>& alpha_zface_arr = alpha[2].array(mfi);
+            const Array4<Real>& alpha_xface_arr = alpha[0].array(mfi);
+            const Array4<Real>& alpha_yface_arr = alpha[1].array(mfi);
+            const Array4<Real>& alpha_zface_arr = alpha[2].array(mfi);
 
-              const Array4<Real>& gamma_xface_arr = gamma[0].array(mfi);
-              const Array4<Real>& gamma_yface_arr = gamma[1].array(mfi);
-              const Array4<Real>& gamma_zface_arr = gamma[2].array(mfi);
+            const Array4<Real>& gamma_xface_arr = gamma[0].array(mfi);
+            const Array4<Real>& gamma_yface_arr = gamma[1].array(mfi);
+            const Array4<Real>& gamma_zface_arr = gamma[2].array(mfi);
 
-              const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
-              const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
-              const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+            const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+            const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+            const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
 
-              const Array4<Real>& exchange_xface_arr = exchange[0].array(mfi);
-              const Array4<Real>& exchange_yface_arr = exchange[1].array(mfi);
-              const Array4<Real>& exchange_zface_arr = exchange[2].array(mfi);
+            const Array4<Real>& exchange_xface_arr = exchange[0].array(mfi);
+            const Array4<Real>& exchange_yface_arr = exchange[1].array(mfi);
+            const Array4<Real>& exchange_zface_arr = exchange[2].array(mfi);
 
-              const Array4<Real>& anisotropy_xface_arr = anisotropy[0].array(mfi);
-              const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
-              const Array4<Real>& anisotropy_zface_arr = anisotropy[2].array(mfi);
+            const Array4<Real>& anisotropy_xface_arr = anisotropy[0].array(mfi);
+            const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
+            const Array4<Real>& anisotropy_zface_arr = anisotropy[2].array(mfi);
 
+            amrex::IntVect Mxface_stag = Mfield[0].ixType().toIntVect();
+            amrex::IntVect Myface_stag = Mfield[1].ixType().toIntVect();
+            amrex::IntVect Mzface_stag = Mfield[2].ixType().toIntVect();
 
-              // extract tileboxes for which to loop
-              Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
-              Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
-              Box const &tbz = mfi.tilebox(Mfield[2].ixType().toIntVect());
+            // extract tileboxes for which to loop
+            Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
+            Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
+            Box const &tbz = mfi.tilebox(Mfield[2].ixType().toIntVect());
 
-              //xface 
-              amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-              {
-                 if (Ms_xface_arr(i,j,k) > 0._rt)
-                 {
+            //xface 
+            amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                if (Ms_xface_arr(i,j,k) > 0._rt)
+                {
                     amrex::Real Hx_eff = H_bias_xface(i,j,k,0);
                     amrex::Real Hy_eff = H_bias_xface(i,j,k,1);
                     amrex::Real Hz_eff = H_bias_xface(i,j,k,2);
-                 
+
+                    // PSSW validation
+                    // amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    
+                    // Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*pi*frequency*time)) * cos(z / 345.0e-9 * pi);
+                    // Hy_bias(i,j,k) = 2.4e4;
+                    // Hz_bias(i,j,k) = 0.;
+
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += Hx(i,j,k);
-                      Hy_eff += Hy(i,j,k);
-                      Hz_eff += Hz(i,j,k);
+                        Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mxface_stag, Hx_demag);
+                        Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mxface_stag, Hy_demag);
+                        Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mxface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -780,22 +697,22 @@ void main_main ()
 
                  }   
  
-              });     
+            });     
                       
-              //yface 
-              amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-              {
-                 if (Ms_yface_arr(i,j,k) > 0._rt)
-                 {
+            //yface 
+            amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                if (Ms_yface_arr(i,j,k) > 0._rt)
+                {
                     amrex::Real Hx_eff = H_bias_yface(i,j,k,0);
                     amrex::Real Hy_eff = H_bias_yface(i,j,k,1);
                     amrex::Real Hz_eff = H_bias_yface(i,j,k,2);
                  
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += Hx(i,j,k);
-                      Hy_eff += Hy(i,j,k);
-                      Hz_eff += Hz(i,j,k);
+                      Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Myface_stag, Hx_demag);
+                      Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Myface_stag, Hy_demag);
+                      Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Myface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -873,6 +790,7 @@ void main_main ()
                        if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                        {
                            printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                           printf("i = %d, j = %d, k = %d \n", i, j,k);
                            amrex::Abort("Exceed the normalized error of the Mx field");
                        }
                        // normalize the M field
@@ -899,22 +817,22 @@ void main_main ()
 
                  }   
  
-              });     
+            });     
                       
-              //zface 
-              amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-              {
-                 if (Ms_zface_arr(i,j,k) > 0._rt)
-                 {
+            //zface 
+            amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                if (Ms_zface_arr(i,j,k) > 0._rt)
+                {
                     amrex::Real Hx_eff = H_bias_zface(i,j,k,0);
                     amrex::Real Hy_eff = H_bias_zface(i,j,k,1);
                     amrex::Real Hz_eff = H_bias_zface(i,j,k,2);
                  
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += Hx(i,j,k);
-                      Hy_eff += Hy(i,j,k);
-                      Hz_eff += Hz(i,j,k);
+                      Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mzface_stag, Hx_demag);
+                      Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mzface_stag, Hy_demag);
+                      Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mzface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -1018,35 +936,9 @@ void main_main ()
 
                  }   
  
-              });    
- 
-     }  
-	
-//        // copy new solution into old solution
-//        for(int comp = 0; comp < 3; comp++)
-//        {
-//           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
-//
-//           // fill periodic ghost cells
-//           Mfield_old[comp].FillBoundary(geom.periodicity());
-//
-//        }
-
-//             //Solve Poisson's equation laplacian(Phi) = div(M) and get Hfield = -grad(Phi)
-//       	//Compute RHS of Poisson equation
-//      	ComputePoissonRHS(PoissonRHS, Mfield, 
-//      			mag_lo, mag_hi, 
-//      			prob_lo, prob_hi, 
-//      			geom);
-//
-//              //Initial guess for phi
-//              PoissonPhi.setVal(0.);
-//              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-//      
-//              // Calculate H from Phi
-//      
-//      	ComputeHfromPhi(PoissonPhi, Hx, Hy, Hz, prob_lo, prob_hi, geom);
-//      
+            });    
+            
+        }
 
 	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
@@ -1063,66 +955,61 @@ void main_main ()
             //Averaging face-centerd Multifabs to cell-centers for plotting 
             for (MFIter mfi(Plt); mfi.isValid(); ++mfi)
             {
-            
-                  const Box& bx = mfi.tilebox(); 
+                const Box& bx = mfi.tilebox(); 
 
-            // extract field data
-                  Array4<Real> const &M_xface = Mfield[0].array(mfi);         
-                  Array4<Real> const &M_yface = Mfield[1].array(mfi);         
-                  Array4<Real> const &M_zface = Mfield[2].array(mfi);
+                // extract field data
+                const Array4<Real>& M_xface = Mfield[0].array(mfi);         
+                const Array4<Real>& M_yface = Mfield[1].array(mfi);         
+                const Array4<Real>& M_zface = Mfield[2].array(mfi);
                  
-                  Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
-                  Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
-                  Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
+                const Array4<Real>& H_bias_xface = H_biasfield[0].array(mfi);
+                const Array4<Real>& H_bias_yface = H_biasfield[1].array(mfi);
+                const Array4<Real>& H_bias_zface = H_biasfield[2].array(mfi);
               
-                  Array4<Real> const &Hx = Hfield[0].array(mfi);
-                  Array4<Real> const &Hy = Hfield[1].array(mfi);
-                  Array4<Real> const &Hz = Hfield[2].array(mfi);
-                      
-                  const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
-                  const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
-                  const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+                const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+                const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+                const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
 
-                  const Array4<Real>& plt = Plt.array(mfi);
+                const Array4<Real>& plt = Plt.array(mfi);
 
-                  amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-                  {
-                       //Ms at xface, yface, zface
-                       plt(i,j,k,0) = 0.5 * ( Ms_xface_arr(i,j,k) + Ms_xface_arr(i+1,j,k) );   
-                       plt(i,j,k,1) = 0.5 * ( Ms_yface_arr(i,j,k) + Ms_yface_arr(i,j+1,k) );   
-                       plt(i,j,k,2) = 0.5 * ( Ms_zface_arr(i,j,k) + Ms_zface_arr(i,j,k+1) );   
+                amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                {
+                    //Ms at xface, yface, zface
+                    plt(i,j,k,0) = 0.5 * ( Ms_xface_arr(i,j,k) + Ms_xface_arr(i+1,j,k) );   
+                    plt(i,j,k,1) = 0.5 * ( Ms_yface_arr(i,j,k) + Ms_yface_arr(i,j+1,k) );   
+                    plt(i,j,k,2) = 0.5 * ( Ms_zface_arr(i,j,k) + Ms_zface_arr(i,j,k+1) );   
  
-                       //Mx at xface, yface, zface
-                       plt(i,j,k,3) = 0.5 * ( M_xface(i,j,k,0) + M_xface(i+1,j,k,0) );   
-                       plt(i,j,k,4) = 0.5 * ( M_yface(i,j,k,0) + M_yface(i,j+1,k,0) );   
-                       plt(i,j,k,5) = 0.5 * ( M_zface(i,j,k,0) + M_zface(i,j,k+1,0) );  
+                    //Mx at xface, yface, zface
+                    plt(i,j,k,3) = 0.5 * ( M_xface(i,j,k,0) + M_xface(i+1,j,k,0) );   
+                    plt(i,j,k,4) = 0.5 * ( M_yface(i,j,k,0) + M_yface(i,j+1,k,0) );   
+                    plt(i,j,k,5) = 0.5 * ( M_zface(i,j,k,0) + M_zface(i,j,k+1,0) );  
  
-                       //My at xface, yface, zface
-                       plt(i,j,k,6) = 0.5 * ( M_xface(i,j,k,1) + M_xface(i+1,j,k,1) );   
-                       plt(i,j,k,7) = 0.5 * ( M_yface(i,j,k,1) + M_yface(i,j+1,k,1) );   
-                       plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
+                    //My at xface, yface, zface
+                    plt(i,j,k,6) = 0.5 * ( M_xface(i,j,k,1) + M_xface(i+1,j,k,1) );   
+                    plt(i,j,k,7) = 0.5 * ( M_yface(i,j,k,1) + M_yface(i,j+1,k,1) );   
+                    plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
  
-                       //Mz at xface, yface, zface
-                       plt(i,j,k,9) = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
-                       plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
-                       plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
+                    //Mz at xface, yface, zface
+                    plt(i,j,k,9)  = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
+                    plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
+                    plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
  
-                       //Hx_bias at xface, yface, zface
-                       plt(i,j,k,12) = 0.5 * ( H_bias_xface(i,j,k,0) + H_bias_xface(i+1,j,k,0) );   
-                       plt(i,j,k,13) = 0.5 * ( H_bias_yface(i,j,k,0) + H_bias_yface(i,j+1,k,0) );   
-                       plt(i,j,k,14) = 0.5 * ( H_bias_zface(i,j,k,0) + H_bias_zface(i,j,k+1,0) );  
+                    //Hx_bias at xface, yface, zface
+                    plt(i,j,k,12) = 0.5 * ( H_bias_xface(i,j,k,0) + H_bias_xface(i+1,j,k,0) );   
+                    plt(i,j,k,13) = 0.5 * ( H_bias_yface(i,j,k,0) + H_bias_yface(i,j+1,k,0) );   
+                    plt(i,j,k,14) = 0.5 * ( H_bias_zface(i,j,k,0) + H_bias_zface(i,j,k+1,0) );  
  
-                       //Hy_bias at xface, yface, zface
-                       plt(i,j,k,15) = 0.5 * ( H_bias_xface(i,j,k,1) + H_bias_xface(i+1,j,k,1) );   
-                       plt(i,j,k,16) = 0.5 * ( H_bias_yface(i,j,k,1) + H_bias_yface(i,j+1,k,1) );   
-                       plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
+                    //Hy_bias at xface, yface, zface
+                    plt(i,j,k,15) = 0.5 * ( H_bias_xface(i,j,k,1) + H_bias_xface(i+1,j,k,1) );   
+                    plt(i,j,k,16) = 0.5 * ( H_bias_yface(i,j,k,1) + H_bias_yface(i,j+1,k,1) );   
+                    plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
  
-                       //Hz_bias at xface, yface, zface
-                       plt(i,j,k,18)  = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
-                       plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
-                       plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
+                    //Hz_bias at xface, yface, zface
+                    plt(i,j,k,18) = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
+                    plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
+                    plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
  
-                  });
+                });
 
             } 
             WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
@@ -1135,27 +1022,6 @@ void main_main ()
                                                      geom, time, step);
 
         }
-//        if (plot_int > 0 && step%plot_int == 0)
-//        {
-//            const std::string& pltfile = amrex::Concatenate("plt",step,8);
-//            MultiFab::Copy(Plt, Ms[0], 0, 0, 1, 0);
-//            MultiFab::Copy(Plt, Ms[1], 0, 1, 1, 0);
-//            MultiFab::Copy(Plt, Ms[2], 0, 2, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[0], 0, 3, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[0], 1, 4, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[0], 2, 5, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[1], 1, 7, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[1], 2, 8, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[2], 0, 9, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[2], 1, 10, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[2], 2, 11, 1, 0);
-//            MultiFab::Copy(Plt, H_biasfield[0], 0, 12, 1, 0);
-//            MultiFab::Copy(Plt, H_biasfield[1], 0, 13, 1, 0);
-//            MultiFab::Copy(Plt, H_biasfield[2], 0, 14, 1, 0);
-//            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface","Mx_xface","My_xface","Mz_xface", "Mx_yface", "My_yface", "Mz_yface", "Mx_zface", "My_zface", "Mz_zface", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, step);
-//
-//        }
 
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
@@ -1180,8 +1046,8 @@ void main_main ()
 
     }
     
-        Real total_step_stop_time = ParallelDescriptor::second() - total_step_strt_time;
-        ParallelDescriptor::ReduceRealMax(total_step_stop_time);
+    Real total_step_stop_time = ParallelDescriptor::second() - total_step_strt_time;
+    ParallelDescriptor::ReduceRealMax(total_step_stop_time);
 
-        amrex::Print() << "Total run time " << total_step_stop_time << " seconds\n";
+    amrex::Print() << "Total run time " << total_step_stop_time << " seconds\n";
 }
