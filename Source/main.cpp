@@ -189,15 +189,21 @@ void main_main ()
     // Allocate multifabs
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield;
-    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-    {
-        Mfield[dir].define(ba, dm, Ncomp, Nghost);
-    }
+    // face-centered Mfield
+    AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+                 Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+                 Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
+    // face-centered Mfield_old
+    AMREX_D_TERM(Mfield_old[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+                 Mfield_old[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+                 Mfield_old[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
+
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_cc;
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
     {
-        Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
+        Mfield_cc[dir].define(ba, dm, Ncomp, Nghost);
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
@@ -207,16 +213,36 @@ void main_main ()
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
-    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-    {
-        H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
-    }
+    // face-centered H_biasfield
+    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
 
-    MultiFab alpha(ba, dm, Ncomp, Nghost);
-    MultiFab gamma(ba, dm, Ncomp, Nghost);
-    MultiFab Ms(ba, dm, Ncomp, Nghost);
-    MultiFab exchange(ba, dm, Ncomp, Nghost);
-    MultiFab anisotropy(ba, dm, Ncomp, Nghost);
+    //Face-centered magnetic properties
+    std::array< MultiFab, AMREX_SPACEDIM > alpha;
+    AMREX_D_TERM(alpha[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                 alpha[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                 alpha[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
+    std::array< MultiFab, AMREX_SPACEDIM > gamma;
+    AMREX_D_TERM(gamma[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                 gamma[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                 gamma[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
+    std::array< MultiFab, AMREX_SPACEDIM > Ms;
+    AMREX_D_TERM(Ms[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, Nghost);,
+                 Ms[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, Nghost);,
+                 Ms[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, Nghost););
+
+    std::array< MultiFab, AMREX_SPACEDIM > exchange;
+    AMREX_D_TERM(exchange[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                 exchange[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                 exchange[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
+    std::array< MultiFab, AMREX_SPACEDIM > anisotropy;
+    AMREX_D_TERM(anisotropy[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                 anisotropy[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                 anisotropy[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
@@ -233,7 +259,7 @@ void main_main ()
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
 
-    MultiFab Plt(ba, dm, 12, 0);
+    MultiFab Plt(ba, dm, 21, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -258,50 +284,130 @@ void main_main ()
           const Box& bx = mfi.growntilebox(1); 
 
     // extract field data
-          Array4<Real> const &Mx = Mfield[0].array(mfi);         
-          Array4<Real> const &My = Mfield[1].array(mfi);         
-          Array4<Real> const &Mz = Mfield[2].array(mfi);
+          Array4<Real> const &M_xface = Mfield[0].array(mfi);         
+          Array4<Real> const &M_yface = Mfield[1].array(mfi);         
+          Array4<Real> const &M_zface = Mfield[2].array(mfi);
          
-          Array4<Real> const &Hx_bias = H_biasfield[0].array(mfi);
-          Array4<Real> const &Hy_bias = H_biasfield[1].array(mfi);
-          Array4<Real> const &Hz_bias = H_biasfield[2].array(mfi);
+          Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
+          Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
+          Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
       
           Array4<Real> const &Hx_demag= H_demagfield[0].array(mfi);
           Array4<Real> const &Hy_demag= H_demagfield[1].array(mfi);
           Array4<Real> const &Hz_demag= H_demagfield[2].array(mfi);
               
-          const Array4<Real>& Ms_arr = Ms.array(mfi);
+          const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+          const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+          const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
 
-          amrex::Real angle_theta = 1.5650; // radiant of [111] direction
-          amrex::Real angle_phi = 0.2450; // radiant [111] direction
+          // extract tileboxes for which to loop
+          Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
+          Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
+          Box const &tbz = mfi.tilebox(Mfield[2].ixType().toIntVect());
 
-          amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+          amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
           {
-             if (Ms_arr(i,j,k) > 0._rt)
+
+             if (Ms_xface_arr(i,j,k) > 0._rt)
+             {
+
+                Real x = prob_lo[0] + i * dx[0];
+                Real y = prob_lo[1] + (j+0.5) * dx[1];
+                Real z = prob_lo[2] + (k+0.5) * dx[2];
+               
+                //x_face 
+                M_xface(i,j,k,0) = (y < 0) ? 1.4e5 : 0.;
+                M_xface(i,j,k,1) = 0._rt;
+                M_xface(i,j,k,2) = (y >= 0) ? 1.4e5 : 0.;
+
+                H_bias_xface(i,j,k,0) = 0._rt;         
+                H_bias_xface(i,j,k,1) = 3.7e4;
+                H_bias_xface(i,j,k,2) = 0._rt;
+
+             } else {
+             
+                //x_face 
+                M_xface(i,j,k,0) = 0.0; 
+                M_xface(i,j,k,1) = 0.0;
+                M_xface(i,j,k,2) = 0.0;
+
+                H_bias_xface(i,j,k,0) = 0.0;         
+                H_bias_xface(i,j,k,1) = 0.0;
+                H_bias_xface(i,j,k,2) = 0.0;
+
+	     }
+ 
+
+          });
+
+          amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+          {
+
+             if (Ms_yface_arr(i,j,k) > 0._rt)
+             {
+
+                Real x = prob_lo[0] + (i+0.5) * dx[0];
+                Real y = prob_lo[1] + j * dx[1];
+                Real z = prob_lo[2] + (k+0.5) * dx[2];
+               
+                //y_face
+                M_yface(i,j,k,0) = (y < 0) ? 1.4e5 : 0.;
+                M_yface(i,j,k,1) = 0._rt;
+                M_yface(i,j,k,2) = (y >= 0) ? 1.4e5 : 0.;
+
+                H_bias_yface(i,j,k,0) = 0._rt;         
+                H_bias_yface(i,j,k,1) = 3.7e4;
+                H_bias_yface(i,j,k,2) = 0._rt;
+
+             } else {
+             
+                //y_face
+                M_yface(i,j,k,0) = 0.0;
+                M_yface(i,j,k,1) = 0.0;
+                M_yface(i,j,k,2) = 0.0;
+
+                H_bias_yface(i,j,k,0) = 0.0;         
+                H_bias_yface(i,j,k,1) = 0.0;
+                H_bias_yface(i,j,k,2) = 0.0;
+
+	     }
+
+          });
+
+          amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+          {
+
+             if (Ms_zface_arr(i,j,k) > 0._rt)
              {
 
                 Real x = prob_lo[0] + (i+0.5) * dx[0];
                 Real y = prob_lo[1] + (j+0.5) * dx[1];
-                Real z = prob_lo[2] + (k+0.5) * dx[2];
-                
-                // Mx(i,j,k) = (y < 0) ? Ms_arr(i,j,k) : 0.;
-                // My(i,j,k) = 0._rt;
-                // Mz(i,j,k) = (y >= 0) ? Ms_arr(i,j,k) : 0.;
+                Real z = prob_lo[2] + k * dx[2];
+               
+                //z_face
+                M_zface(i,j,k,0) = (y < 0) ? 1.4e5 : 0.;
+                M_zface(i,j,k,1) = 0._rt;
+                M_zface(i,j,k,2) = (y >= 0) ? 1.4e5 : 0.;
 
-                // Mx(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
-                // My(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
-                // Mz(i,j,k) = 1/sqrt(3.0)*Ms_arr(i,j,k);
-
-                Mx(i,j,k) = 0._rt;
-                My(i,j,k) = Ms_arr(i,j,k);
-                Mz(i,j,k) = 0._rt;
+                H_bias_zface(i,j,k,0) = 0._rt;         
+                H_bias_zface(i,j,k,1) = 3.7e4;
+                H_bias_zface(i,j,k,2) = 0._rt;
 
              } else {
-                Mx(i,j,k) = 0.0;
-                My(i,j,k) = 0.0;
-                Mz(i,j,k) = 0.0;
-            }
+             
+                //z_face
+                M_zface(i,j,k,0) = 0.0;
+                M_zface(i,j,k,1) = 0.0;
+                M_zface(i,j,k,2) = 0.0;
+
+                H_bias_zface(i,j,k,0) = 0.0;         
+                H_bias_zface(i,j,k,1) = 0.0;
+                H_bias_zface(i,j,k,2) = 0.0;
+
+	     }
+
           });
+
 
     } 
     if(demag_coupling == 1){ 
@@ -316,33 +422,118 @@ void main_main ()
         // Calculate H from Phi
         ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
     }
- 
+
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
     {
         int step = 0;
         const std::string& pltfile = amrex::Concatenate("plt",step,8);
-        MultiFab::Copy(Plt, PoissonRHS, 0, 0, 1, 0);  
-        MultiFab::Copy(Plt, Ms, 0, 1, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[0], 0, 2, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[1], 0, 3, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[2], 0, 4, 1, 0);
-        MultiFab::Copy(Plt, Mfield[0], 0, 5, 1, 0);
-        MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
-        MultiFab::Copy(Plt, Mfield[2], 0, 7, 1, 0);
-        MultiFab::Copy(Plt, H_biasfield[0], 0, 8, 1, 0);
-        MultiFab::Copy(Plt, H_biasfield[1], 0, 9, 1, 0);
-        MultiFab::Copy(Plt, H_biasfield[2], 0, 10, 1, 0);
-        MultiFab::Copy(Plt, PoissonPhi, 0, 11, 1, 0);
-        WriteSingleLevelPlotfile(pltfile, Plt, {"PoissonRHS","Ms","Hx_demag","Hy_demag","Hz_demag","Mx", "My", "Mz", "Hx_bias", "Hy_bias", "Hz_bias", "PoissonPhi"}, geom, time, 0);
-    }
+        //Averaging face-centerd Multifabs to cell-centers for plotting 
+        for (MFIter mfi(Plt); mfi.isValid(); ++mfi)
+        {
+        
+              const Box& bx = mfi.tilebox(); 
 
+        // extract field data
+              Array4<Real> const &M_xface = Mfield[0].array(mfi);         
+              Array4<Real> const &M_yface = Mfield[1].array(mfi);         
+              Array4<Real> const &M_zface = Mfield[2].array(mfi);
+             
+              Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
+              Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
+              Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
+          
+              Array4<Real> const &Hx = Hfield[0].array(mfi);
+              Array4<Real> const &Hy = Hfield[1].array(mfi);
+              Array4<Real> const &Hz = Hfield[2].array(mfi);
+                  
+              const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+              const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+              const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+
+              const Array4<Real>& plt = Plt.array(mfi);
+
+              amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+              {
+                   //Ms at xface, yface, zface
+                   plt(i,j,k,0) = 0.5 * ( Ms_xface_arr(i,j,k) + Ms_xface_arr(i+1,j,k) );   
+                   plt(i,j,k,1) = 0.5 * ( Ms_yface_arr(i,j,k) + Ms_yface_arr(i,j+1,k) );   
+                   plt(i,j,k,2) = 0.5 * ( Ms_zface_arr(i,j,k) + Ms_zface_arr(i,j,k+1) );   
+ 
+                   //Mx at xface, yface, zface
+                   plt(i,j,k,3) = 0.5 * ( M_xface(i,j,k,0) + M_xface(i+1,j,k,0) );   
+                   plt(i,j,k,4) = 0.5 * ( M_yface(i,j,k,0) + M_yface(i,j+1,k,0) );   
+                   plt(i,j,k,5) = 0.5 * ( M_zface(i,j,k,0) + M_zface(i,j,k+1,0) );  
+ 
+                   //My at xface, yface, zface
+                   plt(i,j,k,6) = 0.5 * ( M_xface(i,j,k,1) + M_xface(i+1,j,k,1) );   
+                   plt(i,j,k,7) = 0.5 * ( M_yface(i,j,k,1) + M_yface(i,j+1,k,1) );   
+                   plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
+ 
+                   //Mz at xface, yface, zface
+                   plt(i,j,k,9)  = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
+                   plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
+                   plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
+ 
+                   //Hx_bias at xface, yface, zface
+                   plt(i,j,k,12) = 0.5 * ( H_bias_xface(i,j,k,0) + H_bias_xface(i+1,j,k,0) );   
+                   plt(i,j,k,13) = 0.5 * ( H_bias_yface(i,j,k,0) + H_bias_yface(i,j+1,k,0) );   
+                   plt(i,j,k,14) = 0.5 * ( H_bias_zface(i,j,k,0) + H_bias_zface(i,j,k+1,0) );  
+ 
+                   //Hy_bias at xface, yface, zface
+                   plt(i,j,k,15) = 0.5 * ( H_bias_xface(i,j,k,1) + H_bias_xface(i+1,j,k,1) );   
+                   plt(i,j,k,16) = 0.5 * ( H_bias_yface(i,j,k,1) + H_bias_yface(i,j+1,k,1) );   
+                   plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
+ 
+                   //Hz_bias at xface, yface, zface
+                   plt(i,j,k,18) = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
+                   plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
+                   plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
+ 
+              });
+
+        } 
+        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
+                                                "Mx_xface","Mx_yface","Mx_zface",
+                                                "My_xface", "My_yface", "My_zface",
+                                                "Mz_xface", "Mz_yface", "Mz_zface",
+                                                "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
+                                                "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
+                                                "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface"},
+                                                 geom, time, step);
+
+    }
+/*
+    // Write a plotfile of the initial data if plot_int > 0
+    if (plot_int > 0)
+    {
+        int step = 0;
+        const std::string& pltfile = amrex::Concatenate("plt",step,8);
+        
+        MultiFab::Copy(Plt, Ms[0], 0, 0, 1, 0);
+        MultiFab::Copy(Plt, Ms[1], 0, 1, 1, 0);
+        MultiFab::Copy(Plt, Ms[2], 0, 2, 1, 0);
+        MultiFab::Copy(Plt, Mfield[0], 0, 3, 1, 0);
+        MultiFab::Copy(Plt, Mfield[0], 1, 4, 1, 0);
+        MultiFab::Copy(Plt, Mfield[0], 2, 5, 1, 0);
+        MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
+        MultiFab::Copy(Plt, Mfield[1], 1, 7, 1, 0);
+        MultiFab::Copy(Plt, Mfield[1], 2, 8, 1, 0);
+        MultiFab::Copy(Plt, Mfield[2], 0, 9, 1, 0);
+        MultiFab::Copy(Plt, Mfield[2], 1, 10, 1, 0);
+        MultiFab::Copy(Plt, Mfield[2], 2, 11, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[0], 0, 12, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[1], 0, 13, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[2], 0, 14, 1, 0);
+        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface","Mx_xface","My_xface","Mz_xface", "Mx_yface", "My_yface", "Mz_yface", "Mx_zface", "My_zface", "Mz_zface", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, 0);
+    }
+*/
     for (int step = 1; step <= nsteps; ++step)
     {
         // copy new solution into old solution
         for(int comp = 0; comp < 3; comp++)
         {
-           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
+           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, 1);
 
            // fill periodic ghost cells
            Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -376,63 +567,61 @@ void main_main ()
               Array4<Real> const &Hx_demag= H_demagfield[0].array(mfi);
               Array4<Real> const &Hy_demag= H_demagfield[1].array(mfi);
               Array4<Real> const &Hz_demag= H_demagfield[2].array(mfi);
-              Array4<Real> const &Mx = Mfield[0].array(mfi);         
-              Array4<Real> const &My = Mfield[1].array(mfi);         
-              Array4<Real> const &Mz = Mfield[2].array(mfi);         
-              Array4<Real> const &Mx_old = Mfield_old[0].array(mfi); 
-              Array4<Real> const &My_old = Mfield_old[1].array(mfi); 
-              Array4<Real> const &Mz_old = Mfield_old[2].array(mfi); 
-              Array4<Real> const &Hx_bias = H_biasfield[0].array(mfi);
-              Array4<Real> const &Hy_bias = H_biasfield[1].array(mfi);
-              Array4<Real> const &Hz_bias = H_biasfield[2].array(mfi);
+
+              Array4<Real> const &M_xface = Mfield[0].array(mfi);         
+              Array4<Real> const &M_yface = Mfield[1].array(mfi);         
+              Array4<Real> const &M_zface = Mfield[2].array(mfi);         
+
+              Array4<Real> const &M_xface_old = Mfield_old[0].array(mfi); 
+              Array4<Real> const &M_yface_old = Mfield_old[1].array(mfi); 
+              Array4<Real> const &M_zface_old = Mfield_old[2].array(mfi); 
+
+              Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
+              Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
+              Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
           
-              const Array4<Real>& alpha_arr = alpha.array(mfi);
-              const Array4<Real>& gamma_arr = gamma.array(mfi);
-              const Array4<Real>& Ms_arr = Ms.array(mfi);
-              const Array4<Real>& exchange_arr = exchange.array(mfi);
-              const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
+              const Array4<Real>& alpha_xface_arr = alpha[0].array(mfi);
+              const Array4<Real>& alpha_yface_arr = alpha[1].array(mfi);
+              const Array4<Real>& alpha_zface_arr = alpha[2].array(mfi);
 
-              amrex::Real t0 = 1.0e-9; // time when bias reduces to zero
-              amrex::Real frequency = 2.e9;
-              amrex::Real TP = 1/frequency;
-              amrex::Real pi = 3.14159265358979;
- 
-              amrex::ParallelForRNG( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
+              const Array4<Real>& gamma_xface_arr = gamma[0].array(mfi);
+              const Array4<Real>& gamma_yface_arr = gamma[1].array(mfi);
+              const Array4<Real>& gamma_zface_arr = gamma[2].array(mfi);
+
+              const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+              const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+              const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+
+              const Array4<Real>& exchange_xface_arr = exchange[0].array(mfi);
+              const Array4<Real>& exchange_yface_arr = exchange[1].array(mfi);
+              const Array4<Real>& exchange_zface_arr = exchange[2].array(mfi);
+
+              const Array4<Real>& anisotropy_xface_arr = anisotropy[0].array(mfi);
+              const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
+              const Array4<Real>& anisotropy_zface_arr = anisotropy[2].array(mfi);
+
+
+              // extract tileboxes for which to loop
+              Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
+              Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
+              Box const &tbz = mfi.tilebox(Mfield[2].ixType().toIntVect());
+
+              //xface 
+              amrex::ParallelFor( tbx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
               {
-                 if (Ms_arr(i,j,k) > 0._rt)
+                 if (Ms_xface_arr(i,j,k) > 0._rt)
                  {
+                    amrex::Real Hx_eff = H_bias_xface(i,j,k,0);
+                    amrex::Real Hy_eff = H_bias_xface(i,j,k,1);
+                    amrex::Real Hz_eff = H_bias_xface(i,j,k,2);
 
-                    // if (time <= t0){
-                    //     Hx_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
-                    //     Hy_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
-                    //     Hz_bias(i,j,k) = 1.0e5 * (1-time/t0) * 1._rt/sqrt(3);
-                    // } else {
-                    //     Hx_bias(i,j,k) = 0.0 ;
-                    //     Hy_bias(i,j,k) = 0.0 ;
-                    //     Hz_bias(i,j,k) = 0.0 ;
-                    // }
-
-                    amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    // PSSW validation
+                    // amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
                     
-                    Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*pi*frequency*time)) * cos(z / 345.0e-9 * pi);
-                    Hy_bias(i,j,k) = 2.4e4;
-                    Hz_bias(i,j,k) = 0.;
-
-                    // Hx_bias(i,j,k) = (j < 32) ? 1.0e5 : 0.;
-                    // Hy_bias(i,j,k) = (j < 32) ? 0. : 1.0e5;
+                    // Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*pi*frequency*time)) * cos(z / 345.0e-9 * pi);
+                    // Hy_bias(i,j,k) = 2.4e4;
                     // Hz_bias(i,j,k) = 0.;
 
-                    amrex::Real Hx_eff = Hx_bias(i,j,k);
-                    amrex::Real Hy_eff = Hy_bias(i,j,k);
-                    amrex::Real Hz_eff = Hz_bias(i,j,k);
-
-                    if (step == 1){
-                        Hx_eff += (-1.0 + 2.0*Random(engine))*0.000002; // add random noise
-                        Hy_eff += (-1.0 + 2.0*Random(engine))*0.000002; // add random noise
-                        Hz_eff += (-1.0 + 2.0*Random(engine))*0.000002; // add random noise
-                    }
-                    
-                    
                     if(demag_coupling == 1)
                     {
                         Hx_eff += Hx_demag(i,j,k);
@@ -451,22 +640,22 @@ void main_main ()
                     if(exchange_coupling == 1)
                     { 
                     //Add exchange term
-                      if (exchange_arr(i,j,k) == 0._rt) amrex::Abort("The exchange_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
+                      if (exchange_xface_arr(i,j,k) == 0._rt) amrex::Abort("The exchange_yface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                       // H_exchange - use M^(old_time)
-                      amrex::Real const H_exchange_coeff = 2.0 * exchange_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
+                      amrex::Real const H_exchange_coeff = 2.0 * exchange_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
 
-                      amrex::Real Ms_lo_x = Ms_arr(i-1, j, k); 
-                      amrex::Real Ms_hi_x = Ms_arr(i+1, j, k); 
-                      amrex::Real Ms_lo_y = Ms_arr(i, j-1, k); 
-                      amrex::Real Ms_hi_y = Ms_arr(i, j+1, k); 
-                      amrex::Real Ms_lo_z = Ms_arr(i, j, k-1);
-                      amrex::Real Ms_hi_z = Ms_arr(i, j, k+1);
+                      amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k); 
+                      amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k); 
+                      amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k); 
+                      amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k); 
+                      amrex::Real Ms_lo_z = Ms_xface_arr(i, j, k-1);
+                      amrex::Real Ms_hi_z = Ms_xface_arr(i, j, k+1);
 
-                      if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx));
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(Mx_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(My_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(Mz_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx);
+		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
 
                     }
                  
@@ -474,12 +663,14 @@ void main_main ()
                     {
                      //Add anisotropy term
  
-                     if (anisotropy_arr(i,j,k) == 0._rt) amrex::Abort("The anisotropy_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
+                     if (anisotropy_xface_arr(i,j,k) == 0._rt) amrex::Abort("The anisotropy_xface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                       // H_anisotropy - use M^(old_time)
                       amrex::Real M_dot_anisotropy_axis = 0.0;
-                      M_dot_anisotropy_axis = Mx(i, j, k) * anisotropy_axis[0] + My(i, j, k) * anisotropy_axis[1] + Mz(i, j, k) * anisotropy_axis[2];
-                      amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
+                      for (int comp=0; comp<3; ++comp) {
+                          M_dot_anisotropy_axis += M_xface_old(i, j, k, comp) * anisotropy_axis[comp];
+                      }
+                      amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
                       Hx_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
                       Hy_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
                       Hz_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
@@ -488,33 +679,149 @@ void main_main ()
 
                    //Update M
 
-                   amrex::Real mag_gammaL = gamma_arr(i,j,k) / (1._rt + std::pow(alpha_arr(i,j,k), 2._rt));
+                   amrex::Real mag_gammaL = gamma_xface_arr(i,j,k) / (1._rt + std::pow(alpha_xface_arr(i,j,k), 2._rt));
 
-                   // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s 
-                   amrex::Real M_magnitude = (M_normalization == 0) ? std::sqrt(std::pow(Mx(i, j, k), 2._rt) + std::pow(My(i, j, k), 2._rt) + std::pow(Mz(i, j, k), 2._rt))
-                                                             : Ms_arr(i,j,k);
-                   amrex::Real Gil_damp = mu0 * mag_gammaL * alpha_arr(i,j,k) / M_magnitude;
+                   // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
+                   amrex::Real M_magnitude = (M_normalization == 0) ? std::sqrt(std::pow(M_xface(i, j, k, 0), 2._rt) + std::pow(M_xface(i, j, k, 1), 2._rt) + std::pow(M_xface(i, j, k, 2), 2._rt))
+                                                              : Ms_xface_arr(i,j,k); 
+                   amrex::Real Gil_damp = mu0 * mag_gammaL * alpha_xface_arr(i,j,k) / M_magnitude;
 
-                   // x component on cell-centers
-                   Mx(i, j, k) += dt * (mu0 * mag_gammaL) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff)
-                                        + dt * Gil_damp * (My_old(i, j, k) * (Mx_old(i, j, k) * Hy_eff - My_old(i, j, k) * Hx_eff)
-                                        - Mz_old(i, j, k) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff));
+                   // x component on x-faces of grid
+                    M_xface(i, j, k, 0) += dt * (mu0 * mag_gammaL) * (M_xface_old(i, j, k, 1) * Hz_eff - M_xface_old(i, j, k, 2) * Hy_eff)
+                                         + dt * Gil_damp * (M_xface_old(i, j, k, 1) * (M_xface_old(i, j, k, 0) * Hy_eff - M_xface_old(i, j, k, 1) * Hx_eff)
+                                         - M_xface_old(i, j, k, 2) * (M_xface_old(i, j, k, 2) * Hx_eff - M_xface_old(i, j, k, 0) * Hz_eff));
 
-                   // y component on cell-centers
-                   My(i, j, k) += dt * (mu0 * mag_gammaL) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff)
-                                        + dt * Gil_damp * (Mz_old(i, j, k) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff)
-                                        - Mx_old(i, j, k) * (Mx_old(i, j, k) * Hy_eff - My_old(i, j, k) * Hx_eff));
+                    // y component on x-faces of grid
+                    M_xface(i, j, k, 1) += dt * (mu0 * mag_gammaL) * (M_xface_old(i, j, k, 2) * Hx_eff - M_xface_old(i, j, k, 0) * Hz_eff)
+                                         + dt * Gil_damp * (M_xface_old(i, j, k, 2) * (M_xface_old(i, j, k, 1) * Hz_eff - M_xface_old(i, j, k, 2) * Hy_eff)
+                                         - M_xface_old(i, j, k, 0) * (M_xface_old(i, j, k, 0) * Hy_eff - M_xface_old(i, j, k, 1) * Hx_eff));
 
-                   // z component on cell-centers
-                   Mz(i, j, k) += dt * (mu0 * mag_gammaL) * (Mx_old(i, j, k) * Hy_eff - My_old(i, j, k) * Hx_eff)
-                                        + dt * Gil_damp * (Mx_old(i, j, k) * (Mz_old(i, j, k) * Hx_eff - Mx_old(i, j, k) * Hz_eff)
-                                        - My_old(i, j, k) * (My_old(i, j, k) * Hz_eff - Mz_old(i, j, k) * Hy_eff));
-  
+                    // z component on x-faces of grid
+                    M_xface(i, j, k, 2) += dt * (mu0 * mag_gammaL) * (M_xface_old(i, j, k, 0) * Hy_eff - M_xface_old(i, j, k, 1) * Hx_eff)
+                                         + dt * Gil_damp * (M_xface_old(i, j, k, 0) * (M_xface_old(i, j, k, 2) * Hx_eff - M_xface_old(i, j, k, 0) * Hz_eff)
+                                         - M_xface_old(i, j, k, 1) * (M_xface_old(i, j, k, 1) * Hz_eff - M_xface_old(i, j, k, 2) * Hy_eff));
 
                    // temporary normalized magnitude of M_xface field at the fixed point
-                   amrex::Real M_magnitude_normalized = std::sqrt(std::pow(Mx(i, j, k), 2._rt) + std::pow(My(i, j, k), 2._rt) + std::pow(Mz(i, j, k), 2._rt)) / Ms_arr(i,j,k);
+                   amrex::Real M_magnitude_normalized = std::sqrt(std::pow(M_xface(i, j, k, 0), 2._rt) + std::pow(M_xface(i, j, k, 1), 2._rt) + std::pow(M_xface(i, j, k, 2), 2._rt)) / Ms_xface_arr(i,j,k);
+                   amrex::Real normalized_error = 0.1;
 
-                       
+                   if (M_normalization > 0)
+                   {
+                       // saturated case; if |M| has drifted from M_s too much, abort.  Otherwise, normalize
+                       // check the normalized error
+                       if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
+                       {
+                           printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                           amrex::Abort("Exceed the normalized error of the Mx field");
+                       }
+                       // normalize the M field
+                       M_xface(i, j, k, 0) /= M_magnitude_normalized;
+                       M_xface(i, j, k, 1) /= M_magnitude_normalized;
+                       M_xface(i, j, k, 2) /= M_magnitude_normalized;
+                   }
+                   else if (M_normalization == 0)
+                   {   
+		       if(i == 1 && j == 1 && k == 1) printf("Here ??? \n");
+                       // check the normalized error
+                       if (M_magnitude_normalized > (1._rt + normalized_error))
+                       {
+                           amrex::Abort("Caution: Unsaturated material has M_xface exceeding the saturation magnetization");
+                       }
+                       else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
+                       {
+                           // normalize the M field
+                           M_xface(i, j, k, 0) /= M_magnitude_normalized;
+                           M_xface(i, j, k, 1) /= M_magnitude_normalized;
+                           M_xface(i, j, k, 2) /= M_magnitude_normalized;
+                       }
+                   }
+
+                 }   
+ 
+              });     
+                      
+              //yface 
+              amrex::ParallelFor( tby, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+              {
+                 if (Ms_yface_arr(i,j,k) > 0._rt)
+                 {
+                    amrex::Real Hx_eff = H_bias_yface(i,j,k,0);
+                    amrex::Real Hy_eff = H_bias_yface(i,j,k,1);
+                    amrex::Real Hz_eff = H_bias_yface(i,j,k,2);
+                 
+                    if(demag_coupling == 1)
+                    {
+                      Hx_eff += Hx(i,j,k);
+                      Hy_eff += Hy(i,j,k);
+                      Hz_eff += Hz(i,j,k);
+                    }
+
+                    if(exchange_coupling == 1)
+                    { 
+                    //Add exchange term
+                      if (exchange_yface_arr(i,j,k) == 0._rt) amrex::Abort("The exchange_yface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
+
+                      // H_exchange - use M^(old_time)
+                      amrex::Real const H_exchange_coeff = 2.0 * exchange_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
+
+                      amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k); 
+                      amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k); 
+                      amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k); 
+                      amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k); 
+                      amrex::Real Ms_lo_z = Ms_yface_arr(i, j, k-1);
+                      amrex::Real Ms_hi_z = Ms_yface_arr(i, j, k+1);
+
+		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+
+                    }
+                 
+                    if(anisotropy_coupling == 1)
+                    {
+                     //Add anisotropy term
+ 
+                     if (anisotropy_yface_arr(i,j,k) == 0._rt) amrex::Abort("The anisotropy_yface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
+
+                      // H_anisotropy - use M^(old_time)
+                      amrex::Real M_dot_anisotropy_axis = 0.0;
+                      for (int comp=0; comp<3; ++comp) {
+                          M_dot_anisotropy_axis += M_yface_old(i, j, k, comp) * anisotropy_axis[comp];
+                      }
+                      amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
+                      Hx_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
+                      Hy_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
+                      Hz_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+
+                    }
+
+                   //Update M
+
+                   amrex::Real mag_gammaL = gamma_yface_arr(i,j,k) / (1._rt + std::pow(alpha_yface_arr(i,j,k), 2._rt));
+
+                   // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
+                   amrex::Real M_magnitude = (M_normalization == 0) ? std::sqrt(std::pow(M_yface(i, j, k, 0), 2._rt) + std::pow(M_yface(i, j, k, 1), 2._rt) + std::pow(M_yface(i, j, k, 2), 2._rt))
+                                                              : Ms_yface_arr(i,j,k); 
+                   amrex::Real Gil_damp = mu0 * mag_gammaL * alpha_yface_arr(i,j,k) / M_magnitude;
+
+                   // x component on y-faces of grid
+                    M_yface(i, j, k, 0) += dt * (mu0 * mag_gammaL) * (M_yface_old(i, j, k, 1) * Hz_eff - M_yface_old(i, j, k, 2) * Hy_eff)
+                                         + dt * Gil_damp * (M_yface_old(i, j, k, 1) * (M_yface_old(i, j, k, 0) * Hy_eff - M_yface_old(i, j, k, 1) * Hx_eff)
+                                         - M_yface_old(i, j, k, 2) * (M_yface_old(i, j, k, 2) * Hx_eff - M_yface_old(i, j, k, 0) * Hz_eff));
+
+                    // y component on y-faces of grid
+                    M_yface(i, j, k, 1) += dt * (mu0 * mag_gammaL) * (M_yface_old(i, j, k, 2) * Hx_eff - M_yface_old(i, j, k, 0) * Hz_eff)
+                                         + dt * Gil_damp * (M_yface_old(i, j, k, 2) * (M_yface_old(i, j, k, 1) * Hz_eff - M_yface_old(i, j, k, 2) * Hy_eff)
+                                         - M_yface_old(i, j, k, 0) * (M_yface_old(i, j, k, 0) * Hy_eff - M_yface_old(i, j, k, 1) * Hx_eff));
+
+                    // z component on y-faces of grid
+                    M_yface(i, j, k, 2) += dt * (mu0 * mag_gammaL) * (M_yface_old(i, j, k, 0) * Hy_eff - M_yface_old(i, j, k, 1) * Hx_eff)
+                                         + dt * Gil_damp * (M_yface_old(i, j, k, 0) * (M_yface_old(i, j, k, 2) * Hx_eff - M_yface_old(i, j, k, 0) * Hz_eff)
+                                         - M_yface_old(i, j, k, 1) * (M_yface_old(i, j, k, 1) * Hz_eff - M_yface_old(i, j, k, 2) * Hy_eff));
+
+                   // temporary normalized magnitude of M_xface field at the fixed point
+                   amrex::Real M_magnitude_normalized = std::sqrt(std::pow(M_yface(i, j, k, 0), 2._rt) + std::pow(M_yface(i, j, k, 1), 2._rt) + std::pow(M_yface(i, j, k, 2), 2._rt)) / Ms_yface_arr(i,j,k);
                    amrex::Real normalized_error = 0.1;
 
                    if (M_normalization > 0)
@@ -528,9 +835,9 @@ void main_main ()
                            amrex::Abort("Exceed the normalized error of the Mx field");
                        }
                        // normalize the M field
-                       Mx(i, j, k) /= M_magnitude_normalized;
-                       My(i, j, k) /= M_magnitude_normalized;
-                       Mz(i, j, k) /= M_magnitude_normalized;
+                       M_yface(i, j, k, 0) /= M_magnitude_normalized;
+                       M_yface(i, j, k, 1) /= M_magnitude_normalized;
+                       M_yface(i, j, k, 2) /= M_magnitude_normalized;
                    }
                    else if (M_normalization == 0)
                    {   
@@ -543,9 +850,9 @@ void main_main ()
                        else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
                        {
                            // normalize the M field
-                           Mx(i, j, k) /= M_magnitude_normalized;
-                           My(i, j, k) /= M_magnitude_normalized;
-                           Mz(i, j, k) /= M_magnitude_normalized;
+                           M_yface(i, j, k, 0) /= M_magnitude_normalized;
+                           M_yface(i, j, k, 1) /= M_magnitude_normalized;
+                           M_yface(i, j, k, 2) /= M_magnitude_normalized;
                        }
                    }
 
@@ -553,6 +860,125 @@ void main_main ()
  
               });     
                       
+              //zface 
+              amrex::ParallelFor( tbz, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+              {
+                 if (Ms_zface_arr(i,j,k) > 0._rt)
+                 {
+                    amrex::Real Hx_eff = H_bias_zface(i,j,k,0);
+                    amrex::Real Hy_eff = H_bias_zface(i,j,k,1);
+                    amrex::Real Hz_eff = H_bias_zface(i,j,k,2);
+                 
+                    if(demag_coupling == 1)
+                    {
+                      Hx_eff += Hx(i,j,k);
+                      Hy_eff += Hy(i,j,k);
+                      Hz_eff += Hz(i,j,k);
+                    }
+
+                    if(exchange_coupling == 1)
+                    { 
+                    //Add exchange term
+                      if (exchange_zface_arr(i,j,k) == 0._rt) amrex::Abort("The exchange_zface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
+
+                      // H_exchange - use M^(old_time)
+                      amrex::Real const H_exchange_coeff = 2.0 * exchange_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
+
+                      amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k); 
+                      amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k); 
+                      amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k); 
+                      amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k); 
+                      amrex::Real Ms_lo_z = Ms_zface_arr(i, j, k-1);
+                      amrex::Real Ms_hi_z = Ms_zface_arr(i, j, k+1);
+
+		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+
+                    }
+                 
+                    if(anisotropy_coupling == 1)
+                    {
+                     //Add anisotropy term
+ 
+                     if (anisotropy_zface_arr(i,j,k) == 0._rt) amrex::Abort("The anisotropy_zface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
+
+                      // H_anisotropy - use M^(old_time)
+                      amrex::Real M_dot_anisotropy_axis = 0.0;
+                      for (int comp=0; comp<3; ++comp) {
+                          M_dot_anisotropy_axis += M_zface_old(i, j, k, comp) * anisotropy_axis[comp];
+                      }
+                      amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
+                      Hx_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
+                      Hy_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
+                      Hz_eff += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+
+                    }
+
+                   //Update M
+
+                   amrex::Real mag_gammaL = gamma_zface_arr(i,j,k) / (1._rt + std::pow(alpha_zface_arr(i,j,k), 2._rt));
+
+                   // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
+                   amrex::Real M_magnitude = (M_normalization == 0) ? std::sqrt(std::pow(M_zface(i, j, k, 0), 2._rt) + std::pow(M_zface(i, j, k, 1), 2._rt) + std::pow(M_zface(i, j, k, 2), 2._rt))
+                                                              : Ms_zface_arr(i,j,k); 
+                   amrex::Real Gil_damp = mu0 * mag_gammaL * alpha_zface_arr(i,j,k) / M_magnitude;
+
+                   // x component on z-faces of grid
+                    M_zface(i, j, k, 0) += dt * (mu0 * mag_gammaL) * (M_zface_old(i, j, k, 1) * Hz_eff - M_zface_old(i, j, k, 2) * Hy_eff)
+                                         + dt * Gil_damp * (M_zface_old(i, j, k, 1) * (M_zface_old(i, j, k, 0) * Hy_eff - M_zface_old(i, j, k, 1) * Hx_eff)
+                                         - M_zface_old(i, j, k, 2) * (M_zface_old(i, j, k, 2) * Hx_eff - M_zface_old(i, j, k, 0) * Hz_eff));
+
+                    // y component on z-faces of grid
+                    M_zface(i, j, k, 1) += dt * (mu0 * mag_gammaL) * (M_zface_old(i, j, k, 2) * Hx_eff - M_zface_old(i, j, k, 0) * Hz_eff)
+                                         + dt * Gil_damp * (M_zface_old(i, j, k, 2) * (M_zface_old(i, j, k, 1) * Hz_eff - M_zface_old(i, j, k, 2) * Hy_eff)
+                                         - M_zface_old(i, j, k, 0) * (M_zface_old(i, j, k, 0) * Hy_eff - M_zface_old(i, j, k, 1) * Hx_eff));
+
+                    // z component on z-faces of grid
+                    M_zface(i, j, k, 2) += dt * (mu0 * mag_gammaL) * (M_zface_old(i, j, k, 0) * Hy_eff - M_zface_old(i, j, k, 1) * Hx_eff)
+                                         + dt * Gil_damp * (M_zface_old(i, j, k, 0) * (M_zface_old(i, j, k, 2) * Hx_eff - M_zface_old(i, j, k, 0) * Hz_eff)
+                                         - M_zface_old(i, j, k, 1) * (M_zface_old(i, j, k, 1) * Hz_eff - M_zface_old(i, j, k, 2) * Hy_eff));
+
+                   // temporary normalized magnitude of M_xface field at the fixed point
+                   amrex::Real M_magnitude_normalized = std::sqrt(std::pow(M_zface(i, j, k, 0), 2._rt) + std::pow(M_zface(i, j, k, 1), 2._rt) + std::pow(M_zface(i, j, k, 2), 2._rt)) / Ms_zface_arr(i,j,k);
+                   amrex::Real normalized_error = 0.1;
+
+                   if (M_normalization > 0)
+                   {
+                       // saturated case; if |M| has drifted from M_s too much, abort.  Otherwise, normalize
+                       // check the normalized error
+                       if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
+                       {
+                           printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                           amrex::Abort("Exceed the normalized error of the Mx field");
+                       }
+                       // normalize the M field
+                       M_zface(i, j, k, 0) /= M_magnitude_normalized;
+                       M_zface(i, j, k, 1) /= M_magnitude_normalized;
+                       M_zface(i, j, k, 2) /= M_magnitude_normalized;
+                   }
+                   else if (M_normalization == 0)
+                   {   
+		       if(i == 1 && j == 1 && k == 1) printf("Here ??? \n");
+                       // check the normalized error
+                       if (M_magnitude_normalized > (1._rt + normalized_error))
+                       {
+                           amrex::Abort("Caution: Unsaturated material has M_xface exceeding the saturation magnetization");
+                       }
+                       else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
+                       {
+                           // normalize the M field
+                           M_zface(i, j, k, 0) /= M_magnitude_normalized;
+                           M_zface(i, j, k, 1) /= M_magnitude_normalized;
+                           M_zface(i, j, k, 2) /= M_magnitude_normalized;
+                       }
+                   }
+
+                 }   
+ 
+              });    
+ 
      }  
 
 	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
@@ -563,23 +989,106 @@ void main_main ()
         // update time
         time = time + dt;
 
+        // Write a plotfile of the initial data if plot_int > 0
         if (plot_int > 0 && step%plot_int == 0)
         {
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
-            MultiFab::Copy(Plt, PoissonRHS, 0, 0, 1, 0);  
-            MultiFab::Copy(Plt, Ms, 0, 1, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[0], 0, 2, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[1], 0, 3, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[2], 0, 4, 1, 0);
-            MultiFab::Copy(Plt, Mfield[0], 0, 5, 1, 0);
-            MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
-            MultiFab::Copy(Plt, Mfield[2], 0, 7, 1, 0);
-            MultiFab::Copy(Plt, H_biasfield[0], 0, 8, 1, 0);
-            MultiFab::Copy(Plt, H_biasfield[1], 0, 9, 1, 0);
-            MultiFab::Copy(Plt, H_biasfield[2], 0, 10, 1, 0);
-            MultiFab::Copy(Plt, PoissonPhi, 0, 11, 1, 0);
-            WriteSingleLevelPlotfile(pltfile, Plt, {"PoissonRHS","Ms","Hx_demag","Hy_demag","Hz_demag","Mx", "My", "Mz", "Hx_bias", "Hy_bias", "Hz_bias", "PoissonPhi"}, geom, time, step);
+            //Averaging face-centerd Multifabs to cell-centers for plotting 
+            for (MFIter mfi(Plt); mfi.isValid(); ++mfi)
+            {
+            
+                  const Box& bx = mfi.tilebox(); 
+
+            // extract field data
+                  Array4<Real> const &M_xface = Mfield[0].array(mfi);         
+                  Array4<Real> const &M_yface = Mfield[1].array(mfi);         
+                  Array4<Real> const &M_zface = Mfield[2].array(mfi);
+                 
+                  Array4<Real> const &H_bias_xface = H_biasfield[0].array(mfi);
+                  Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
+                  Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
+              
+                  Array4<Real> const &Hx = Hfield[0].array(mfi);
+                  Array4<Real> const &Hy = Hfield[1].array(mfi);
+                  Array4<Real> const &Hz = Hfield[2].array(mfi);
+                      
+                  const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+                  const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+                  const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
+
+                  const Array4<Real>& plt = Plt.array(mfi);
+
+                  amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                  {
+                       //Ms at xface, yface, zface
+                       plt(i,j,k,0) = 0.5 * ( Ms_xface_arr(i,j,k) + Ms_xface_arr(i+1,j,k) );   
+                       plt(i,j,k,1) = 0.5 * ( Ms_yface_arr(i,j,k) + Ms_yface_arr(i,j+1,k) );   
+                       plt(i,j,k,2) = 0.5 * ( Ms_zface_arr(i,j,k) + Ms_zface_arr(i,j,k+1) );   
+ 
+                       //Mx at xface, yface, zface
+                       plt(i,j,k,3) = 0.5 * ( M_xface(i,j,k,0) + M_xface(i+1,j,k,0) );   
+                       plt(i,j,k,4) = 0.5 * ( M_yface(i,j,k,0) + M_yface(i,j+1,k,0) );   
+                       plt(i,j,k,5) = 0.5 * ( M_zface(i,j,k,0) + M_zface(i,j,k+1,0) );  
+ 
+                       //My at xface, yface, zface
+                       plt(i,j,k,6) = 0.5 * ( M_xface(i,j,k,1) + M_xface(i+1,j,k,1) );   
+                       plt(i,j,k,7) = 0.5 * ( M_yface(i,j,k,1) + M_yface(i,j+1,k,1) );   
+                       plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
+ 
+                       //Mz at xface, yface, zface
+                       plt(i,j,k,9) = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
+                       plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
+                       plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
+ 
+                       //Hx_bias at xface, yface, zface
+                       plt(i,j,k,12) = 0.5 * ( H_bias_xface(i,j,k,0) + H_bias_xface(i+1,j,k,0) );   
+                       plt(i,j,k,13) = 0.5 * ( H_bias_yface(i,j,k,0) + H_bias_yface(i,j+1,k,0) );   
+                       plt(i,j,k,14) = 0.5 * ( H_bias_zface(i,j,k,0) + H_bias_zface(i,j,k+1,0) );  
+ 
+                       //Hy_bias at xface, yface, zface
+                       plt(i,j,k,15) = 0.5 * ( H_bias_xface(i,j,k,1) + H_bias_xface(i+1,j,k,1) );   
+                       plt(i,j,k,16) = 0.5 * ( H_bias_yface(i,j,k,1) + H_bias_yface(i,j+1,k,1) );   
+                       plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
+ 
+                       //Hz_bias at xface, yface, zface
+                       plt(i,j,k,18)  = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
+                       plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
+                       plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
+ 
+                  });
+
+            } 
+            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
+                                                    "Mx_xface","Mx_yface","Mx_zface",
+                                                    "My_xface", "My_yface", "My_zface",
+                                                    "Mz_xface", "Mz_yface", "Mz_zface",
+                                                    "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
+                                                    "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
+                                                    "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface"},
+                                                     geom, time, step);
+
         }
+//        if (plot_int > 0 && step%plot_int == 0)
+//        {
+//            const std::string& pltfile = amrex::Concatenate("plt",step,8);
+//            MultiFab::Copy(Plt, Ms[0], 0, 0, 1, 0);
+//            MultiFab::Copy(Plt, Ms[1], 0, 1, 1, 0);
+//            MultiFab::Copy(Plt, Ms[2], 0, 2, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[0], 0, 3, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[0], 1, 4, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[0], 2, 5, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[1], 1, 7, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[1], 2, 8, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[2], 0, 9, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[2], 1, 10, 1, 0);
+//            MultiFab::Copy(Plt, Mfield[2], 2, 11, 1, 0);
+//            MultiFab::Copy(Plt, H_biasfield[0], 0, 12, 1, 0);
+//            MultiFab::Copy(Plt, H_biasfield[1], 0, 13, 1, 0);
+//            MultiFab::Copy(Plt, H_biasfield[2], 0, 14, 1, 0);
+//            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface","Mx_xface","My_xface","Mz_xface", "Mx_yface", "My_yface", "Mz_yface", "Mx_zface", "My_zface", "Mz_zface", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, step);
+//
+//        }
 
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();

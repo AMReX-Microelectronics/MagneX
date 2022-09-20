@@ -4,11 +4,11 @@
 
 using namespace amrex;
 
-void InitializeMagneticProperties(MultiFab&  alpha,
-                   MultiFab&   Ms, 
-                   MultiFab&   gamma,
-                   MultiFab&   exchange,
-                   MultiFab&   anisotropy,
+void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha,
+                   std::array< MultiFab, AMREX_SPACEDIM >&   Ms, 
+                   std::array< MultiFab, AMREX_SPACEDIM >&   gamma,
+                   std::array< MultiFab, AMREX_SPACEDIM >&   exchange,
+                   std::array< MultiFab, AMREX_SPACEDIM >&   anisotropy,
                    Real        alpha_val,
                    Real        Ms_val,
                    Real        gamma_val,
