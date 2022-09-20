@@ -118,13 +118,12 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             }
         }); 
      }
-
-    // fill periodic and interior ghost cells
-    for(int i = 0; i < 3; i++){
-        Ms[i].FillBoundary(geom.periodicity());
+     // fill periodic ghost cells for Ms. Used to calculate Ms_lo(hi)_x(y,z) for exchange field calculation
+     for(int i = 0; i < 3; i++){
+       Ms[i].FillBoundary(geom.periodicity());
     }
 
-} 
+}
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        Array<MultiFab, AMREX_SPACEDIM>& Mfield,
@@ -146,7 +145,7 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
 
-               rhs(i,j,k) = DivergenceDx_Mag(M_xface, i, j, k, dx, 0)
+               rhs(i,j,k) =  DivergenceDx_Mag(M_xface, i, j, k, dx, 0)
                            + DivergenceDy_Mag(M_yface, i, j, k, dx, 1)
                            + DivergenceDz_Mag(M_zface, i, j, k, dx, 2);
                 
@@ -173,14 +172,13 @@ void ComputeHfromPhi(MultiFab&                        PoissonPhi,
             const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);
             const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);
             const Array4<Real>& Hz_demag = H_demagfield[2].array(mfi);
+
             const Array4<Real>& phi = PoissonPhi.array(mfi);
 
             amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
                      Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i,j,k))/(dx[0]);
-
                      Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j,k))/(dx[1]);
-
                      Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k))/(dx[2]);
              });
         }
