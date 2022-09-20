@@ -990,7 +990,7 @@ void main_main ()
                     plt(i,j,k,8) = 0.5 * ( M_zface(i,j,k,1) + M_zface(i,j,k+1,1) );  
  
                     //Mz at xface, yface, zface
-                    plt(i,j,k,9) = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
+                    plt(i,j,k,9)  = 0.5 * ( M_xface(i,j,k,2) + M_xface(i+1,j,k,2) );   
                     plt(i,j,k,10) = 0.5 * ( M_yface(i,j,k,2) + M_yface(i,j+1,k,2) );   
                     plt(i,j,k,11) = 0.5 * ( M_zface(i,j,k,2) + M_zface(i,j,k+1,2) );  
  
@@ -1005,7 +1005,7 @@ void main_main ()
                     plt(i,j,k,17) = 0.5 * ( H_bias_zface(i,j,k,1) + H_bias_zface(i,j,k+1,1) );  
  
                     //Hz_bias at xface, yface, zface
-                    plt(i,j,k,18)  = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
+                    plt(i,j,k,18) = 0.5 * ( H_bias_xface(i,j,k,2) + H_bias_xface(i+1,j,k,2) );   
                     plt(i,j,k,19) = 0.5 * ( H_bias_yface(i,j,k,2) + H_bias_yface(i,j+1,k,2) );   
                     plt(i,j,k,20) = 0.5 * ( H_bias_zface(i,j,k,2) + H_bias_zface(i,j,k+1,2) );  
  
@@ -1022,27 +1022,6 @@ void main_main ()
                                                      geom, time, step);
 
         }
-//        if (plot_int > 0 && step%plot_int == 0)
-//        {
-//            const std::string& pltfile = amrex::Concatenate("plt",step,8);
-//            MultiFab::Copy(Plt, Ms[0], 0, 0, 1, 0);
-//            MultiFab::Copy(Plt, Ms[1], 0, 1, 1, 0);
-//            MultiFab::Copy(Plt, Ms[2], 0, 2, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[0], 0, 3, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[0], 1, 4, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[0], 2, 5, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[1], 0, 6, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[1], 1, 7, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[1], 2, 8, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[2], 0, 9, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[2], 1, 10, 1, 0);
-//            MultiFab::Copy(Plt, Mfield[2], 2, 11, 1, 0);
-//            MultiFab::Copy(Plt, H_biasfield[0], 0, 12, 1, 0);
-//            MultiFab::Copy(Plt, H_biasfield[1], 0, 13, 1, 0);
-//            MultiFab::Copy(Plt, H_biasfield[2], 0, 14, 1, 0);
-//            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface","Mx_xface","My_xface","Mz_xface", "Mx_yface", "My_yface", "Mz_yface", "Mx_zface", "My_zface", "Mz_zface", "Hx_bias", "Hy_bias", "Hz_bias"}, geom, time, step);
-//
-//        }
 
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
@@ -1067,8 +1046,8 @@ void main_main ()
 
     }
     
-        Real total_step_stop_time = ParallelDescriptor::second() - total_step_strt_time;
-        ParallelDescriptor::ReduceRealMax(total_step_stop_time);
+    Real total_step_stop_time = ParallelDescriptor::second() - total_step_strt_time;
+    ParallelDescriptor::ReduceRealMax(total_step_stop_time);
 
-        amrex::Print() << "Total run time " << total_step_stop_time << " seconds\n";
+    amrex::Print() << "Total run time " << total_step_stop_time << " seconds\n";
 }
