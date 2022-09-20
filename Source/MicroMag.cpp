@@ -118,15 +118,12 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             }
         }); 
      }
-//     // fill periodic ghost cells
-//    for(int i = 0; i < 3; i++){
-//       alpha[i].FillBoundary(geom.periodicity());
-//       Ms[i].FillBoundary(geom.periodicity());
-//       gamma[i].FillBoundary(geom.periodicity());
-//       exchange[i].FillBoundary(geom.periodicity());
-//       anisotropy[i].FillBoundary(geom.periodicity());
-//    }
-//
+
+    // fill periodic and interior ghost cells
+    for(int i = 0; i < 3; i++){
+        Ms[i].FillBoundary(geom.periodicity());
+    }
+
 } 
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
@@ -158,11 +155,11 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
    
 }
 
-void ComputeHfromPhi(MultiFab&                         PoissonPhi,
-                      Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                      amrex::GpuArray<amrex::Real, 3> prob_lo,
-                      amrex::GpuArray<amrex::Real, 3> prob_hi,
-                      const Geometry&                 geom)
+void ComputeHfromPhi(MultiFab&                        PoissonPhi,
+                     Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                     amrex::GpuArray<amrex::Real, 3>  prob_lo,
+                     amrex::GpuArray<amrex::Real, 3>  prob_hi,
+                     const Geometry&                  geom)
 {
        // Calculate H from Phi
 
