@@ -292,10 +292,6 @@ void main_main ()
           Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
           Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
       
-          Array4<Real> const &Hx_demag= H_demagfield[0].array(mfi);
-          Array4<Real> const &Hy_demag= H_demagfield[1].array(mfi);
-          Array4<Real> const &Hz_demag= H_demagfield[2].array(mfi);
-              
           const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
           const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
           const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
@@ -443,10 +439,6 @@ void main_main ()
               Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
               Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
           
-              Array4<Real> const &Hx_demag = H_demagfield[0].array(mfi);
-              Array4<Real> const &Hy_demag = H_demagfield[1].array(mfi);
-              Array4<Real> const &Hz_demag = H_demagfield[2].array(mfi);
-                  
               const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
               const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
               const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
@@ -629,14 +621,6 @@ void main_main ()
                         Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mxface_stag, Hx_demag);
                         Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mxface_stag, Hy_demag);
                         Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mxface_stag, Hz_demag);
-
-                        if (i == 128 && j == 32 && k == 4){
-                            printf("got here \n");
-                            printf("Hx_demag = %g", Hx_demag(i,j,k));
-                            printf("Hy_demag = %g", Hy_demag(i,j,k));
-                            printf("Hz_demag = %g", Hz_demag(i,j,k));
-                        }
-                        
                     }
 
                     if(exchange_coupling == 1)
@@ -1010,10 +994,6 @@ void main_main ()
                   Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
                   Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
               
-                  Array4<Real> const &Hx_demag = H_demagfield[0].array(mfi);
-                  Array4<Real> const &Hy_demag = H_demagfield[1].array(mfi);
-                  Array4<Real> const &Hz_demag = H_demagfield[2].array(mfi);
-                      
                   const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
                   const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
                   const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
