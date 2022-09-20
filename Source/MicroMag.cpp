@@ -10,7 +10,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    Real        Ms_val,
                    Real        gamma_val,
                    Real        exchange_val,
-		   Real        anisotropy_val,
+		             Real        anisotropy_val,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
                    amrex::GpuArray<amrex::Real, 3> mag_lo,
@@ -129,9 +129,9 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
 //
 } 
 
-void ComputePoissonRHS(MultiFab&                       PoissonRHS,
+void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       MultiFab&                       Ms,
+                       Array<MultiFab, AMREX_SPACEDIM>& Ms,
                        const Geometry&                 geom)
 {
     for ( MFIter mfi(PoissonRHS); mfi.isValid(); ++mfi )
@@ -140,38 +140,27 @@ void ComputePoissonRHS(MultiFab&                       PoissonRHS,
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-            const Array4<Real>& Mx = Mfield[0].array(mfi);
-            const Array4<Real>& My = Mfield[1].array(mfi);
-            const Array4<Real>& Mz = Mfield[2].array(mfi);
-            const Array4<Real>& Ms_arr = Ms.array(mfi);
+            Array4<Real> const &M_xface = Mfield[0].array(mfi);         
+            Array4<Real> const &M_yface = Mfield[1].array(mfi);         
+            Array4<Real> const &M_zface = Mfield[2].array(mfi);   
+            const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
+            const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
+            const Array4<Real>& Ms_zface_arr = Ms[2].array(mfi);
             const Array4<Real>& rhs = PoissonRHS.array(mfi);
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                amrex::Real Ms_lo_x = Ms_arr(i-1, j, k); 
-                amrex::Real Ms_hi_x = Ms_arr(i+1, j, k); 
-                amrex::Real Ms_lo_y = Ms_arr(i, j-1, k); 
-                amrex::Real Ms_hi_y = Ms_arr(i, j+1, k); 
-                amrex::Real Ms_lo_z = Ms_arr(i, j, k-1);
-                amrex::Real Ms_hi_z = Ms_arr(i, j, k+1);
 
-                if (Ms_arr(i,j,k) > 0._rt) {
-                    rhs(i,j,k) = DivergenceDx_Mag(Mx, Ms_lo_x, Ms_hi_x, i, j, k, dx)
-                               + DivergenceDy_Mag(My, Ms_lo_y, Ms_hi_y, i, j, k, dx)
-                               + DivergenceDz_Mag(Mz, Ms_lo_z, Ms_hi_z, i, j, k, dx);
-                } else {
-                    rhs(i,j,k) = 0.0;
-                }
-                if (i == 128 && j == 32 && k == 4){
-                    printf("RHS for Poisson = %g \n", rhs(i,j,k));
-                    printf("Ms = %g \n", Ms_arr(i,j,k));
-                }
+               rhs(i,j,k) = DivergenceDx_Mag(M_xface, i, j, k, dx, 0)
+                           + DivergenceDy_Mag(M_yface, i, j, k, dx, 1)
+                           + DivergenceDz_Mag(M_zface, i, j, k, dx, 2);
+                
             });
         }
    
 }
 
-void ComputeHfromPhi(MultiFab&                        PoissonPhi,
+void ComputeHfromPhi(MultiFab&                         PoissonPhi,
                       Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
                       amrex::GpuArray<amrex::Real, 3> prob_lo,
                       amrex::GpuArray<amrex::Real, 3> prob_hi,
@@ -186,49 +175,18 @@ void ComputeHfromPhi(MultiFab&                        PoissonPhi,
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-            const Array4<Real>& Hx_arr = H_demagfield[0].array(mfi);
-            const Array4<Real>& Hy_arr = H_demagfield[1].array(mfi);
-            const Array4<Real>& Hz_arr = H_demagfield[2].array(mfi);
+            const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);
+            const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);
+            const Array4<Real>& Hz_demag = H_demagfield[2].array(mfi);
             const Array4<Real>& phi = PoissonPhi.array(mfi);
 
             amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                     Real x    = prob_lo[0] + (i+0.5) * dx[0];
-                     Real x_hi = prob_lo[0] + (i+1.5) * dx[0];
-                     Real x_lo = prob_lo[0] + (i-0.5) * dx[0];
-                     Real y    = prob_lo[1] + (j+0.5) * dx[1];
-                     Real y_hi = prob_lo[1] + (j+1.5) * dx[1];
-                     Real y_lo = prob_lo[1] + (j-0.5) * dx[1];
-                     Real z    = prob_lo[2] + (k+0.5) * dx[2];
-                     Real z_hi = prob_lo[2] + (k+1.5) * dx[2];
-                     Real z_lo = prob_lo[2] + (k-0.5) * dx[2];
+                     Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i,j,k))/(dx[0]);
 
-                     if(x_lo < prob_lo[0]){ //Bottom Boundary
-                       Hx_arr(i,j,k) = -(phi(i+1,j,k) - phi(i,j,k))/(dx[0]); // 1st order accuracy at the outer boundary
-                     } else if (x_hi > prob_hi[0]){ //Top Boundary
-                       Hx_arr(i,j,k) = -(phi(i,j,k) - phi(i-1,j,k))/(dx[0]); // 1st order accuracy at the outer boundary
-                     } else{ //inside
-                       Hx_arr(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/(2.*dx[0]);
-                     }
+                     Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j,k))/(dx[1]);
 
-                     if(y_lo < prob_lo[1]){ //Bottom Boundary
-                       Hy_arr(i,j,k) = -(phi(i,j+1,k) - phi(i,j,k))/(dx[1]); // 1st order accuracy at the outer boundary
-                     } else if (y_hi > prob_hi[1]){ //Top Boundary
-                       Hy_arr(i,j,k) = -(phi(i,j,k) - phi(i,j-1,k))/(dx[1]); // 1st order accuracy at the outer boundary
-                     } else{ //inside
-                       Hy_arr(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/(2.*dx[1]);
-                     }
-
-                     if(z_lo < prob_lo[2]){ //Bottom Boundary
-                       Hz_arr(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k))/(dx[2]); // 1st order accuracy at the outer boundary
-                     } else if (z_hi > prob_hi[2]){ //Top Boundary
-                       Hz_arr(i,j,k) = -(phi(i,j,k) - phi(i,j,k-1))/(dx[2]); // 1st order accuracy at the outer boundary
-                     } else{ //inside
-                       Hz_arr(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/(2.*dx[2]);
-                     }
-                     if (i == 128 && j == 32 && k == 4){
-                        printf("Hx_demag = %g \n", Hx_arr(i,j,k));
-                     }
+                     Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k))/(dx[2]);
              });
         }
 

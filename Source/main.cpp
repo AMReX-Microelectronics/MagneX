@@ -443,9 +443,9 @@ void main_main ()
               Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
               Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
           
-              Array4<Real> const &Hx = Hfield[0].array(mfi);
-              Array4<Real> const &Hy = Hfield[1].array(mfi);
-              Array4<Real> const &Hz = Hfield[2].array(mfi);
+              Array4<Real> const &Hx_demag = H_demagfield[0].array(mfi);
+              Array4<Real> const &Hy_demag = H_demagfield[1].array(mfi);
+              Array4<Real> const &Hz_demag = H_demagfield[2].array(mfi);
                   
               const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
               const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);
@@ -600,7 +600,9 @@ void main_main ()
               const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
               const Array4<Real>& anisotropy_zface_arr = anisotropy[2].array(mfi);
 
-
+              amrex::IntVect Mxface_stag = Mfield[0].ixType().toIntVect();
+              amrex::IntVect Myface_stag = Mfield[1].ixType().toIntVect();
+              amrex::IntVect Mzface_stag = Mfield[2].ixType().toIntVect();
               // extract tileboxes for which to loop
               Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
               Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
@@ -624,9 +626,9 @@ void main_main ()
 
                     if(demag_coupling == 1)
                     {
-                        Hx_eff += Hx_demag(i,j,k);
-                        Hy_eff += Hy_demag(i,j,k);
-                        Hz_eff += Hz_demag(i,j,k);
+                        Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mxface_stag, Hx_demag);
+                        Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mxface_stag, Hy_demag);
+                        Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mxface_stag, Hz_demag);
 
                         if (i == 128 && j == 32 && k == 4){
                             printf("got here \n");
@@ -751,9 +753,9 @@ void main_main ()
                  
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += Hx(i,j,k);
-                      Hy_eff += Hy(i,j,k);
-                      Hz_eff += Hz(i,j,k);
+                      Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Myface_stag, Hx_demag);
+                      Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Myface_stag, Hy_demag);
+                      Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Myface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -871,9 +873,9 @@ void main_main ()
                  
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += Hx(i,j,k);
-                      Hy_eff += Hy(i,j,k);
-                      Hz_eff += Hz(i,j,k);
+                      Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mzface_stag, Hx_demag);
+                      Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mzface_stag, Hy_demag);
+                      Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mzface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -1008,9 +1010,9 @@ void main_main ()
                   Array4<Real> const &H_bias_yface = H_biasfield[1].array(mfi);
                   Array4<Real> const &H_bias_zface = H_biasfield[2].array(mfi);
               
-                  Array4<Real> const &Hx = Hfield[0].array(mfi);
-                  Array4<Real> const &Hy = Hfield[1].array(mfi);
-                  Array4<Real> const &Hz = Hfield[2].array(mfi);
+                  Array4<Real> const &Hx_demag = H_demagfield[0].array(mfi);
+                  Array4<Real> const &Hy_demag = H_demagfield[1].array(mfi);
+                  Array4<Real> const &Hz_demag = H_demagfield[2].array(mfi);
                       
                   const Array4<Real>& Ms_xface_arr = Ms[0].array(mfi);
                   const Array4<Real>& Ms_yface_arr = Ms[1].array(mfi);

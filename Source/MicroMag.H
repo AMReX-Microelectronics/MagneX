@@ -20,12 +20,12 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    amrex::GpuArray<amrex::Real, 3> mag_hi,
                    const       Geometry& geom);
 
-void ComputePoissonRHS(MultiFab&                       PoissonRHS,
+void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       MultiFab&                       Ms,
+                       Array<MultiFab, AMREX_SPACEDIM>& Ms,
                        const Geometry&                 geom);
 
-void ComputeHfromPhi(MultiFab&                        PoissonPhi,
+void ComputeHfromPhi(MultiFab&                         PoissonPhi,
                       Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
                       amrex::GpuArray<amrex::Real, 3> prob_lo,
                       amrex::GpuArray<amrex::Real, 3> prob_hi,

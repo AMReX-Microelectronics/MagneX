@@ -181,10 +181,9 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real DivergenceDx_Mag (
     amrex::Array4<amrex::Real> const& F,
-    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x,
-    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
-    return (UpwardDx(F, i, j, k, dx) + DownwardDx(F, i, j, k, dx))/2.;
+    return (UpwardDx(F, i, j, k, dx, ncomp) + DownwardDx(F, i, j, k, dx, ncomp))/2.;
  }
 
 
@@ -193,10 +192,9 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real DivergenceDy_Mag (
     amrex::Array4<amrex::Real> const& F,
-    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y,
-    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
-    return (UpwardDy(F, i, j, k, dx) + DownwardDy(F, i, j, k, dx))/2.;
+    return (UpwardDy(F, i, j, k, dx, ncomp) + DownwardDy(F, i, j, k, dx, ncomp))/2.;
  }
 
  /**
@@ -204,8 +202,42 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real DivergenceDz_Mag (
     amrex::Array4<amrex::Real> const& F,
-    amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
-    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
-    return (UpwardDz(F, i, j, k, dx) + DownwardDz(F, i, j, k, dx))/2.;
+    return (UpwardDz(F, i, j, k, dx, ncomp) + DownwardDz(F, i, j, k, dx, ncomp))/2.;
  }
+
+
+
+ /** \brief
+         * This GPU kernel averages a face-centered field onto a (possibly different nodality) face.
+         * i,j,k are the spatial indices, n is the component index
+         * iv_in is the nodality of the input field, iv_out is the nodality of the output.
+         * Thus, if iv_in is the same as iv_out the value on the face is returned.
+         * Some other examples when iv_in is different from iv_out:
+
+         * Hy (0,1,0) components (in) to Hx face (1,0,0) (out)
+         * return 0.25*(Hy(i,j,k)+Hy(i,j+1,k)+Hy(i-1,j,k)+Hy(i-1,j+1,k));
+         *
+         * \param[in] Fieldcomp  floating point data to be interpolated from one staggering location to another.
+         * \param[in] iv_in           nodality of the input field, Fieldcomp
+         * \param[in] iv_out         nodality of the output
+         * \param[in] i                index along x of the Array4 Fieldcomp
+         * \param[in] j                index along y of the Array4 Fieldcomp
+         * \param[in] k                index along z of the Array4 Fieldcomp
+     */
+     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+     static amrex::Real face_avg_to_face (int i, int j, int k, int n,
+                                           amrex::IntVect iv_in, amrex::IntVect iv_out,
+                                           amrex::Array4<amrex::Real> const& Fieldcomp) {
+         using namespace amrex;
+         return ( 0.125_rt * ( Fieldcomp(i                   , j                   , k                   , n)
+                             + Fieldcomp(i+iv_in[0]-iv_out[0], j                   , k                   , n)
+                             + Fieldcomp(i                   , j+iv_in[1]-iv_out[1], k                   , n)
+                             + Fieldcomp(i                   , j                   , k+iv_in[2]-iv_out[2], n)
+                             + Fieldcomp(i+iv_in[0]-iv_out[0], j+iv_in[1]-iv_out[1], k                   , n)
+                             + Fieldcomp(i+iv_in[0]-iv_out[0], j                   , k+iv_in[2]-iv_out[2], n)
+                             + Fieldcomp(i                   , j+iv_in[1]-iv_out[1], k+iv_in[2]-iv_out[2], n)
+                             + Fieldcomp(i+iv_in[0]-iv_out[0], j+iv_in[1]-iv_out[1], k+iv_in[2]-iv_out[2], n)
+                             ));
+    }
