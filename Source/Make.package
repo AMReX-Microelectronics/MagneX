@@ -1,4 +1,10 @@
 CEXE_sources += main.cpp
-CEXE_sources += MicroMag.cpp
+CEXE_sources += Initialization.cpp
+CEXE_sources += MagnetostaticSolver.cpp
+CEXE_sources += Diagnostics.cpp
+CEXE_sources += EvolveM.cpp
 CEXE_headers += myfunc.H
-CEXE_headers += MicroMag.H
+CEXE_headers += Initialization.H
+CEXE_headers += MagnetostaticSolver.H
+CEXE_headers += Diagnostics.H
+CEXE_headers += EvolveM.H
