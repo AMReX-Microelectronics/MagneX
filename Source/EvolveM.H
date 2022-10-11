@@ -24,6 +24,3 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
 
 void NormalizeM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< MultiFab, AMREX_SPACEDIM >& Ms, int M_normalization);
 
-void UpdateM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< MultiFab, AMREX_SPACEDIM >& LLG_RHS, std::array< MultiFab, AMREX_SPACEDIM >& Ms, Real dt);
-
-void UpdateM_2nd(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< MultiFab, AMREX_SPACEDIM >& LLG_RHS, std::array< MultiFab, AMREX_SPACEDIM >& LLG_RHS_pre, std::array< MultiFab, AMREX_SPACEDIM >& Ms, Real dt);
