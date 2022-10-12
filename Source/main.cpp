@@ -437,7 +437,7 @@ void main_main ()
 
 	       //Predictor step : M^{n+1,*} = M^{n,*} + dt * f^{n,*}
 		for(int i = 0; i < 3; i++){
-	           MultiFab::LinComb(Mfield_pre[i], 1.0, Mfield_prev_iter[i], 0, dt, LLG_RHS[i], 0, 0, 3, Nghost);
+		   MultiFab::LinComb(Mfield_pre[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, Nghost);
 	        }
 
                 // Poisson solve and H_demag computation with M_field_pre
@@ -462,7 +462,7 @@ void main_main ()
                 // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
 	        for(int i = 0; i < 3; i++){
 	           MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, Nghost);
-	           MultiFab::LinComb(Mfield[i], 1.0, Mfield_prev_iter[i], 0, dt, LLG_RHS_avg[i], 0, 0, 3, Nghost);
+		   MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, 0.5*dt, LLG_RHS_avg[i], 0, 0, 3, Nghost);
 	        }
 
 		// Normalize M              
