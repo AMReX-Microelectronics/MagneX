@@ -415,96 +415,90 @@ void main_main ()
            int iter = 0;
            int stop_iter = 0;
 
+	   // Evolve H_demag (H^{n})
+	   if(demag_coupling == 1)
+	   {
+	      //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+	      //Compute RHS of Poisson equation
+	      ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+                    
+	      //Initial guess for phi
+	      PoissonPhi.setVal(0.);
+	      openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+    
+	      // Calculate H from Phi
+	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+	   }
+
+	   // Compute f^{n} = f(M^{n}, H^{n}) 
+	   Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom);
+
            while(!stop_iter){
 
-    	        // Evolve H_demag (H^{n,*})
-                if(demag_coupling == 1)
-                {
-                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                    //Compute RHS of Poisson equation
-                    ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+  	      // Poisson solve and H_demag computation with M_field_pre
+ 	      if(demag_coupling == 1)
+	      {
+		 //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+		 //Compute RHS of Poisson equation
+	         ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
                     
-                    //Initial guess for phi
-                    PoissonPhi.setVal(0.);
-                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+		 //Initial guess for phi
+		 PoissonPhi.setVal(0.);
+		 openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
     
-                    // Calculate H from Phi
-                    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-                }
+		 // Calculate H from Phi
+		 ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+	      }
 
-                // Compute f^{n,*} = f(M^{n,*}, H^{n,*}) 
-                Compute_LLG_RHS(LLG_RHS, Mfield_prev_iter, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom);
+	      // LLG RHS with new H_demag and M_field_pre
+	      // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *}) 
+	      Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom);
 
-	       //Predictor step : M^{n+1,*} = M^{n,*} + dt * f^{n,*}
-		for(int i = 0; i < 3; i++){
-		   MultiFab::LinComb(Mfield_pre[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, Nghost);
-	        }
+	      // Corrector step update M
+	      // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
+	      for(int i = 0; i < 3; i++){
+		MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, Nghost);
+		MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 3, Nghost);
+	      }
 
-                // Poisson solve and H_demag computation with M_field_pre
-                if(demag_coupling == 1)
-                {
-                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                    //Compute RHS of Poisson equation
-                    ComputePoissonRHS(PoissonRHS, Mfield_pre, Ms, geom);
-                    
-                    //Initial guess for phi
-                    PoissonPhi.setVal(0.);
-                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-    
-                    // Calculate H from Phi
-                    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-                }
+	      // Normalize M              
+	      NormalizeM(Mfield, Ms, M_normalization);
 
-                // LLG RHS with new H_demag and M_field_pre
-                Compute_LLG_RHS(LLG_RHS_pre, Mfield_pre, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom);
+	      Real M_mag_error_max = -1.;
 
-                // Corrector step update M
-                // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
-	        for(int i = 0; i < 3; i++){
-	           MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, Nghost);
-		   MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, 0.5*dt, LLG_RHS_avg[i], 0, 0, 3, Nghost);
-	        }
+	      for(int face = 0; face < 3; face++){
+ 		 for(int comp = 0; comp < 3; comp++){
+		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, 1);
+		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, 1);
+		    Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
+		    if (M_mag_error >= M_mag_error_max){
+		       M_mag_error_max = M_mag_error;
+		    }
+		 }
+	      }
 
-		// Normalize M              
-                NormalizeM(Mfield, Ms, M_normalization);
+	      // copy new solution into Mfield_pre_iter
+	      for(int comp = 0; comp < 3; comp++)
+	      {
+	         MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, 1);
+		 // fill periodic ghost cells
+		 Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
+	      }
 
-                Real M_mag_error_max = -1.;
-
-	        for(int face = 0; face < 3; face++){
-	          for(int comp = 0; comp < 3; comp++){
-                     MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, 1);
-                     MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, 1);
-		     Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
-   
-   		     if (M_mag_error >= M_mag_error_max){
-                        M_mag_error_max = M_mag_error;
-                     }
-		  }
-		}
-
-                // copy new solution into old solution
-                for(int comp = 0; comp < 3; comp++)
-                {
-                   MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, 1);
-                   // fill periodic ghost cells
-                   Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
-                }
-
-		iter = iter + 1;
+	      iter = iter + 1;
 	   
-		amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
-		if(M_mag_error_max <= M_tolerance) stop_iter = 1;
+	      amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
+	      if (M_mag_error_max <= M_tolerance) stop_iter = 1;
 
 	   } // while stop_iter
 
            // copy new solution into old solution
-           for(int comp = 0; comp < 3; comp++)
+           for (int comp = 0; comp < 3; comp++)
            {
-              MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, 1);
-              // fill periodic ghost cells
-              Mfield_old[comp].FillBoundary(geom.periodicity());
+ 	      MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, 1);
+	      // fill periodic ghost cells
+	      Mfield_old[comp].FillBoundary(geom.periodicity());
            }
-
 
         } //else 2nd order
  
