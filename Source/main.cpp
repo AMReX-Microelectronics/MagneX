@@ -464,6 +464,78 @@ void main_main ()
 	      // Normalize M              
 	      NormalizeM(Mfield, Ms, M_normalization);
 
+#if 1
+              for (MFIter mfi(Ms[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+
+                  Array4<Real> const& Ms_xface = Ms[0].array(mfi);
+                  Array4<Real> const& Ms_yface = Ms[1].array(mfi);
+                  Array4<Real> const& Ms_zface = Ms[2].array(mfi);
+                  
+                  Array4<Real> const& Mfield_error_xface = Mfield_error[0].array(mfi);
+                  Array4<Real> const& Mfield_error_yface = Mfield_error[1].array(mfi);
+                  Array4<Real> const& Mfield_error_zface = Mfield_error[2].array(mfi);
+
+                  Array4<Real> const& Mfield_xface = Mfield[0].array(mfi);
+                  Array4<Real> const& Mfield_yface = Mfield[1].array(mfi);
+                  Array4<Real> const& Mfield_zface = Mfield[2].array(mfi);
+
+                  Array4<Real> const& Mfield_prev_iter_xface = Mfield_prev_iter[0].array(mfi);
+                  Array4<Real> const& Mfield_prev_iter_yface = Mfield_prev_iter[1].array(mfi);
+                  Array4<Real> const& Mfield_prev_iter_zface = Mfield_prev_iter[2].array(mfi);
+
+                  Box const &tbx = mfi.tilebox(IntVect(1,0,0));
+                  Box const &tby = mfi.tilebox(IntVect(0,1,0));
+                  Box const &tbz = mfi.tilebox(IntVect(0,0,1));
+                  
+                  amrex::ParallelFor(tbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                      if (Ms_xface(i,j,k) > 0) {
+                          for (int n=0; n<3; ++n) {
+                              Mfield_error_xface(i,j,k,n) = amrex::Math::abs(Mfield_xface(i,j,k,n) - Mfield_prev_iter_xface(i,j,k,n)) / Ms_xface(i,j,k);
+                          }
+                      } else {
+                          for (int n=0; n<3; ++n) {
+                              Mfield_error_xface(i,j,k,n) = 0.;
+                          }
+                      }
+                  });
+                  
+                  amrex::ParallelFor(tby, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                      if (Ms_yface(i,j,k) > 0) {
+                          for (int n=0; n<3; ++n) {
+                              Mfield_error_yface(i,j,k,n) = amrex::Math::abs(Mfield_yface(i,j,k,n) - Mfield_prev_iter_yface(i,j,k,n)) / Ms_yface(i,j,k);
+                          }
+                      } else {
+                          for (int n=0; n<3; ++n) {
+                              Mfield_error_yface(i,j,k,n) = 0.;
+                          }
+                      }
+                  });
+                  
+                  amrex::ParallelFor(tbz, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                      if (Ms_zface(i,j,k) > 0) {
+                          for (int n=0; n<3; ++n) {
+                              Mfield_error_zface(i,j,k,n) = amrex::Math::abs(Mfield_zface(i,j,k,n) - Mfield_prev_iter_zface(i,j,k,n)) / Ms_zface(i,j,k);
+                          }
+                      } else {
+                          for (int n=0; n<3; ++n) {
+                              Mfield_error_zface(i,j,k,n) = 0.;
+                          }
+                      }
+                  });
+
+              }
+
+              amrex::Real M_mag_error_max = -1.;
+              for (int face = 0; face < 3; face++){
+                  for (int comp = 0; comp < 3; comp++){
+                      Real M_iter_error = Mfield_error[face].norm0(comp);
+                      if (M_iter_error >= M_mag_error_max){
+                          M_mag_error_max = M_iter_error;
+                      }
+                  }
+              }
+
+#else
 	      Real M_mag_error_max = -1.;
 
 	      for(int face = 0; face < 3; face++){
@@ -476,6 +548,7 @@ void main_main ()
 		    }
 		 }
 	      }
+#endif
 
 	      // copy new solution into Mfield_pre_iter
 	      for(int comp = 0; comp < 3; comp++)
@@ -486,7 +559,7 @@ void main_main ()
 	      }
 
 	      iter = iter + 1;
-	   
+
 	      amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
 	      if (M_mag_error_max <= M_tolerance) stop_iter = 1;
 
