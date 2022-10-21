@@ -344,7 +344,8 @@ void NormalizeM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< Mult
                        // check the normalized error
                        if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                        {
-                           printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+  			   printf("y-face M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                           printf("i = %d, j = %d, k = %d \n", i, j,k);
                            amrex::Abort("Exceed the normalized error of the Mx field");
                        }
                        // normalize the M field
@@ -386,7 +387,7 @@ void NormalizeM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< Mult
                        // check the normalized error
                        if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                        {
-                           printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                           printf("y-face M_magnitude_normalized = %g \n", M_magnitude_normalized);
                            printf("i = %d, j = %d, k = %d \n", i, j,k);
                            amrex::Abort("Exceed the normalized error of the Mx field");
                        }
@@ -429,7 +430,8 @@ void NormalizeM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< Mult
                        // check the normalized error
                        if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                        {
-                           printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+			   printf("z-face M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                           printf("i = %d, j = %d, k = %d \n", i, j,k);
                            amrex::Abort("Exceed the normalized error of the Mx field");
                        }
                        // normalize the M field
