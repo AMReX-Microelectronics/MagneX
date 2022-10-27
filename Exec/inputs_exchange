@@ -1,13 +1,13 @@
 n_cell = 64 64 64
 max_grid_size = 32
-dt = 1.0e-15
+dt = 4.0e-15
 nsteps = 100
 plot_int = 10
 
 Phi_Bc_hi = 0.0
 Phi_Bc_lo = 0.0
 
-TimeIntegratorOrder = 1
+TimeIntegratorOrder = 2
 
 prob_lo = -16.e-9 -16.e-9 -16.e-9
 prob_hi =  16.e-9  16.e-9  16.e-9
