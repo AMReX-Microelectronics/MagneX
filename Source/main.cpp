@@ -537,8 +537,8 @@ void main_main ()
 
 	      for(int face = 0; face < 3; face++){
  		 for(int comp = 0; comp < 3; comp++){
-		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, Nghost);
-		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, Nghost);
+		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, 0);
+		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, 0);
 		    Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
 		    if (M_mag_error >= M_mag_error_max){
 		       M_mag_error_max = M_mag_error;
