@@ -183,9 +183,6 @@ void main_main ()
     // Nghost = number of ghost cells for each array
     int Nghost = 2;
 
-    // Ncomp = number of components for each array
-    int Ncomp = 1;
-
     // How Boxes are distrubuted among MPI processes
     DistributionMapping dm(ba);
 
@@ -223,33 +220,33 @@ void main_main ()
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 1);,
-                 LLG_RHS[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 1);,
-                 LLG_RHS[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 1););
+    AMREX_D_TERM(LLG_RHS[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+                 LLG_RHS[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+                 LLG_RHS[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
     // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS_pre[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 1);,
-                 LLG_RHS_pre[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 1);,
-                 LLG_RHS_pre[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 1););
+    AMREX_D_TERM(LLG_RHS_pre[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+                 LLG_RHS_pre[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+                 LLG_RHS_pre[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
     // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS_avg[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 1);,
-                 LLG_RHS_avg[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 1);,
-                 LLG_RHS_avg[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 1););
+    AMREX_D_TERM(LLG_RHS_avg[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+                 LLG_RHS_avg[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+                 LLG_RHS_avg[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
     {
-        H_demagfield[dir].define(ba, dm, Ncomp, 1);
+        H_demagfield[dir].define(ba, dm, 1, 0);
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
     // face-centered H_biasfield
-    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 1);,
-                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 1);,
-                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 1););
+    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
     //Face-centered magnetic properties
     std::array< MultiFab, AMREX_SPACEDIM > alpha;
@@ -347,10 +344,10 @@ void main_main ()
     // copy new solution into old solution
     for(int comp = 0; comp < 3; comp++)
     {
-       MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Mfield[comp].nGrow());
-       MultiFab::Copy(Mfield_pre[comp], Mfield[comp], 0, 0, 3, Mfield[comp].nGrow());
-       MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Mfield[comp].nGrow());
-       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, Mfield[comp].nGrow());
+       MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
+       MultiFab::Copy(Mfield_pre[comp], Mfield[comp], 0, 0, 3, Nghost);
+       MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
+       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, Nghost);
 
        // fill periodic ghost cells
        Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -389,7 +386,7 @@ void main_main ()
 
            // M^{n+1} = M^n + dt * f^n
 	   for(int i = 0; i < 3; i++){
-	      MultiFab::LinComb(Mfield_pre[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, Nghost);
+	      MultiFab::LinComb(Mfield_pre[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, 0);
 	   }
 
            NormalizeM(Mfield_pre, Ms, M_normalization);
@@ -403,7 +400,7 @@ void main_main ()
            // copy new solution into old solution
            for(int comp = 0; comp < 3; comp++)
            {
-              MultiFab::Copy(Mfield_old[comp], Mfield_pre[comp], 0, 0, 3, Mfield_pre[comp].nGrow());
+              MultiFab::Copy(Mfield_old[comp], Mfield_pre[comp], 0, 0, 3, Nghost);
 
               // fill periodic ghost cells
               Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -457,8 +454,8 @@ void main_main ()
 	      // Corrector step update M
 	      // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
 	      for(int i = 0; i < 3; i++){
-		MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, Nghost);
-		MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 3, Nghost);
+		MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, 0);
+		MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 3, 0);
 	      }
 
 	      // Normalize M              
@@ -540,8 +537,8 @@ void main_main ()
 
 	      for(int face = 0; face < 3; face++){
  		 for(int comp = 0; comp < 3; comp++){
-		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, Mfield[face].nGrow());
-		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, Mfield_prev_iter[face].nGrow());
+		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, Nghost);
+		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, Nghost);
 		    Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
 		    if (M_mag_error >= M_mag_error_max){
 		       M_mag_error_max = M_mag_error;
@@ -553,7 +550,7 @@ void main_main ()
 	      // copy new solution into Mfield_pre_iter
 	      for(int comp = 0; comp < 3; comp++)
 	      {
-	         MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Mfield[comp].nGrow());
+	         MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
 		 // fill periodic ghost cells
 		 Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
 	      }
@@ -568,7 +565,7 @@ void main_main ()
            // copy new solution into old solution
            for (int comp = 0; comp < 3; comp++)
            {
- 	      MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Mfield[comp].nGrow());
+ 	      MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
 	      // fill periodic ghost cells
 	      Mfield_old[comp].FillBoundary(geom.periodicity());
            }
