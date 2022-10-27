@@ -214,9 +214,9 @@ void main_main ()
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield_error;
     // face-centered Mfield at predictor step (for 2nd order time integrator)
-    AMREX_D_TERM(Mfield_error[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield_error[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield_error[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
+    AMREX_D_TERM(Mfield_error[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+                 Mfield_error[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+                 Mfield_error[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     // face-centered LLG_RHS
@@ -347,7 +347,7 @@ void main_main ()
        MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
        MultiFab::Copy(Mfield_pre[comp], Mfield[comp], 0, 0, 3, Nghost);
        MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
-       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, Nghost);
+       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, 0);
 
        // fill periodic ghost cells
        Mfield_old[comp].FillBoundary(geom.periodicity());
