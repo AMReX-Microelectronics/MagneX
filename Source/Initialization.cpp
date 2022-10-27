@@ -17,6 +17,13 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    const       Geometry& geom)
 {
 
+    // extract dx from the geometry object
+    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    GpuArray<Real,AMREX_SPACEDIM> ddx;
+    for (int i = 0; i < 3; ++i) {
+      ddx[i] = dx[i] / 1.e6;
+    }
+
     for(int i = 0; i < 3; i++){
        alpha[i].setVal(0.);
        Ms[i].setVal(0.);
@@ -33,9 +40,6 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
         Box const &tbx = mfi.tilebox(alpha[0].ixType().toIntVect());
         Box const &tby = mfi.tilebox(alpha[1].ixType().toIntVect());
         Box const &tbz = mfi.tilebox(alpha[2].ixType().toIntVect());
-
-        // extract dx from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
         
         const Array4<Real>& alpha_xface_arr = alpha[0].array(mfi);
         const Array4<Real>& alpha_yface_arr = alpha[1].array(mfi);
@@ -63,10 +67,10 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             Real x = prob_lo[0] + i * dx[0];
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
-             
-            if (x > mag_lo[0] && x < mag_hi[0]){
-               if (y > mag_lo[1] && y < mag_hi[1]){
-                  if (z > mag_lo[2] && z < mag_hi[2]){
+
+            if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
+               if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
+                  if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
                      alpha_xface_arr(i,j,k) = alpha_val;
                      gamma_xface_arr(i,j,k) = gamma_val;
                      Ms_xface_arr(i,j,k) = Ms_val;
@@ -83,10 +87,10 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             Real x = prob_lo[0] + (i+0.5) * dx[0];
             Real y = prob_lo[1] + j * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
-             
-            if (x > mag_lo[0] && x < mag_hi[0]){
-               if (y > mag_lo[1] && y < mag_hi[1]){
-                  if (z > mag_lo[2] && z < mag_hi[2]){
+
+            if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
+               if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
+                  if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
                      alpha_yface_arr(i,j,k) = alpha_val;
                      gamma_yface_arr(i,j,k) = gamma_val;
                      Ms_yface_arr(i,j,k) = Ms_val;
@@ -103,10 +107,10 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
             Real x = prob_lo[0] + (i+0.5) * dx[0];
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + k * dx[2];
-             
-            if (x > mag_lo[0] && x < mag_hi[0]){
-               if (y > mag_lo[1] && y < mag_hi[1]){
-                  if (z > mag_lo[2] && z < mag_hi[2]){
+
+            if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
+               if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
+                  if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
                      alpha_zface_arr(i,j,k) = alpha_val;
                      gamma_zface_arr(i,j,k) = gamma_val;
                      Ms_zface_arr(i,j,k) = Ms_val;
