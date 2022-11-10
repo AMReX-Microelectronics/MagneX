@@ -7,7 +7,7 @@ using namespace amrex;
 void EvolveM_2nd(
     std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
-    std::array< MultiFab, AMREX_SPACEDIM> const &H_biasfield, // H bias
+    std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
     MultiFab                              &PoissonRHS, 
     MultiFab                              &PoissonPhi, 
     std::array< MultiFab, AMREX_SPACEDIM >&   alpha,

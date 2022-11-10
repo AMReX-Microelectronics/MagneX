@@ -572,7 +572,9 @@ void main_main ()
            }
 
         } else if (TimeIntegratorOrder == 3) {
+
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt);
+        
         }  else {
             amrex::Abort("Time integrator order not recognized");
         }//else 2nd order
