@@ -209,7 +209,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 
 
 
- /** \brief
+/** \brief
          * This GPU kernel averages a face-centered field onto a (possibly different nodality) face.
          * i,j,k are the spatial indices, n is the component index
          * iv_in is the nodality of the input field, iv_out is the nodality of the output.
@@ -225,19 +225,56 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
          * \param[in] i                index along x of the Array4 Fieldcomp
          * \param[in] j                index along y of the Array4 Fieldcomp
          * \param[in] k                index along z of the Array4 Fieldcomp
-     */
-     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-     static amrex::Real face_avg_to_face (int i, int j, int k, int n,
-                                           amrex::IntVect iv_in, amrex::IntVect iv_out,
-                                           amrex::Array4<amrex::Real> const& Fieldcomp) {
-         using namespace amrex;
-         return ( 0.125_rt * ( Fieldcomp(i                   , j                   , k                   , n)
-                             + Fieldcomp(i+iv_in[0]-iv_out[0], j                   , k                   , n)
-                             + Fieldcomp(i                   , j+iv_in[1]-iv_out[1], k                   , n)
-                             + Fieldcomp(i                   , j                   , k+iv_in[2]-iv_out[2], n)
-                             + Fieldcomp(i+iv_in[0]-iv_out[0], j+iv_in[1]-iv_out[1], k                   , n)
-                             + Fieldcomp(i+iv_in[0]-iv_out[0], j                   , k+iv_in[2]-iv_out[2], n)
-                             + Fieldcomp(i                   , j+iv_in[1]-iv_out[1], k+iv_in[2]-iv_out[2], n)
-                             + Fieldcomp(i+iv_in[0]-iv_out[0], j+iv_in[1]-iv_out[1], k+iv_in[2]-iv_out[2], n)
-                             ));
+*/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real face_avg_to_face (int i, int j, int k, int n,
+                                    amrex::IntVect iv_in, amrex::IntVect iv_out,
+                                    amrex::Array4<amrex::Real> const& Fieldcomp) {
+    using namespace amrex;
+    return ( 0.125_rt * ( Fieldcomp(i                   , j                   , k                   , n)
+                        + Fieldcomp(i+iv_in[0]-iv_out[0], j                   , k                   , n)
+                        + Fieldcomp(i                   , j+iv_in[1]-iv_out[1], k                   , n)
+                        + Fieldcomp(i                   , j                   , k+iv_in[2]-iv_out[2], n)
+                        + Fieldcomp(i+iv_in[0]-iv_out[0], j+iv_in[1]-iv_out[1], k                   , n)
+                        + Fieldcomp(i+iv_in[0]-iv_out[0], j                   , k+iv_in[2]-iv_out[2], n)
+                        + Fieldcomp(i                   , j+iv_in[1]-iv_out[1], k+iv_in[2]-iv_out[2], n)
+                        + Fieldcomp(i+iv_in[0]-iv_out[0], j+iv_in[1]-iv_out[1], k+iv_in[2]-iv_out[2], n)
+                        ));
+}
+
+/**
+ update local M_field in the second-order time scheme
+the objective is to output component n of the M_field
+a and b have x,y,z components
+**/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real updateM_field (int i, int j, int k, int n,
+                            amrex::Array4<amrex::Real> const& a, amrex::Array4<amrex::Real> const& b) {
+    using namespace amrex;
+    amrex::Real a_square = pow(a(i, j, k, 0), 2.0) + pow(a(i, j, k, 1), 2.0) + pow(a(i, j, k, 2), 2.0);
+    amrex::Real a_dot_b =  a(i, j, k, 0) * b(i, j, k, 0) +
+                        a(i, j, k, 1) * b(i, j, k, 1) +
+                        a(i, j, k, 2) * b(i, j, k, 2);
+    // Initialize to 0.
+    amrex::Real M_field = 0._rt;
+
+    if(n==0){
+        amrex::Real a_cross_b_x = a(i, j, k, 1) * b(i, j, k, 2) -
+                                a(i, j, k, 2) * b(i, j, k, 1);
+        M_field = ( b(i, j, k, 0) + a_dot_b * a(i, j, k, 0) - a_cross_b_x ) / ( 1.0 + a_square);
     }
+    else if(n==1){
+        amrex::Real a_cross_b_y = a(i, j, k, 2) * b(i, j, k, 0) -
+                                a(i, j, k, 0) * b(i, j, k, 2);
+        M_field = ( b(i, j, k, 1) + a_dot_b * a(i, j, k, 1) - a_cross_b_y ) / ( 1.0 + a_square);
+    }
+    else if(n==2){
+        amrex::Real a_cross_b_z = a(i, j, k, 0) * b(i, j, k, 1) -
+                                a(i, j, k, 1) * b(i, j, k, 0);
+        M_field = ( b(i, j, k, 2) + a_dot_b * a(i, j, k, 2) - a_cross_b_z ) / ( 1.0 + a_square);
+    }
+    else{
+        amrex::Abort("Wrong component n of the M_field");
+    }
+    return M_field;
+}

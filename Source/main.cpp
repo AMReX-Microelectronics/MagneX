@@ -13,6 +13,7 @@
 #include "MagLaplacian.H"
 #include "Diagnostics.H"
 #include "EvolveM.H"
+#include "EvolveM_2nd.H"
 
 using namespace amrex;
 
@@ -406,7 +407,7 @@ void main_main ()
               Mfield_old[comp].FillBoundary(geom.periodicity());
 
            }
-        } else { //2nd Order
+        } else if (TimeIntegratorOrder == 2){ //2nd Order
 
            Real M_tolerance = 1.e-6;
            int iter = 0;
@@ -570,7 +571,11 @@ void main_main ()
 	      Mfield_old[comp].FillBoundary(geom.periodicity());
            }
 
-        } //else 2nd order
+        } else if (TimeIntegratorOrder == 3) {
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt);
+        }  else {
+            amrex::Abort("Time integrator order not recognized");
+        }//else 2nd order
  
 
 	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
