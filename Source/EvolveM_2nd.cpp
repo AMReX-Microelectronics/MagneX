@@ -42,22 +42,32 @@ void EvolveM_2nd(
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
 
     for (int i = 0; i < 3; i++){
-        H_demagfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
-        H_demagfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
-        Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, 0);
-        Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, 0);
+        // H_demagfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
+        H_demagfield_old[i].define(ba, dm, 1, H_demagfield[i].nGrow());
+        // H_demagfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
+        H_demagfield_prev[i].define(ba, dm, 1, H_demagfield[i].nGrow());
+        Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow()); // match ghost cell number with main function
+        Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
+
         MultiFab::Copy(H_demagfield_old[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         
-        Mfield_error[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, 0);
+        // fill periodic ghost cells
+        H_demagfield_old[i].FillBoundary(geom.periodicity());
+        H_demagfield_prev[i].FillBoundary(geom.periodicity());
+        Mfield_old[i].FillBoundary(geom.periodicity());
+        Mfield_prev[i].FillBoundary(geom.periodicity());
+
+        Mfield_error[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
         Mfield_error[i].setVal(0.); // reset Mfield_error to zero
+        Mfield_error[i].FillBoundary(geom.periodicity());
 
         // initialize a_temp, a_temp_static, b_temp_static
-        a_temp[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, 0);
-        a_temp_static[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, 0);
-        b_temp_static[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, 0);
+        a_temp[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
+        a_temp_static[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
+        b_temp_static[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
 
     }
     

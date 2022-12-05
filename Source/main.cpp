@@ -240,7 +240,7 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
     {
-        H_demagfield[dir].define(ba, dm, 1, 0);
+        H_demagfield[dir].define(ba, dm, 1, 1);
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
