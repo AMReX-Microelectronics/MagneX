@@ -49,8 +49,8 @@ void EvolveM_2nd(
         Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow()); // match ghost cell number with main function
         Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
 
-        MultiFab::Copy(H_demagfield_old[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
+        MultiFab::Copy(H_demagfield_old[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         
@@ -129,6 +129,8 @@ void EvolveM_2nd(
         amrex::IntVect Myface_stag = Mfield[1].ixType().toIntVect();
         amrex::IntVect Mzface_stag = Mfield[2].ixType().toIntVect();
         // extract tileboxes for which to loop
+        amrex::IntVect H_demag_stag = H_demagfield[0].ixType().toIntVect();
+        // extract tileboxes for which to loop
         Box const &tbx = mfi.tilebox(Mfield_old[0].ixType().toIntVect());
         Box const &tby = mfi.tilebox(Mfield_old[1].ixType().toIntVect());
         Box const &tbz = mfi.tilebox(Mfield_old[2].ixType().toIntVect());
@@ -152,9 +154,9 @@ void EvolveM_2nd(
                         // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
                         // H_maxwell - use H^(old_time)
-                        Hx_eff_old += face_avg_to_face(i, j, k, 0, Mxface_stag, Mxface_stag, Hx_demag_old);
-                        Hy_eff_old += face_avg_to_face(i, j, k, 0, Myface_stag, Mxface_stag, Hy_demag_old);
-                        Hz_eff_old += face_avg_to_face(i, j, k, 0, Mzface_stag, Mxface_stag, Hz_demag_old);
+                        Hx_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hx_demag_old);
+                        Hy_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hy_demag_old);
+                        Hz_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hz_demag_old);
                     }
 
                     if (exchange_coupling == 1){
@@ -237,9 +239,9 @@ void EvolveM_2nd(
                         // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
                         // H_maxwell - use H^(old_time)
-                        Hx_eff_old += face_avg_to_face(i, j, k, 0, Mxface_stag, Myface_stag, Hx_demag_old);
-                        Hy_eff_old += face_avg_to_face(i, j, k, 0, Myface_stag, Myface_stag, Hy_demag_old);
-                        Hz_eff_old += face_avg_to_face(i, j, k, 0, Mzface_stag, Myface_stag, Hz_demag_old);
+                        Hx_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hx_demag_old);
+                        Hy_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hy_demag_old);
+                        Hz_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hz_demag_old);
                     }
 
                     if (exchange_coupling == 1){
@@ -321,9 +323,9 @@ void EvolveM_2nd(
                         // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
                         // H_maxwell - use H^(old_time)
-                        Hx_eff_old += face_avg_to_face(i, j, k, 0, Mxface_stag, Mzface_stag, Hx_demag_old);
-                        Hy_eff_old += face_avg_to_face(i, j, k, 0, Myface_stag, Mzface_stag, Hy_demag_old);
-                        Hz_eff_old += face_avg_to_face(i, j, k, 0, Mzface_stag, Mzface_stag, Hz_demag_old);
+                        Hx_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hx_demag_old);
+                        Hy_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hy_demag_old);
+                        Hz_eff_old += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hz_demag_old);
                     }
 
                     if (exchange_coupling == 1){
@@ -459,9 +461,11 @@ void EvolveM_2nd(
             const Array4<Real>& b_temp_static_zface = b_temp_static[2].array(mfi);
 
             // extract tileboxes for which to loop
-            amrex::IntVect Hxnodal = H_demagfield_prev[0].ixType().toIntVect();
-            amrex::IntVect Hynodal = H_demagfield_prev[1].ixType().toIntVect();
-            amrex::IntVect Hznodal = H_demagfield_prev[2].ixType().toIntVect();
+            amrex::IntVect H_demag_stag = H_demagfield_prev[0].ixType().toIntVect();
+            // extract tileboxes for which to loop
+            amrex::IntVect Mxface_stag = Mfield[0].ixType().toIntVect();
+            amrex::IntVect Myface_stag = Mfield[1].ixType().toIntVect();
+            amrex::IntVect Mzface_stag = Mfield[2].ixType().toIntVect();
             // extract tileboxes for which to loop
             Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
             Box const &tby = mfi.tilebox(Mfield[1].ixType().toIntVect());
@@ -486,9 +490,9 @@ void EvolveM_2nd(
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
                             // H_maxwell - use H^[(new_time),r-1]
-                            Hx_eff_prev += face_avg_to_face(i, j, k, 0, Hxnodal, Hxnodal, Hx_demag_prev);
-                            Hy_eff_prev += face_avg_to_face(i, j, k, 0, Hynodal, Hxnodal, Hy_demag_prev);
-                            Hz_eff_prev += face_avg_to_face(i, j, k, 0, Hznodal, Hxnodal, Hz_demag_prev);
+                            Hx_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hx_demag_prev);
+                            Hy_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hy_demag_prev);
+                            Hz_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hz_demag_prev);
                         }
 
                         if (exchange_coupling == 1){
@@ -603,9 +607,9 @@ void EvolveM_2nd(
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
                             // H_maxwell - use H^[(new_time),r-1]
-                            Hx_eff_prev += face_avg_to_face(i, j, k, 0, Hxnodal, Hynodal, Hx_demag_prev);
-                            Hy_eff_prev += face_avg_to_face(i, j, k, 0, Hynodal, Hynodal, Hy_demag_prev);
-                            Hz_eff_prev += face_avg_to_face(i, j, k, 0, Hznodal, Hynodal, Hz_demag_prev);
+                            Hx_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hx_demag_prev);
+                            Hy_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hy_demag_prev);
+                            Hz_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hz_demag_prev);
                         }
 
                         if (exchange_coupling == 1){
@@ -720,9 +724,9 @@ void EvolveM_2nd(
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
                             // H_maxwell - use H^[(new_time),r-1]
-                            Hx_eff_prev += face_avg_to_face(i, j, k, 0, Hxnodal, Hznodal, Hx_demag_prev);
-                            Hy_eff_prev += face_avg_to_face(i, j, k, 0, Hynodal, Hznodal, Hy_demag_prev);
-                            Hz_eff_prev += face_avg_to_face(i, j, k, 0, Hznodal, Hznodal, Hz_demag_prev);
+                            Hx_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hx_demag_prev);
+                            Hy_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hy_demag_prev);
+                            Hz_eff_prev += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hz_demag_prev);
                         }
 
                         if (exchange_coupling == 1){
