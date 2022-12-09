@@ -37,7 +37,6 @@ void EvolveM_2nd(
     std::array<MultiFab, 3> b_temp_static; // right-hand side of vector b, see the documentation
 
     BoxArray ba = H_demagfield[0].boxArray();
-    // amrex::Print() << "ba = " << ba << "\n";
 
     DistributionMapping dm = Mfield[0].DistributionMap();
     LPInfo info;
@@ -48,10 +47,6 @@ void EvolveM_2nd(
         H_demagfield_old[i].define(ba, dm, 1, H_demagfield[i].nGrow());
         // H_demagfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
         H_demagfield_prev[i].define(ba, dm, 1, H_demagfield[i].nGrow());
-
-        // amrex::Print() << "H_demag ghost cell = " << H_demagfield[i].nGrow() << "\n";
-        // amrex::Print() << "H_demag_prev ghost cell = " << H_demagfield_prev[i].nGrow() << "\n";
-        // amrex::Print() << "H_demag_old ghost cell = " << H_demagfield_old[i].nGrow() << "\n";
 
         Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow()); // match ghost cell number with main function
         Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());

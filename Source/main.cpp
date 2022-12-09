@@ -463,7 +463,7 @@ void main_main ()
 	      // Normalize M              
 	      NormalizeM(Mfield, Ms, M_normalization);
 
-// #if 1
+#if 1
               for (MFIter mfi(Ms[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
                   Array4<Real> const& Ms_xface = Ms[0].array(mfi);
@@ -490,10 +490,6 @@ void main_main ()
                       if (Ms_xface(i,j,k) > 0) {
                           for (int n=0; n<3; ++n) {
                               Mfield_error_xface(i,j,k,n) = amrex::Math::abs(Mfield_xface(i,j,k,n) - Mfield_prev_iter_xface(i,j,k,n)) / Ms_xface(i,j,k);
-                            //   printf("i = %d, j = %d, k = %d, Ms_xface = %g \n", i, j, k, Ms_xface(i,j,k));
-                            //   printf("i = %d, j = %d, k = %d, Mfield_xface = %g \n", i, j, k, Mfield_xface(i,j,k));
-                            //   printf("i = %d, j = %d, k = %d, Mfield_prev_iter_xface = %g \n", i, j, k, Mfield_prev_iter_xface(i,j,k));
-                            //   printf( "i = %d, j = %d, k = %d, Mfield_error_xface = %g \n", i, j, k, Mfield_error_xface(i,j,k,n));
                           }
                       } else {
                           for (int n=0; n<3; ++n) {
@@ -506,10 +502,6 @@ void main_main ()
                       if (Ms_yface(i,j,k) > 0) {
                           for (int n=0; n<3; ++n) {
                               Mfield_error_yface(i,j,k,n) = amrex::Math::abs(Mfield_yface(i,j,k,n) - Mfield_prev_iter_yface(i,j,k,n)) / Ms_yface(i,j,k);
-                            //   printf("i = %d, j = %d, k = %d, Ms_yface = %g \n", i, j, k, Ms_yface(i,j,k));
-                            //   printf("i = %d, j = %d, k = %d, Mfield_yface = %g \n", i, j, k, Mfield_yface(i,j,k));
-                            //   printf("i = %d, j = %d, k = %d, Mfield_prev_iter_yface = %g \n", i, j, k, Mfield_prev_iter_yface(i,j,k));
-                            //   printf( "i = %d, j = %d, k = %d, Mfield_error_yface = %g \n", i, j, k, Mfield_error_yface(i,j,k,n));
                           }
                       } else {
                           for (int n=0; n<3; ++n) {
@@ -522,10 +514,6 @@ void main_main ()
                       if (Ms_zface(i,j,k) > 0) {
                           for (int n=0; n<3; ++n) {
                               Mfield_error_zface(i,j,k,n) = amrex::Math::abs(Mfield_zface(i,j,k,n) - Mfield_prev_iter_zface(i,j,k,n)) / Ms_zface(i,j,k);
-                            //   printf("i = %d, j = %d, k = %d, Ms_zface(i,j,k) = %g\n", i, j, k, Ms_zface(i,j,k));
-                            //   printf("i = %d, j = %d, k = %d, Mfield_zface(i,j,k) = %g\n", i, j, k, Mfield_zface(i,j,k));
-                            //   printf("i = %d, j = %d, k = %d, Mfield_prev_iter_zface(i,j,k) = %g\n", i, j, k, Mfield_prev_iter_zface(i,j,k));
-                            //   printf( "i = %d, j = %d, k = %d, Mfield_error_zface = %g \n", i, j, k, Mfield_error_zface(i,j,k,n));
                           }
                       } else {
                           for (int n=0; n<3; ++n) {
@@ -546,20 +534,20 @@ void main_main ()
                   }
               }
 
-// #else
-// 	      Real M_mag_error_max = -1.;
+#else
+	      Real M_mag_error_max = -1.;
 
-// 	      for(int face = 0; face < 3; face++){
-//  		 for(int comp = 0; comp < 3; comp++){
-// 		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, 0);
-// 		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, 0);
-// 		    Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
-// 		    if (M_mag_error >= M_mag_error_max){
-// 		       M_mag_error_max = M_mag_error;
-// 		    }
-// 		 }
-// 	      }
-// #endif
+	      for(int face = 0; face < 3; face++){
+ 		 for(int comp = 0; comp < 3; comp++){
+		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, 0);
+		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, 0);
+		    Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
+		    if (M_mag_error >= M_mag_error_max){
+		       M_mag_error_max = M_mag_error;
+		    }
+		 }
+	      }
+#endif
 
 	      // copy new solution into Mfield_pre_iter
 	      for(int comp = 0; comp < 3; comp++)
