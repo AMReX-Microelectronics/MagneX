@@ -8,6 +8,8 @@ USE_CUDA     = FALSE
 COMP         = gnu
 DIM          = 3
 
+NEUMANN = TRUE
+
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ../Source/Make.package
