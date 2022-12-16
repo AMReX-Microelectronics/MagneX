@@ -319,22 +319,24 @@ void main_main ()
 
     mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
 
-    // coefficients for solver
-    MultiFab alpha_cc(ba, dm, 1, 0);
-    std::array< MultiFab, AMREX_SPACEDIM > beta_face;
-    AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 beta_face[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 beta_face[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+    { // add this brace so alpha_cc and beta_face go out of scope afterwards (save memory)
+        // coefficients for solver
+        MultiFab alpha_cc(ba, dm, 1, 0);
+        std::array< MultiFab, AMREX_SPACEDIM > beta_face;
+        AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                     beta_face[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                     beta_face[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
-    alpha_cc.setVal(0.);
-    beta_face[0].setVal(1.);
-    beta_face[1].setVal(1.);
-    beta_face[2].setVal(1.);
+        alpha_cc.setVal(0.);
+        beta_face[0].setVal(1.);
+        beta_face[1].setVal(1.);
+        beta_face[2].setVal(1.);
 
-    // (A*alpha_cc - B * div beta grad) phi = rhs
-    mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
-    mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
-    mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));
+        // (A*alpha_cc - B * div beta grad) phi = rhs
+        mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
+        mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
+        mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));
+    }
 
     //Declare MLMG object
     MLMG mlmg(mlabec);
