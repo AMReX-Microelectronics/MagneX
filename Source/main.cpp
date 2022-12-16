@@ -295,8 +295,56 @@ void main_main ()
 
     //Solver for Poisson equation
     LPInfo info;
+#ifdef NEUMANN
+    MLABecLaplacian mlabec({geom}, {ba}, {dm}, info);
+
+    mlabec.setEnforceSingularSolvable(false);
+
+    // order of stencil
+    int linop_maxorder = 2;
+    mlabec.setMaxOrder(linop_maxorder);
+
+    // build array of boundary conditions needed by MLABecLaplacian
+    std::array<LinOpBCType, AMREX_SPACEDIM> lo_mlmg_bc;
+    std::array<LinOpBCType, AMREX_SPACEDIM> hi_mlmg_bc;
+
+    //Periodic
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        if(is_periodic[idim]){
+          lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
+        } else {
+          lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
+        }
+    }
+
+    mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
+
+    { // add this brace so alpha_cc and beta_face go out of scope afterwards (save memory)
+        // coefficients for solver
+        MultiFab alpha_cc(ba, dm, 1, 0);
+        std::array< MultiFab, AMREX_SPACEDIM > beta_face;
+        AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                     beta_face[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                     beta_face[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
+        alpha_cc.setVal(0.);
+        beta_face[0].setVal(1.);
+        beta_face[1].setVal(1.);
+        beta_face[2].setVal(1.);
+
+        // (A*alpha_cc - B * div beta grad) phi = rhs
+        mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
+        mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
+        mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));
+    }
+
+    //Declare MLMG object
+    MLMG mlmg(mlabec);
+    mlmg.setVerbose(2);
+#else 
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
-    // openbc.setVerbose(2);
+#endif
+	// openbc.setVerbose(2);
     
     // time = starting time in the simulation
     Real time = 0.0;	
@@ -316,7 +364,11 @@ void main_main ()
         
         //Initial guess for phi
         PoissonPhi.setVal(0.);
-        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1); 
+#ifdef NEUMANN
+        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#else
+	openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#endif
 
         // Calculate H from Phi
         ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
@@ -374,7 +426,11 @@ void main_main ()
                
                //Initial guess for phi
                PoissonPhi.setVal(0.);
-               openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#ifdef NEUMANN
+               mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#else
+	       openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#endif
     
                // Calculate H from Phi
                ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
@@ -423,7 +479,12 @@ void main_main ()
                     
 	      //Initial guess for phi
 	      PoissonPhi.setVal(0.);
+	     
+#ifdef NEUMANN
+              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#else
 	      openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#endif
     
 	      // Calculate H from Phi
 	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
@@ -443,7 +504,12 @@ void main_main ()
                     
 		 //Initial guess for phi
 		 PoissonPhi.setVal(0.);
-		 openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+		 
+#ifdef NEUMANN
+                 mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#else
+	         openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+#endif
     
 		 // Calculate H from Phi
 		 ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);

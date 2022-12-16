@@ -8,6 +8,8 @@ USE_CUDA     = FALSE
 COMP         = gnu
 DIM          = 3
 
+NEUMANN = FALSE
+
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ../Source/Make.package
@@ -19,3 +21,8 @@ include $(AMREX_HOME)/Src/Boundary/Make.package
 include $(AMREX_HOME)/Src/LinearSolvers/MLMG/Make.package 
 include $(AMREX_HOME)/Src/LinearSolvers/OpenBC/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
+
+ifeq ($(NEUMANN), TRUE)
+  DEFINES += -DNEUMANN
+endif
+
