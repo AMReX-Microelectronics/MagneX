@@ -53,9 +53,9 @@ void ComputeHfromPhi(MultiFab&                        PoissonPhi,
 
             amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                     Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i,j,k))/(dx[0]);
-                     Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j,k))/(dx[1]);
-                     Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k))/(dx[2]);
+                     Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
+                     Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
+                     Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
              });
         }
 

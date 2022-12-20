@@ -291,7 +291,7 @@ void main_main ()
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
 
-    MultiFab Plt(ba, dm, 21, 0);
+    MultiFab Plt(ba, dm, 26, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -367,7 +367,7 @@ void main_main ()
 #ifdef NEUMANN
         mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+	    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
         // Calculate H from Phi
@@ -382,6 +382,11 @@ void main_main ()
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
         mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
+        MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 1);
+        MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 1);
+        MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 1);
+        MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
+        MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 1);
 
         WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
                                                 "Mx_xface","Mx_yface","Mx_zface",
@@ -389,8 +394,11 @@ void main_main ()
                                                 "Mz_xface", "Mz_yface", "Mz_zface",
                                                 "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                 "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
-                                                "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface"},
+                                                "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
+                                                "Hx_demagfield","Hy_demagfield","Hz_demagfield",
+                                                "PoissonRHS","PoissonPhi"},
                                                  geom, time, step);
+
 
     }
 
@@ -661,7 +669,12 @@ void main_main ()
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
 
             //Averaging face-centerd Multifabs to cell-centers for plotting 
-            mf_avg_fc_to_cc(Plt, Mfield_old, H_biasfield, Ms);
+            mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
+            MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 1);
+            MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 1);
+            MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 1);
+            MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
+            MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 1);
 
             WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
                                                     "Mx_xface","Mx_yface","Mx_zface",
@@ -669,8 +682,10 @@ void main_main ()
                                                     "Mz_xface", "Mz_yface", "Mz_zface",
                                                     "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                     "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
-                                                    "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface"},
-                                                     geom, time, step);
+                                                    "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
+                                                    "Hx_demagfield","Hy_demagfield","Hz_demagfield",
+                                                    "PoissonRHS","PoissonPhi"},
+                                                    geom, time, step);
 
         }
 

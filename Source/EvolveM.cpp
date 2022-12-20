@@ -69,6 +69,9 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
             amrex::IntVect Mzface_stag = Mfield_old[2].ixType().toIntVect();
 
             // extract tileboxes for which to loop
+            amrex::IntVect H_demag_stag = H_demagfield[0].ixType().toIntVect();
+
+            // extract tileboxes for which to loop
             Box const &tbx = mfi.tilebox(Mfield_old[0].ixType().toIntVect());
             Box const &tby = mfi.tilebox(Mfield_old[1].ixType().toIntVect());
             Box const &tbz = mfi.tilebox(Mfield_old[2].ixType().toIntVect());
@@ -91,9 +94,9 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
 
                     if(demag_coupling == 1)
                     {
-                        Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mxface_stag, Hx_demag);
-                        Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mxface_stag, Hy_demag);
-                        Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mxface_stag, Hz_demag);
+                        Hx_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hx_demag);
+                        Hy_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hy_demag);
+                        Hz_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mxface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -166,9 +169,9 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                  
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Myface_stag, Hx_demag);
-                      Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Myface_stag, Hy_demag);
-                      Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Myface_stag, Hz_demag);
+                      Hx_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hx_demag);
+                      Hy_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hy_demag);
+                      Hz_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Myface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
@@ -241,9 +244,9 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                  
                     if(demag_coupling == 1)
                     {
-                      Hx_eff += face_avg_to_face(i, j, k, 0, Mxface_stag, Mzface_stag, Hx_demag);
-                      Hy_eff += face_avg_to_face(i, j, k, 0, Myface_stag, Mzface_stag, Hy_demag);
-                      Hz_eff += face_avg_to_face(i, j, k, 0, Mzface_stag, Mzface_stag, Hz_demag);
+                      Hx_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hx_demag);
+                      Hy_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hy_demag);
+                      Hz_eff += cc_avg_to_face(i, j, k, 0, H_demag_stag, Mzface_stag, Hz_demag);
                     }
 
                     if(exchange_coupling == 1)
