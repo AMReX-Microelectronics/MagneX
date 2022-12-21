@@ -1,0 +1,55 @@
+dt = 1.0e-14
+nsteps = 80
+plot_int = 2
+
+TimeIntegratorOrder = 2
+
+######### this is my original setup ###########
+# n_cell = 256 128 128
+max_grid_size = 64
+# prob_lo = -300.e-9 -70.5e-9 -32.0e-9
+# prob_hi =  300.e-9  70.0e-9  128.0e-9
+
+# # fast converging: 2.7s/step, needs 4 iter per step
+# n_cell = 256 128 128
+# prob_lo = -300.e-9 -70.0e-9 -128.0e-9
+# prob_hi =  300.e-9  70.0e-9  128.0e-9
+
+# # slower converging: 11 s/step, needs 4 iter per step
+# n_cell = 256 128 128
+# prob_lo = -300.e-9 -70.0e-9 -80.0e-9
+# prob_hi =  300.e-9  70.0e-9  80.0e-9
+
+# # medium converging: 4.5 s/step, needs 4 iter per step
+# n_cell = 256 128 128
+# prob_lo = -300.e-9 -70.0e-9 -96.0e-9
+# prob_hi =  300.e-9  70.0e-9  96.0e-9
+
+# fast converging: 1.2 s/step, needs 4 iter per step
+n_cell = 256 128 8
+prob_lo = -300.e-9 -70.0e-9 -6.0e-9
+prob_hi =  300.e-9  70.0e-9  6.0e-9
+
+mag_lo = -250.e-9 -62.5e-9 -1.5e-9
+mag_hi =  250.e-9  62.5e-9  1.5e-9
+
+# # not converging
+# n_cell = 256 128 128
+# prob_lo = -300.e-9 -70.0e-9 -64.0e-9
+# prob_hi =  300.e-9  70.0e-9  64.0e-9
+
+# mag_lo = -250.e-9 -62.5e-9 -1.5e-9
+# mag_hi =  250.e-9  62.5e-9  1.5e-9
+
+mu0 = 1.25663706212e-6 
+alpha_val = 0.02
+Ms_val = 8.0e5
+gamma_val = -1.759e11
+exchange_val = 1.3e-11
+anisotropy_val = -139.26
+anisotropy_axis = 0.0 1.0 0.0
+
+demag_coupling = 1 # this parameter switches on/off the Open BC Poisson; demag_coupling = 1 : Open BC on; demag_coupling = 0: Open BC off
+M_normalization = 1
+exchange_coupling = 1
+anisotropy_coupling = 0
