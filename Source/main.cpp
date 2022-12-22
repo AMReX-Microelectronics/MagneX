@@ -343,9 +343,9 @@ void main_main ()
     mlmg.setVerbose(2);
 #else 
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
+    openbc.setVerbose(2);
 #endif
-	// openbc.setVerbose(2);
-    
+
     // time = starting time in the simulation
     Real time = 0.0;	
    
