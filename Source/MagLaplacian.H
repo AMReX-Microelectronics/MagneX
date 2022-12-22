@@ -183,7 +183,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Array4<amrex::Real> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
-    return (UpwardDx(F, i, j, k, dx, ncomp) + DownwardDx(F, i, j, k, dx, ncomp))/2.;
+     return UpwardDx(F, i, j, k, dx, ncomp);
  }
 
 
@@ -194,7 +194,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Array4<amrex::Real> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
-    return (UpwardDy(F, i, j, k, dx, ncomp) + DownwardDy(F, i, j, k, dx, ncomp))/2.;
+     return UpwardDy(F, i, j, k, dx, ncomp);
  }
 
  /**
@@ -204,7 +204,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     amrex::Array4<amrex::Real> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
-    return (UpwardDz(F, i, j, k, dx, ncomp) + DownwardDz(F, i, j, k, dx, ncomp))/2.;
+     return UpwardDz(F, i, j, k, dx, ncomp);
  }
 
 
