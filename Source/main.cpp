@@ -365,9 +365,12 @@ void main_main ()
         //Initial guess for phi
         PoissonPhi.setVal(0.);
 #ifdef NEUMANN
+        // set boundary conditions to homogeneous Neumann
+        mlabec.setLevelBC(0, &PoissonPhi);
+
         mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
         // Calculate H from Phi
