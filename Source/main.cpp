@@ -46,6 +46,9 @@ void main_main ()
     // how often to write a plotfile
     int plot_int;
 
+    // ho often to write a checkpoint
+    int chk_int;
+
     // time step
     Real dt;
     
@@ -111,6 +114,11 @@ void main_main ()
         //  If plot_int < 0 then no plot files will be written
         plot_int = -1;
         pp.query("plot_int",plot_int);
+
+	// Default chk_int to -1, allow us to set it to something else in the inputs file
+        //  If chk_int < 0 then no chk files will be written
+        chk_int = -1;
+        pp.query("chk_int",chk_int);
 
         // time step
         pp.get("dt",dt);
@@ -200,12 +208,6 @@ void main_main ()
     AMREX_D_TERM(Mfield_old[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
                  Mfield_old[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
                  Mfield_old[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
-
-    Array<MultiFab, AMREX_SPACEDIM> Mfield_pre;
-    // face-centered Mfield at predictor step (for 2nd order time integrator)
-    AMREX_D_TERM(Mfield_pre[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield_pre[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield_pre[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield_prev_iter;
     // face-centered Mfield at predictor step (for 2nd order time integrator)
@@ -409,13 +411,11 @@ void main_main ()
     for(int comp = 0; comp < 3; comp++)
     {
        MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
-       MultiFab::Copy(Mfield_pre[comp], Mfield[comp], 0, 0, 3, Nghost);
        MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
        MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, 0);
 
        // fill periodic ghost cells
        Mfield_old[comp].FillBoundary(geom.periodicity());
-       Mfield_pre[comp].FillBoundary(geom.periodicity());
        Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
        Mfield_error[comp].FillBoundary(geom.periodicity());
 
@@ -454,21 +454,21 @@ void main_main ()
 
            // M^{n+1} = M^n + dt * f^n
 	   for(int i = 0; i < 3; i++){
-	      MultiFab::LinComb(Mfield_pre[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, 0);
+	      MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, 0);
 	   }
 
-           NormalizeM(Mfield_pre, Ms, M_normalization);
+           NormalizeM(Mfield, Ms, M_normalization);
 
            for(int comp = 0; comp < 3; comp++)
            {
               // fill periodic ghost cells
-              Mfield_pre[comp].FillBoundary(geom.periodicity());
+              Mfield[comp].FillBoundary(geom.periodicity());
            }
 
            // copy new solution into old solution
            for(int comp = 0; comp < 3; comp++)
            {
-              MultiFab::Copy(Mfield_old[comp], Mfield_pre[comp], 0, 0, 3, Nghost);
+              MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
 
               // fill periodic ghost cells
               Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -666,7 +666,7 @@ void main_main ()
         // update time
         time = time + dt;
 
-        // Write a plotfile of the initial data if plot_int > 0
+        // Write a plotfile of the data if plot_int > 0
         if (plot_int > 0 && step%plot_int == 0)
         {
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
@@ -691,6 +691,11 @@ void main_main ()
                                                     geom, time, step);
 
         }
+
+	// Write a checkpoint file if chk_int > 0
+	if (chk_int > 0 && step&chk_int == 0) {
+
+	}
 
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
