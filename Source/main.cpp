@@ -160,7 +160,28 @@ void main_main ()
         }
     }
 
+    int start_step = 1;
 
+    // time = starting time in the simulation
+    Real time = 0.0;	
+
+    Array<MultiFab, AMREX_SPACEDIM> Mfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
+
+    BoxArray ba;
+    DistributionMapping dm;
+    
+    if (restart > 0) {
+
+      start_step = restart+1;
+
+      // read in Mfield, H_biasfield, and ba
+      // create a DistributionMapping dm
+      ReadCheckPoint(restart,time,Mfield,H_biasfield,H_demagfield,ba,dm);
+      
+    }
+    
     // **********************************
     // SIMULATION SETUP
 
@@ -168,8 +189,6 @@ void main_main ()
     // ba will contain a list of boxes that cover the domain
     // geom contains information such as the physical domain size,
     //               number of points in the domain, and periodicity
-    BoxArray ba;
-    Geometry geom;
 
     // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
     IntVect dom_lo(AMREX_D_DECL(       0,        0,        0));
@@ -177,12 +196,14 @@ void main_main ()
 
     // Make a single box that is the entire domain
     Box domain(dom_lo, dom_hi);
+    
+    if (restart == -1) {
+      // Initialize the boxarray "ba" from the single box "domain"
+      ba.define(domain);
 
-    // Initialize the boxarray "ba" from the single box "domain"
-    ba.define(domain);
-
-    // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-    ba.maxSize(max_grid_size);
+      // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+      ba.maxSize(max_grid_size);
+    }
 
     // This defines the physical box in each direction.
     RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
@@ -192,6 +213,7 @@ void main_main ()
     Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
 
     // This defines a Geometry object
+    Geometry geom;
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
     // extract dx from the geometry object
@@ -201,16 +223,25 @@ void main_main ()
     int Nghost = 2;
 
     // How Boxes are distrubuted among MPI processes
-    DistributionMapping dm(ba);
+    if (restart == -1) {
+      dm.define(ba);
+    }
 
     // Allocate multifabs
-
-    Array<MultiFab, AMREX_SPACEDIM> Mfield;
     if (restart == -1) {
       // face-centered Mfield
       AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
 		   Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
 		   Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
+
+      // face-centered H_biasfield
+      AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+
+      for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+        H_demagfield[dir].define(ba, dm, 1, 1);
+      }
     }
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
@@ -248,20 +279,6 @@ void main_main ()
     AMREX_D_TERM(LLG_RHS_avg[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
                  LLG_RHS_avg[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
                  LLG_RHS_avg[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
-    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-    {
-        H_demagfield[dir].define(ba, dm, 1, 1);
-    }
-
-    Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
-    if (restart == -1) {
-      // face-centered H_biasfield
-      AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-    }
 
     //Face-centered magnetic properties
     std::array< MultiFab, AMREX_SPACEDIM > alpha;
@@ -360,29 +377,15 @@ void main_main ()
     openbc.setVerbose(2);
 #endif
 
-    // time = starting time in the simulation
-    Real time = 0.0;	
-   
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, anisotropy,
                                  alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
-    int start_step;
-
-    if (restart == -1) {
-
-      start_step = 1;
-      
+    if (restart == -1) {      
       //Initialize fields
       InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
-      
-    } else {
 
-      ReadCheckPoint(start_step,restart,time,Mfield,H_biasfield);
-      
-    }
-
-    if(demag_coupling == 1){ 
+      if(demag_coupling == 1){ 
         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
         //Compute RHS of Poisson equation
         ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
@@ -400,12 +403,19 @@ void main_main ()
 
         // Calculate H from Phi
         ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+      }
+    } else {
+      PoissonPhi.setVal(0.);
+      PoissonRHS.setVal(0.);
     }
 
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
     {
         int plt_step = 0;
+	if (restart > 0) {
+	  plt_step = restart;
+	}
         const std::string& pltfile = amrex::Concatenate("plt",plt_step,8);
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
@@ -716,8 +726,8 @@ void main_main ()
         }
 
 	// Write a checkpoint file if chk_int > 0
-	if (chk_int > 0 && step%chk_int == 0) {	  
-	  WriteCheckPoint(step,time,Mfield,H_biasfield);
+	if (chk_int > 0 && step%chk_int == 0) {
+	  WriteCheckPoint(step,time,Mfield,H_biasfield,H_demagfield);
 	}
 
         // MultiFab memory usage

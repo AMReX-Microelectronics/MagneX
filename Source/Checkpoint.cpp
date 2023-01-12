@@ -16,7 +16,8 @@ namespace {
 void WriteCheckPoint(int step,
                      const amrex::Real time,
                      std::array< MultiFab, AMREX_SPACEDIM>& Mfield,
-                     std::array< MultiFab, AMREX_SPACEDIM>& H_biasfield)
+                     std::array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
+		     std::array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
 {
     // timer for profiling
     BL_PROFILE_VAR("WriteCheckPoint()",WriteCheckPoint);
@@ -26,7 +27,7 @@ void WriteCheckPoint(int step,
 
     amrex::Print() << "Writing checkpoint " << checkpointname << "\n";
 
-    BoxArray ba = Mfield[0].boxArray();
+    BoxArray ba = H_demagfield[0].boxArray();
 
     // single level problem
     int nlevels = 1;
@@ -60,9 +61,6 @@ void WriteCheckPoint(int step,
         // write out title line
         HeaderFile << "Checkpoint file for MagneX\n";
 
-        // write out the time step number
-        HeaderFile << step << "\n";
-
         // write out time
         HeaderFile << time << "\n";
         
@@ -84,13 +82,21 @@ void WriteCheckPoint(int step,
                  amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_biasfieldy"));
     VisMF::Write(H_biasfield[2],
                  amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_biasfieldz"));
+    VisMF::Write(H_demagfield[0],
+                 amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_demagfieldx"));
+    VisMF::Write(H_demagfield[1],
+                 amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_demagfieldy"));
+    VisMF::Write(H_demagfield[2],
+                 amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_demagfieldz"));
 }
 
-void ReadCheckPoint(int& step,
-		    int& restart,
+void ReadCheckPoint(int& restart,
 		    amrex::Real& time,
 		    std::array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    std::array< MultiFab, AMREX_SPACEDIM>& H_biasfield)
+		    std::array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
+		    std::array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+		    BoxArray& ba,
+		    DistributionMapping& dm)
 {
     // timer for profiling
     BL_PROFILE_VAR("ReadCheckPoint()",ReadCheckPoint);
@@ -115,31 +121,30 @@ void ReadCheckPoint(int& step,
         // read in title line
         std::getline(is, line);
 
-        // read in time step number
-        is >> step;
-        ++step;
-        GotoNextLine(is);
-
         // read in time
         is >> time;
         GotoNextLine(is);
 
         // read in BoxArray from Header
-        BoxArray ba;
         ba.readFrom(is);
         GotoNextLine(is);
 
         // create a distribution mapping
-        DistributionMapping dm { ba, ParallelDescriptor::NProcs() };
-        
-        // cu, cuMeans, cuVars
-        Mfield[0].define(ba,dm,3,2);
-        Mfield[1].define(ba,dm,3,2);
-        Mfield[2].define(ba,dm,3,2);
+        dm.define(ba, ParallelDescriptor::NProcs());
+
+	int Nghost = 2;
+	
+	AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+		     Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+		     Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost);)
 	
 	AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
 		     H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
 		     H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+
+	for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+	  H_demagfield[dir].define(ba, dm, 1, 1);
+	}
     }
 
     // read in the MultiFab data
@@ -155,6 +160,12 @@ void ReadCheckPoint(int& step,
                 amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_biasfieldy"));
     VisMF::Read(H_biasfield[2],
                 amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_biasfieldz"));
+    VisMF::Read(H_demagfield[0],
+                amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_demagfieldx"));
+    VisMF::Read(H_demagfield[1],
+                amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_demagfieldy"));
+    VisMF::Read(H_demagfield[2],
+                amrex::MultiFabFileFullPrefix(0, checkpointname, "Level_", "H_demagfieldz"));
 }
 
 
