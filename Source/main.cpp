@@ -14,6 +14,7 @@
 #include "Diagnostics.H"
 #include "EvolveM.H"
 #include "EvolveM_2nd.H"
+#include "Checkpoint.H"
 
 using namespace amrex;
 
@@ -48,6 +49,9 @@ void main_main ()
 
     // ho often to write a checkpoint
     int chk_int;
+
+    // step to restart from
+    int restart;
 
     // time step
     Real dt;
@@ -120,6 +124,10 @@ void main_main ()
         chk_int = -1;
         pp.query("chk_int",chk_int);
 
+	// query restart
+	restart = -1;
+	pp.query("restart",restart);
+	
         // time step
         pp.get("dt",dt);
 
@@ -198,10 +206,12 @@ void main_main ()
     // Allocate multifabs
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield;
-    // face-centered Mfield
-    AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
+    if (restart == -1) {
+      // face-centered Mfield
+      AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+		   Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+		   Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
+    }
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
     // face-centered Mfield_old
@@ -246,10 +256,12 @@ void main_main ()
     }
 
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
-    // face-centered H_biasfield
-    AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+    if (restart == -1) {
+      // face-centered H_biasfield
+      AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+    }
 
     //Face-centered magnetic properties
     std::array< MultiFab, AMREX_SPACEDIM > alpha;
@@ -355,9 +367,20 @@ void main_main ()
                                  alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
+    int start_step;
 
-    //Initialize fields
-    InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
+    if (restart == -1) {
+
+      start_step = 1;
+      
+      //Initialize fields
+      InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
+      
+    } else {
+
+      ReadCheckPoint(start_step,restart,time,Mfield,H_biasfield);
+      
+    }
 
     if(demag_coupling == 1){ 
         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
@@ -382,8 +405,8 @@ void main_main ()
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
     {
-        int step = 0;
-        const std::string& pltfile = amrex::Concatenate("plt",step,8);
+        int plt_step = 0;
+        const std::string& pltfile = amrex::Concatenate("plt",plt_step,8);
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
         mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
@@ -402,7 +425,7 @@ void main_main ()
                                                 "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
                                                 "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                 "PoissonRHS","PoissonPhi"},
-                                                 geom, time, step);
+                                                 geom, time, plt_step);
 
 
     }
@@ -421,7 +444,7 @@ void main_main ()
 
     }
 
-    for (int step = 1; step <= nsteps; ++step)
+    for (int step = start_step; step <= nsteps; ++step)
     {
 
         Real step_strt_time = ParallelDescriptor::second();
@@ -693,8 +716,8 @@ void main_main ()
         }
 
 	// Write a checkpoint file if chk_int > 0
-	if (chk_int > 0 && step&chk_int == 0) {
-
+	if (chk_int > 0 && step%chk_int == 0) {	  
+	  WriteCheckPoint(step,time,Mfield,H_biasfield);
 	}
 
         // MultiFab memory usage
