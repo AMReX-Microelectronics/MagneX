@@ -382,11 +382,11 @@ void main_main ()
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
         mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
-        MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 1);
-        MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 1);
-        MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 1);
+        MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 0);
         MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
-        MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 1);
+        MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
 
         WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
                                                 "Mx_xface","Mx_yface","Mx_zface",
@@ -670,11 +670,11 @@ void main_main ()
 
             //Averaging face-centerd Multifabs to cell-centers for plotting 
             mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
-            MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 1);
-            MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 1);
-            MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 1);
+            MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 0);
             MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
-            MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 1);
+            MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
 
             WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
                                                     "Mx_xface","Mx_yface","Mx_zface",
