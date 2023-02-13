@@ -1,7 +1,8 @@
 #include "Diagnostics.H"
 
 void mf_avg_fc_to_cc(MultiFab&  Plt,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   Mfield,
+                   //std::array< MultiFab, AMREX_SPACEDIM >&   Mfield,
+		   amrex::Vector<MultiFab>& Mfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   Ms)
 {

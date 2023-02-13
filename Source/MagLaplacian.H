@@ -4,7 +4,7 @@
  * Perform derivative along x on a nodal grid, from a cell-centered field `F`*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real UpwardDx (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
     amrex::Real const inv_dx = 1./dx[0];
@@ -16,7 +16,7 @@ static amrex::Real UpwardDx (
  * Perform derivative along x on a nodal grid, from a cell-centered field `F`*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real DownwardDx (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
     amrex::Real const inv_dx = 1./dx[0];
@@ -28,7 +28,7 @@ static amrex::Real DownwardDx (
  * Perform derivative along y on a nodal grid, from a cell-centered field `F`*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real UpwardDy (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
     amrex::Real const inv_dy = 1./dx[1];
@@ -40,7 +40,7 @@ static amrex::Real UpwardDy (
  * Perform derivative along y on a nodal grid, from a cell-centered field `F`*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real DownwardDy (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
     amrex::Real const inv_dy = 1./dx[1];
@@ -53,7 +53,7 @@ static amrex::Real DownwardDy (
  * Perform derivative along z on a nodal grid, from a cell-centered field `F`*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real UpwardDz (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
     amrex::Real const inv_dz = 1./dx[2];
@@ -65,7 +65,7 @@ static amrex::Real UpwardDz (
  * Perform derivative along z on a nodal grid, from a cell-centered field `F`*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real DownwardDz (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
     amrex::Real const inv_dz = 1./dx[2];
@@ -76,7 +76,7 @@ static amrex::Real DownwardDz (
   * Perform divergence of gradient along x on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real LaplacianDx_Mag (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
@@ -107,7 +107,7 @@ static amrex::Real DownwardDz (
   * Perform divergence of gradient along y on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real LaplacianDy_Mag (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
@@ -138,7 +138,7 @@ static amrex::Real DownwardDz (
   * Perform divergence of gradient along z on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real LaplacianDz_Mag (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
@@ -168,7 +168,7 @@ static amrex::Real DownwardDz (
   * Compute the sum to get Laplacian of M field */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real Laplacian_Mag (
-     amrex::Array4<amrex::Real> const& F,
+     amrex::Array4<amrex::Real const> const& F,
      amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
      int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
@@ -180,7 +180,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
   * Perform divergence  along x on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real DivergenceDx_Mag (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
      return UpwardDx(F, i, j, k, dx, ncomp);
@@ -191,7 +191,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
   * Perform divergence along y on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real DivergenceDy_Mag (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
      return UpwardDy(F, i, j, k, dx, ncomp);
@@ -201,7 +201,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
   * Perform divergence along z on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real DivergenceDz_Mag (
-    amrex::Array4<amrex::Real> const& F,
+    amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp) {
 
      return UpwardDz(F, i, j, k, dx, ncomp);

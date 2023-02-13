@@ -21,7 +21,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    const       Geometry& geom);
 
 
-void InitializeFields(std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
+void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
