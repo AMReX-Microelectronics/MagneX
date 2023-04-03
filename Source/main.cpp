@@ -381,32 +381,32 @@ void main_main ()
                                  alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
+    // initialize to zero; for demag_coupling==0 these aren't used
+    PoissonPhi.setVal(0.);
+    PoissonRHS.setVal(0.);
+
     if (restart == -1) {      
-      //Initialize fields
-      InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
+        //Initialize fields
+        InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
 
-      if(demag_coupling == 1){ 
-        //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-        //Compute RHS of Poisson equation
-        ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
+        if(demag_coupling == 1){ 
+            //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+            //Compute RHS of Poisson equation
+            ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
         
-        //Initial guess for phi
-        PoissonPhi.setVal(0.);
+            //Initial guess for phi
+            PoissonPhi.setVal(0.);
 #ifdef NEUMANN
-        // set boundary conditions to homogeneous Neumann
-        mlabec.setLevelBC(0, &PoissonPhi);
+            // set boundary conditions to homogeneous Neumann
+            mlabec.setLevelBC(0, &PoissonPhi);
 
-        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+            mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
-
-        // Calculate H from Phi
-        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-      }
-    } else {
-      PoissonPhi.setVal(0.);
-      PoissonRHS.setVal(0.);
+            // Calculate H from Phi
+            ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+        }
     }
 
     // Write a plotfile of the initial data if plot_int > 0
