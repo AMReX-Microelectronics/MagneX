@@ -156,6 +156,17 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    // z component on x-faces of grid
                    LLG_rhs_xface(i, j, k, 2) = LLG_RHS_z(M_xface_old, alpha_xface_arr, gamma_xface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
 
+                   } else {
+ 
+                    // x component on z-faces of grid
+                    LLG_rhs_xface(i, j, k, 0) = 0.0;
+             
+                    // y component on z-faces of grid
+                    LLG_rhs_xface(i, j, k, 1) = 0.0;
+ 
+                    // z component on z-faces of grid
+                    LLG_rhs_xface(i, j, k, 2) = 0.0;
+
                  }   
  
             });     
@@ -230,6 +241,17 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
 
                    // z component on y-faces of grid
                    LLG_rhs_yface(i, j, k, 2) = LLG_RHS_z(M_yface_old, alpha_yface_arr, gamma_yface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
+
+                   } else {
+ 
+                    // x component on z-faces of grid
+                    LLG_rhs_yface(i, j, k, 0) = 0.0;
+             
+                    // y component on z-faces of grid
+                    LLG_rhs_yface(i, j, k, 1) = 0.0;
+ 
+                    // z component on z-faces of grid
+                    LLG_rhs_yface(i, j, k, 2) = 0.0;
 
                  }   
  
@@ -306,7 +328,17 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    // z component on z-faces of grid
                    LLG_rhs_zface(i, j, k, 2) = LLG_RHS_z(M_zface_old, alpha_zface_arr, gamma_zface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
 
-                 }   
+                 } else {
+
+                   // x component on z-faces of grid
+                   LLG_rhs_zface(i, j, k, 0) = 0.0;
+
+                   // y component on z-faces of grid
+                   LLG_rhs_zface(i, j, k, 1) = 0.0;
+
+                   // z component on z-faces of grid
+                   LLG_rhs_zface(i, j, k, 2) = 0.0;
+                }   
  
             });    
             

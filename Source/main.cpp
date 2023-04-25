@@ -244,6 +244,7 @@ void main_main ()
 
       for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
         H_demagfield[dir].define(ba, dm, 1, 1);
+        H_demagfield[dir].setVal(0.);
       }
     }
 
@@ -329,6 +330,9 @@ void main_main ()
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
+
+    PoissonPhi.setVal(0.);
+    PoissonRHS.setVal(0.);
 
     MultiFab Plt(ba, dm, 26, 0);
 
@@ -746,6 +750,7 @@ void main_main ()
             // to the integrator
             integrator.set_rhs(source_fun);
             integrator.set_post_update(post_update_fun);
+ 
             
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.advance(Mfield_old, Mfield, time, dt);
