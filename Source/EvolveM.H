@@ -4,9 +4,11 @@
 
 using namespace amrex;
 
-void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
+void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
+                   //std::array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
+                   amrex::Vector<MultiFab>& LLG_RHS,
+                   const amrex::Vector<MultiFab>& Mfield_old,
+		   std::array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   alpha,
                    std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
@@ -19,8 +21,11 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
                    int M_normalization, 
                    Real mu0, 
-                   const Geometry& geom);
+                   const Geometry& geom,
+		   const Real time);
 
 
-void NormalizeM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< MultiFab, AMREX_SPACEDIM >& Ms, int M_normalization);
+void NormalizeM(amrex::Vector<MultiFab>& Mfield, 
+		//std::array< MultiFab, AMREX_SPACEDIM >& Mfield,
+		std::array< MultiFab, AMREX_SPACEDIM >& Ms, int M_normalization);
 

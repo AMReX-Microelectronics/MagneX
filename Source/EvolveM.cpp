@@ -2,9 +2,11 @@
 #include "MagLaplacian.H"
 #include "ComputeLLG_RHS.H"
 
-void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
+void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
+                   //std::array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
+                   amrex::Vector<MultiFab>& LLG_RHS,
+                   const amrex::Vector<MultiFab>& Mfield_old,
+		   std::array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   alpha,
                    std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
@@ -17,12 +19,11 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
                    int M_normalization, 
                    Real mu0,
-                   const Geometry& geom)
+                   const Geometry& geom, const Real time)
 {
         //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         for (MFIter mfi(Mfield_old[0]); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.growntilebox(1); 
 
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
@@ -36,9 +37,9 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
             const Array4<Real>& LLG_rhs_yface = LLG_RHS[1].array(mfi);         
             const Array4<Real>& LLG_rhs_zface = LLG_RHS[2].array(mfi);         
 
-            const Array4<Real>& M_xface_old = Mfield_old[0].array(mfi); 
-            const Array4<Real>& M_yface_old = Mfield_old[1].array(mfi); 
-            const Array4<Real>& M_zface_old = Mfield_old[2].array(mfi); 
+            const Array4<Real const>& M_xface_old = Mfield_old[0].array(mfi); 
+            const Array4<Real const>& M_yface_old = Mfield_old[1].array(mfi); 
+            const Array4<Real const>& M_zface_old = Mfield_old[2].array(mfi); 
 
             const Array4<Real>& H_bias_xface = H_biasfield[0].array(mfi);
             const Array4<Real>& H_bias_yface = H_biasfield[1].array(mfi);
@@ -304,19 +305,19 @@ void Compute_LLG_RHS(std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    // z component on z-faces of grid
                    LLG_rhs_zface(i, j, k, 2) = LLG_RHS_z(M_zface_old, alpha_zface_arr, gamma_zface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
 
-                 }   
+                }   
  
             });    
             
         }
 }
 
-void NormalizeM(std::array< MultiFab, AMREX_SPACEDIM >& Mfield, std::array< MultiFab, AMREX_SPACEDIM >& Ms, int M_normalization)
+void NormalizeM(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, AMREX_SPACEDIM >& Mfield,
+	       	std::array< MultiFab, AMREX_SPACEDIM >& Ms, int M_normalization)
 {
         //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.growntilebox(1); 
 
             // extract field data
             const Array4<Real>& M_xface = Mfield[0].array(mfi);         
