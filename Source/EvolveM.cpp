@@ -24,7 +24,6 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
         //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         for (MFIter mfi(Mfield_old[0]); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.growntilebox(1); 
 
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
@@ -156,17 +155,6 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    // z component on x-faces of grid
                    LLG_rhs_xface(i, j, k, 2) = LLG_RHS_z(M_xface_old, alpha_xface_arr, gamma_xface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
 
-                   } else {
- 
-                    // x component on z-faces of grid
-                    LLG_rhs_xface(i, j, k, 0) = 0.0;
-             
-                    // y component on z-faces of grid
-                    LLG_rhs_xface(i, j, k, 1) = 0.0;
- 
-                    // z component on z-faces of grid
-                    LLG_rhs_xface(i, j, k, 2) = 0.0;
-
                  }   
  
             });     
@@ -241,17 +229,6 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
 
                    // z component on y-faces of grid
                    LLG_rhs_yface(i, j, k, 2) = LLG_RHS_z(M_yface_old, alpha_yface_arr, gamma_yface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
-
-                   } else {
- 
-                    // x component on z-faces of grid
-                    LLG_rhs_yface(i, j, k, 0) = 0.0;
-             
-                    // y component on z-faces of grid
-                    LLG_rhs_yface(i, j, k, 1) = 0.0;
- 
-                    // z component on z-faces of grid
-                    LLG_rhs_yface(i, j, k, 2) = 0.0;
 
                  }   
  
@@ -328,16 +305,6 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    // z component on z-faces of grid
                    LLG_rhs_zface(i, j, k, 2) = LLG_RHS_z(M_zface_old, alpha_zface_arr, gamma_zface_arr, M_magnitude, mu0, Hx_eff, Hy_eff, Hz_eff, i, j, k);
 
-                 } else {
-
-                   // x component on z-faces of grid
-                   LLG_rhs_zface(i, j, k, 0) = 0.0;
-
-                   // y component on z-faces of grid
-                   LLG_rhs_zface(i, j, k, 1) = 0.0;
-
-                   // z component on z-faces of grid
-                   LLG_rhs_zface(i, j, k, 2) = 0.0;
                 }   
  
             });    
@@ -351,7 +318,6 @@ void NormalizeM(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, AMREX_S
         //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.growntilebox(1); 
 
             // extract field data
             const Array4<Real>& M_xface = Mfield[0].array(mfi);         

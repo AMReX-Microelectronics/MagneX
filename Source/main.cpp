@@ -219,9 +219,6 @@ void main_main ()
     Geometry geom;
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
-
     // Nghost = number of ghost cells for each array
     int Nghost = 2;
 
@@ -333,6 +330,12 @@ void main_main ()
 
     PoissonPhi.setVal(0.);
     PoissonRHS.setVal(0.);
+
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        LLG_RHS[idim].setVal(0.);
+        LLG_RHS_pre[idim].setVal(0.);
+        LLG_RHS_avg[idim].setVal(0.);
+    }
 
     MultiFab Plt(ba, dm, 26, 0);
 
@@ -706,14 +709,19 @@ void main_main ()
         amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
 
 	    // Create a RHS source function we will integrate
-            auto source_fun = [&](Vector<MultiFab>& LLG_RHS, const Vector<MultiFab>& Mfield_old, const Real time){
+            auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real /*time*/){
+
                  // User function to calculate the rhs MultiFab given the state MultiFab
+                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+                     rhs[idim].setVal(0.);
+                 } 
+ 
     	         // Evolve H_demag
                  if(demag_coupling == 1)
                  {
                      //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                      //Compute RHS of Poisson equation
-                     ComputePoissonRHS(PoissonRHS, Mfield_old, Ms, geom);
+                     ComputePoissonRHS(PoissonRHS, old_state, Ms, geom);
                      
                      //Initial guess for phi
                      PoissonPhi.setVal(0.);
@@ -728,19 +736,18 @@ void main_main ()
                  }
 
                  // Compute f^n = f(M^n, H^n) 
-                 Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
-                 //fill_rhs(rhs, state, time);
+                 Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
             };
 
 	    // Create a function to call after updating a state
-            auto post_update_fun = [&](Vector<MultiFab>& Mfield, const Real time) {
+            auto post_update_fun = [&](Vector<MultiFab>& state, const Real /*time*/) {
                  // Call user function to update state MultiFab, e.g. fill BCs
-                 NormalizeM(Mfield, Ms, M_normalization);
+                 NormalizeM(state, Ms, M_normalization);
 
                  for(int comp = 0; comp < 3; comp++)
                  {
                     // fill periodic ghost cells
-                    Mfield[comp].FillBoundary(geom.periodicity());
+                    state[comp].FillBoundary(geom.periodicity());
                  }
 
                 //post_update(Mfield_old, time, geom);
