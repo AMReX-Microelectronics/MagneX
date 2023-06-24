@@ -2,7 +2,8 @@
 #include "MagLaplacian.H"
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+                       //Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+		       const amrex::Vector<MultiFab>& Mfield,
                        Array<MultiFab, AMREX_SPACEDIM>& Ms,
                        const Geometry&                 geom)
 {
@@ -12,9 +13,9 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-            const Array4<Real>& M_xface = Mfield[0].array(mfi);         
-            const Array4<Real>& M_yface = Mfield[1].array(mfi);         
-            const Array4<Real>& M_zface = Mfield[2].array(mfi);   
+            const Array4<Real const>& M_xface = Mfield[0].array(mfi);         
+            const Array4<Real const>& M_yface = Mfield[1].array(mfi);         
+            const Array4<Real const>& M_zface = Mfield[2].array(mfi);   
 
             const Array4<Real>& rhs = PoissonRHS.array(mfi);
 

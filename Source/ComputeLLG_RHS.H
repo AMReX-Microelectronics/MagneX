@@ -3,7 +3,7 @@
  * Compute the x component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real LLG_RHS_x(
-    amrex::Array4<amrex::Real> const& M,
+    amrex::Array4<amrex::Real const> const& M,
     amrex::Array4<amrex::Real> const& alpha,
     amrex::Array4<amrex::Real> const& gamma,
     Real const M_magnitude, Real const mu0,
@@ -20,7 +20,7 @@ static amrex::Real LLG_RHS_x(
  * Compute the y component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real LLG_RHS_y(
-    amrex::Array4<amrex::Real> const& M,
+    amrex::Array4<amrex::Real const> const& M,
     amrex::Array4<amrex::Real> const& alpha,
     amrex::Array4<amrex::Real> const& gamma,
     Real const M_magnitude, Real const mu0,
@@ -38,7 +38,7 @@ static amrex::Real LLG_RHS_y(
  * Compute the z component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real LLG_RHS_z(
-    amrex::Array4<amrex::Real> const& M,
+    amrex::Array4<amrex::Real const> const& M,
     amrex::Array4<amrex::Real> const& alpha,
     amrex::Array4<amrex::Real> const& gamma,
     Real const M_magnitude, Real const mu0,

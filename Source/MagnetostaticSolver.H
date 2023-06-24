@@ -5,7 +5,8 @@
 using namespace amrex;
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+                       //Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+		       const amrex::Vector<MultiFab>& Mfield,
                        Array<MultiFab, AMREX_SPACEDIM>& Ms,
                        const Geometry&                 geom);
 

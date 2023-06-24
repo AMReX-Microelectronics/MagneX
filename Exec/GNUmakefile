@@ -9,6 +9,7 @@ COMP         = gnu
 DIM          = 3
 
 NEUMANN = FALSE
+USE_SUNDIALS = FALSE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
@@ -24,5 +25,21 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 ifeq ($(NEUMANN), TRUE)
   DEFINES += -DNEUMANN
+endif
+
+ifeq ($(USE_SUNDIALS),TRUE)
+SUNDIALS_ROOT ?= ../../sundials/instdir
+SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
+
+USE_CVODE_LIBS ?= TRUE
+USE_ARKODE_LIBS ?= TRUE
+
+DEFINES += -DAMREX_USE_SUNDIALS
+INCLUDE_LOCATIONS += $(SUNDIALS_ROOT)/include
+LIBRARY_LOCATIONS += $(SUNDIALS_LIB_DIR)
+
+LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
+LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
+LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
 endif
 
