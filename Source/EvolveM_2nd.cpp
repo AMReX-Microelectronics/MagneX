@@ -2,6 +2,9 @@
 #include "MagLaplacian.H"
 #include <AMReX_OpenBC.H>
 #include "MagnetostaticSolver.H"
+#include <AMReX_MLMG.H> 
+#include <AMReX_MultiFab.H> 
+#include <AMReX_VisMF.H>
 
 void EvolveM_2nd(
     //std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
@@ -14,9 +17,11 @@ void EvolveM_2nd(
     std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
     std::array< MultiFab, AMREX_SPACEDIM >&   gamma,
     std::array< MultiFab, AMREX_SPACEDIM >&   exchange,
+    std::array< MultiFab, AMREX_SPACEDIM >&   DMI,
     std::array< MultiFab, AMREX_SPACEDIM >&   anisotropy,
     int demag_coupling,
     int exchange_coupling,
+    int DMI_coupling,
     int anisotropy_coupling,
     amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
     int M_normalization, 
@@ -24,7 +29,8 @@ void EvolveM_2nd(
     const Geometry& geom,
     amrex::GpuArray<amrex::Real, 3>  prob_lo,
     amrex::GpuArray<amrex::Real, 3>  prob_hi,
-    amrex::Real const dt
+    amrex::Real const dt,
+    const Real time
 ){
 
     // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
@@ -37,21 +43,18 @@ void EvolveM_2nd(
     std::array<MultiFab, 3> a_temp_static; // α M^(old_time)/|M| in the right-hand side of vector a, see the documentation
     std::array<MultiFab, 3> b_temp_static; // right-hand side of vector b, see the documentation
 
-    BoxArray ba = H_demagfield[0].boxArray();
+    BoxArray ba = H_demagfield[0].boxArray(); // H_demagfield is cell centered
 
     DistributionMapping dm = Mfield[0].DistributionMap();
     LPInfo info;
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
 
     for (int i = 0; i < 3; i++){
-        // H_demagfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
         H_demagfield_old[i].define(ba, dm, 1, H_demagfield[i].nGrow());
-        // H_demagfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
         H_demagfield_prev[i].define(ba, dm, 1, H_demagfield[i].nGrow());
-
         Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow()); // match ghost cell number with main function
         Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
-
+        
         MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(H_demagfield_old[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
@@ -97,6 +100,10 @@ void EvolveM_2nd(
         const Array4<Real>& exchange_xface_arr = exchange[0].array(mfi);
         const Array4<Real>& exchange_yface_arr = exchange[1].array(mfi);
         const Array4<Real>& exchange_zface_arr = exchange[2].array(mfi);
+
+        const Array4<Real>& DMI_xface_arr = DMI[0].array(mfi);
+        const Array4<Real>& DMI_yface_arr = DMI[1].array(mfi);
+        const Array4<Real>& DMI_zface_arr = DMI[2].array(mfi);
 
         const Array4<Real>& anisotropy_xface_arr = anisotropy[0].array(mfi);
         const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
@@ -153,6 +160,14 @@ void EvolveM_2nd(
                     amrex::Real Hy_eff_old = H_bias_xface(i,j,k,1);
                     amrex::Real Hz_eff_old = H_bias_xface(i,j,k,2);
 
+                    // PSSW validation
+                    amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                    amrex::Real TP = 1./frequency;
+                    H_bias_xface(i,j,k,0) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                    H_bias_xface(i,j,k,1) = 2.387324146378430e4; // 300 Oe
+                    H_bias_xface(i,j,k,2) = 0.;
+
                     if (demag_coupling == 1){
                         // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -179,6 +194,24 @@ void EvolveM_2nd(
                         Hx_eff_old += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
                         Hy_eff_old += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
                         Hz_eff_old += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+
+                    }
+
+                    if (DMI_coupling == 1){
+
+                        if (DMI_xface_arr(i,j,k) == 0.) amrex::Abort("The DMI_xface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+
+                        // H_DMI - use M^(old_time)
+                        amrex::Real const H_DMI_coeff = 2.0 * DMI_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
+
+                        amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k);
+                        amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k);
+                        amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k);
+                        amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k);
+
+                        Hx_eff_old += H_DMI_coeff * DMDx_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 0); // dMz/dx
+                        Hy_eff_old += H_DMI_coeff * DMDy_Mag(M_xface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 0); // dMz/dy
+                        Hz_eff_old += H_DMI_coeff * (- DMDx_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 0) - DMDy_Mag(M_xface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 0)); // -dMx/dx - dMy/dy
 
                     }
 
@@ -238,6 +271,14 @@ void EvolveM_2nd(
                     amrex::Real Hy_eff_old = H_bias_yface(i,j,k,1);
                     amrex::Real Hz_eff_old = H_bias_yface(i,j,k,2);
 
+                    // PSSW validation
+                    amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                    amrex::Real TP = 1./frequency;
+                    H_bias_yface(i,j,k,0) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                    H_bias_yface(i,j,k,1) = 2.387324146378430e4; // 300 Oe
+                    H_bias_yface(i,j,k,2) = 0.;
+
                     if (demag_coupling == 1){
                         // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -264,6 +305,23 @@ void EvolveM_2nd(
                         Hx_eff_old += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
                         Hy_eff_old += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
                         Hz_eff_old += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+                    }
+
+                    if (DMI_coupling == 1){
+
+                        if (DMI_yface_arr(i,j,k) == 0.) amrex::Abort("The DMI_yface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+
+                        // H_DMI - use M^(old_time)
+                        amrex::Real const H_DMI_coeff = 2.0 * DMI_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
+
+                        amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k);
+                        amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k);
+                        amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k);
+                        amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k);
+
+                        Hx_eff_old += H_DMI_coeff * DMDx_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 1); // dMz/dx
+                        Hy_eff_old += H_DMI_coeff * DMDy_Mag(M_yface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 1); // dMz/dy
+                        Hz_eff_old += H_DMI_coeff * (- DMDx_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 1) - DMDy_Mag(M_yface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 1)); // -dMx/dx-dMy/dy
                     }
 
                     if (anisotropy_coupling == 1){
@@ -322,6 +380,14 @@ void EvolveM_2nd(
                     amrex::Real Hy_eff_old = H_bias_zface(i,j,k,1);
                     amrex::Real Hz_eff_old = H_bias_zface(i,j,k,2);
 
+                    // PSSW validation
+                    amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                    amrex::Real TP = 1./frequency;
+                    H_bias_zface(i,j,k,0) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                    H_bias_zface(i,j,k,1) = 2.387324146378430e4; // 300 Oe
+                    H_bias_zface(i,j,k,2) = 0.;
+
                     if (demag_coupling == 1){
                         // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -348,6 +414,24 @@ void EvolveM_2nd(
                         Hx_eff_old += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
                         Hy_eff_old += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
                         Hz_eff_old += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+
+                    }
+
+                    if (DMI_coupling == 1){
+
+                        if (DMI_zface_arr(i,j,k) == 0.) amrex::Abort("The DMI_zface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+
+                        // H_DMI - use M^(old_time)
+                        amrex::Real const H_DMI_coeff = 2.0 * DMI_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
+
+                        amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k);
+                        amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k);
+                        amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k);
+                        amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k);
+
+                        Hx_eff_old += H_DMI_coeff * DMDx_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 2); // dMz/dx
+                        Hy_eff_old += H_DMI_coeff * DMDy_Mag(M_zface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 2); // dMz/dy
+                        Hz_eff_old += H_DMI_coeff * (- DMDx_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 2) - DMDy_Mag(M_zface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 2)); // -dMx/dx-dMy/dy
 
                     }
 
@@ -428,6 +512,10 @@ void EvolveM_2nd(
             const Array4<Real>& exchange_yface_arr = exchange[1].array(mfi);
             const Array4<Real>& exchange_zface_arr = exchange[2].array(mfi);
 
+            const Array4<Real>& DMI_xface_arr = DMI[0].array(mfi);
+            const Array4<Real>& DMI_yface_arr = DMI[1].array(mfi);
+            const Array4<Real>& DMI_zface_arr = DMI[2].array(mfi);
+
             const Array4<Real>& anisotropy_xface_arr = anisotropy[0].array(mfi);
             const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
             const Array4<Real>& anisotropy_zface_arr = anisotropy[2].array(mfi);
@@ -489,6 +577,14 @@ void EvolveM_2nd(
                         amrex::Real Hy_eff_prev = H_bias_xface(i,j,k,1);
                         amrex::Real Hz_eff_prev = H_bias_xface(i,j,k,2);
 
+                        // PSSW validation
+                        amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                        amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                        amrex::Real TP = 1./frequency;
+                        H_bias_xface(i,j,k,0) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                        H_bias_xface(i,j,k,1) = 2.387324146378430e4; // 300 Oe
+                        H_bias_xface(i,j,k,2) = 0.;
+
                         if (demag_coupling == 1){
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -515,6 +611,23 @@ void EvolveM_2nd(
                             Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
                             Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
                             Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+                        }
+
+                        if (DMI_coupling == 1){
+
+                            if (DMI_xface_arr(i,j,k) == 0.) amrex::Abort("The DMI_xface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+
+                            // H_DMI - use M^[(new_time),r-1]
+                            amrex::Real const H_DMI_coeff = 2.0 * DMI_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
+
+                            amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k);
+                            amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k);
+                            amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k);
+                            amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k);
+
+                            Hx_eff_prev += H_DMI_coeff * DMDx_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 0); // dMz/dx
+                            Hy_eff_prev += H_DMI_coeff * DMDy_Mag(M_xface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 0); // dMz/dy
+                            Hz_eff_prev += H_DMI_coeff * (- DMDx_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 0) - DMDy_Mag(M_xface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 0)); // -dMx/dx-dMy/dy
                         }
 
                         if (anisotropy_coupling == 1){
@@ -606,6 +719,14 @@ void EvolveM_2nd(
                         amrex::Real Hy_eff_prev = H_bias_yface(i,j,k,1);
                         amrex::Real Hz_eff_prev = H_bias_yface(i,j,k,2);
 
+                        // PSSW validation
+                        amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                        amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                        amrex::Real TP = 1./frequency;
+                        H_bias_yface(i,j,k,0) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                        H_bias_yface(i,j,k,1) = 2.387324146378430e4; // 300 Oe
+                        H_bias_yface(i,j,k,2) = 0.;
+
                         if (demag_coupling == 1){
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -632,6 +753,23 @@ void EvolveM_2nd(
                             Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
                             Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
                             Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+                        }
+
+                        if (DMI_coupling == 1){
+
+                            if (DMI_yface_arr(i,j,k) == 0.) amrex::Abort("The DMI_yface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+
+                            // H_DMI - use M^[(new_time),r-1]
+                            amrex::Real const H_DMI_coeff = 2.0 * DMI_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
+
+                            amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k);
+                            amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k);
+                            amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k);
+                            amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k);
+
+                            Hx_eff_prev += H_DMI_coeff * DMDx_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 1); // dMz/dx
+                            Hy_eff_prev += H_DMI_coeff * DMDy_Mag(M_yface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 1); // dMz/dy
+                            Hz_eff_prev += H_DMI_coeff * (- DMDx_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 1) - DMDy_Mag(M_yface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 1)); // -dMx/dx-dMy/dy
                         }
 
                         if (anisotropy_coupling == 1){
@@ -723,6 +861,14 @@ void EvolveM_2nd(
                         amrex::Real Hy_eff_prev = H_bias_zface(i,j,k,1);
                         amrex::Real Hz_eff_prev = H_bias_zface(i,j,k,2);
 
+                        // PSSW validation
+                        amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                        amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                        amrex::Real TP = 1./frequency;
+                        H_bias_zface(i,j,k,0) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                        H_bias_zface(i,j,k,1) = 2.387324146378430e4; // 300 Oe
+                        H_bias_zface(i,j,k,2) = 0.;
+
                         if (demag_coupling == 1){
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -749,6 +895,23 @@ void EvolveM_2nd(
                             Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
                             Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
                             Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+                        }
+
+                        if (DMI_coupling == 1){
+
+                            if (DMI_zface_arr(i,j,k) == 0.) amrex::Abort("The DMI_zface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+
+                            // H_DMI - use M^[(new_time),r-1]
+                            amrex::Real const H_DMI_coeff = 2.0 * DMI_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
+
+                            amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k);
+                            amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k);
+                            amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k);
+                            amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k);
+
+                            Hx_eff_prev += H_DMI_coeff * DMDx_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 2); // dMz/dx
+                            Hy_eff_prev += H_DMI_coeff * DMDy_Mag(M_zface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 2); // dMz/dy
+                            Hz_eff_prev += H_DMI_coeff * (- DMDx_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 2) - DMDy_Mag(M_zface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 2)); // -dMx/dx -dMy/dy
                         }
 
                         if (anisotropy_coupling == 1){

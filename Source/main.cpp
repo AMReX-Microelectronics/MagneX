@@ -66,15 +66,15 @@ void main_main ()
     int TimeIntegratorOption;
 
     // Magnetic Properties
-    Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
+    Real alpha_val, gamma_val, Ms_val, exchange_val, DMI_val, anisotropy_val;
     Real mu0;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
     int demag_coupling;
     int M_normalization;
     int exchange_coupling;
+    int DMI_coupling;
     int anisotropy_coupling;
-
 
     // inputs parameters
     {
@@ -103,13 +103,14 @@ void main_main ()
         pp.get("gamma_val",gamma_val);
         pp.get("Ms_val",Ms_val);
         pp.get("exchange_val",exchange_val);
+        pp.get("DMI_val",DMI_val);
         pp.get("anisotropy_val",anisotropy_val);
 
         pp.get("demag_coupling",demag_coupling);
         pp.get("M_normalization", M_normalization);
         pp.get("exchange_coupling", exchange_coupling);
+        pp.get("DMI_coupling", DMI_coupling);
         pp.get("anisotropy_coupling", anisotropy_coupling);
-
 
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
@@ -236,11 +237,11 @@ void main_main ()
 
       // face-centered H_biasfield
       AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
 		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
       for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-        H_demagfield[dir].define(ba, dm, 1, 1);
+        H_demagfield[dir].define(ba, dm, 1, 1); // demagnetization field H is cell centered
         H_demagfield[dir].setVal(0.);
       }
     }
@@ -307,21 +308,27 @@ void main_main ()
                  exchange[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  exchange[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
+    std::array< MultiFab, AMREX_SPACEDIM > DMI;
+    AMREX_D_TERM(DMI[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                 DMI[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                 DMI[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
     std::array< MultiFab, AMREX_SPACEDIM > anisotropy;
     AMREX_D_TERM(anisotropy[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
                  anisotropy[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  anisotropy[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
-
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
     amrex::Print() << " M_normalization     = " << M_normalization     << "\n";
     amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
+    amrex::Print() << " DMI_coupling        = " << DMI_coupling        << "\n";
     amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
     amrex::Print() << " Ms                  = " << Ms_val              << "\n";
     amrex::Print() << " alpha               = " << alpha_val           << "\n";
     amrex::Print() << " gamma               = " << gamma_val           << "\n";
     amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
+    amrex::Print() << " DMI_value           = " << DMI_val             << "\n";
     amrex::Print() << " anisotropy_value    = " << anisotropy_val      << "\n";
     amrex::Print() << "=======================================================\n";
 
@@ -392,8 +399,8 @@ void main_main ()
     openbc.setVerbose(2);
 #endif
 
-    InitializeMagneticProperties(alpha, Ms, gamma, exchange, anisotropy,
-                                 alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
+    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
+                                 alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
     // initialize to zero; for demag_coupling==0 these aren't used
@@ -702,7 +709,7 @@ void main_main ()
         } else if (TimeIntegratorOption == 3) { // artemis way
         amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt);
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators

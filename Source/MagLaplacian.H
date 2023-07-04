@@ -1,4 +1,7 @@
-//Algorithm to calculate Laplacian for exchange term in LLG equation
+// Algorithm to calculate 
+// 1. Laplacian for exchange term in LLG equation
+// 2. Divergence for demagnetization term
+// 3. Spatial derivative for DMI term
 
 /**
  * Perform derivative along x on a nodal grid, from a cell-centered field `F`*/
@@ -72,6 +75,7 @@ static amrex::Real DownwardDz (
     return inv_dz*( F(i,j,k,ncomp) - F(i,j,k-1,ncomp) );
 }
 
+// 1. Laplacian for exchange term in LLG equation
 /**
   * Perform divergence of gradient along x on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -176,6 +180,7 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
      return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, i, j, k, dx, ncomp, nodality) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, i, j, k, dx, ncomp, nodality) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, i, j, k, dx, ncomp, nodality);
  }
 
+// 2. Divergence for demagnetization term
  /**
   * Perform divergence  along x on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -207,7 +212,97 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
      return UpwardDz(F, i, j, k, dx, ncomp);
  }
 
+// 3. Spatial derivative for DMI term
+/**
+  * Perform divergence of gradient along x on M field */
+ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+ static amrex::Real DMDx_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
+    amrex::Real const inv_dx = 1./dx[0];
+    if (nodality == 0){ // x face (normal face) dM/dx = 0
+       if ( Ms_hi_x == 0.) {
+           return 0.0;
+       } else if ( Ms_lo_x == 0.){
+           return 0.0;
+       } else {
+           return 0.5 *(UpwardDx(F, i, j, k, dx, ncomp) - DownwardDx(F, i, j, k, dx, ncomp));
+       }
+
+    } else { //y or z face
+       if ( Ms_hi_x == 0.) {
+           return 0.5 *(0. - DownwardDx(F, i, j, k, dx, ncomp));
+       } else if ( Ms_lo_x == 0.){
+           return 0.5 *(UpwardDx(F, i, j, k, dx, ncomp) - 0.);
+       } else {
+           return 0.5 *(UpwardDx(F, i, j, k, dx, ncomp) - DownwardDx(F, i, j, k, dx, ncomp));
+       }
+    }
+
+ }
+
+ /**
+  * Perform divergence of gradient along y on M field */
+ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+ static amrex::Real DMDy_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
+
+    amrex::Real const inv_dy = 1./dx[1];
+    if (nodality == 1){ // y face (normal face) dM/dy = 0
+       if ( Ms_hi_y == 0.) {
+           return 0.0;
+       } else if ( Ms_lo_y == 0.){
+           return 0.0;
+       } else {
+           return 0.5 *(UpwardDy(F, i, j, k, dx, ncomp) - DownwardDy(F, i, j, k, dx, ncomp));
+       }
+
+    } else { // x or z face
+       if ( Ms_hi_y == 0.) {
+           return 0.5 *(0. - DownwardDy(F, i, j, k, dx, ncomp));
+       } else if ( Ms_lo_y == 0.){
+           return 0.5 *(UpwardDy(F, i, j, k, dx, ncomp) - 0.);
+       } else {
+           return 0.5 *(UpwardDy(F, i, j, k, dx, ncomp) - DownwardDy(F, i, j, k, dx, ncomp));
+       }
+    }
+
+ }
+
+
+/**
+  * Perform divergence of gradient along z on M field */
+ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+ static amrex::Real DMDz_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
+
+    amrex::Real const inv_dz = 1./dx[2];
+    if (nodality == 2){ // z face (normal face) dM/dz = 0
+       if ( Ms_hi_z == 0.) {
+           return 0.0;
+       } else if ( Ms_lo_z == 0.){
+           return 0.0;
+       } else {
+           return 0.5 *(UpwardDz(F, i, j, k, dx, ncomp) - DownwardDz(F, i, j, k, dx, ncomp));
+       }
+
+    } else { // x or y face
+       if ( Ms_hi_z == 0.) {
+           return 0.5 *(0. - DownwardDz(F, i, j, k, dx, ncomp));
+       } else if ( Ms_lo_z == 0.){
+           return 0.5 *(UpwardDz(F, i, j, k, dx, ncomp) - 0.);
+       } else {
+           return 0.5 *(UpwardDz(F, i, j, k, dx, ncomp) - DownwardDz(F, i, j, k, dx, ncomp));
+       }
+    }
+
+ }
 
 /** \brief
          * This GPU kernel averages a face-centered field onto a (possibly different nodality) face.

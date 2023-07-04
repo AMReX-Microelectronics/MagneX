@@ -4,11 +4,13 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
                    std::array< MultiFab, AMREX_SPACEDIM >&   gamma,
                    std::array< MultiFab, AMREX_SPACEDIM >&   exchange,
+                   std::array< MultiFab, AMREX_SPACEDIM >&   DMI,
                    std::array< MultiFab, AMREX_SPACEDIM >&   anisotropy,
                    Real        alpha_val,
                    Real        Ms_val,
                    Real        gamma_val,
                    Real        exchange_val,
+                   Real        DMI_val,
                    Real        anisotropy_val,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
@@ -29,6 +31,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
        Ms[i].setVal(0.);
        gamma[i].setVal(0.);
        exchange[i].setVal(0.);
+       DMI[i].setVal(0.);
        anisotropy[i].setVal(0.);
     }
 
@@ -57,6 +60,10 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
         const Array4<Real>& exchange_yface_arr = exchange[1].array(mfi);
         const Array4<Real>& exchange_zface_arr = exchange[2].array(mfi);
 
+        const Array4<Real>& DMI_xface_arr = DMI[0].array(mfi);
+        const Array4<Real>& DMI_yface_arr = DMI[1].array(mfi);
+        const Array4<Real>& DMI_zface_arr = DMI[2].array(mfi);
+
         const Array4<Real>& anisotropy_xface_arr = anisotropy[0].array(mfi);
         const Array4<Real>& anisotropy_yface_arr = anisotropy[1].array(mfi);
         const Array4<Real>& anisotropy_zface_arr = anisotropy[2].array(mfi);
@@ -75,6 +82,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                      gamma_xface_arr(i,j,k) = gamma_val;
                      Ms_xface_arr(i,j,k) = Ms_val;
                      exchange_xface_arr(i,j,k) = exchange_val;
+                     DMI_xface_arr(i,j,k) = DMI_val;
                      anisotropy_xface_arr(i,j,k) = anisotropy_val;
                      if (Ms_xface_arr(i,j,k) < Ms_val) {
                      printf("i= %d, j = %d, k = %d, Ms_xface = %g \n", i, j, k, Ms_xface_arr(i,j,k));
@@ -99,6 +107,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                      gamma_yface_arr(i,j,k) = gamma_val;
                      Ms_yface_arr(i,j,k) = Ms_val;
                      exchange_yface_arr(i,j,k) = exchange_val;
+                     DMI_yface_arr(i,j,k) = DMI_val;
                      anisotropy_yface_arr(i,j,k) = anisotropy_val;
                   }
                }
@@ -119,6 +128,7 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                      gamma_zface_arr(i,j,k) = gamma_val;
                      Ms_zface_arr(i,j,k) = Ms_val;
                      exchange_zface_arr(i,j,k) = exchange_val;
+                     DMI_zface_arr(i,j,k) = DMI_val;
                      anisotropy_zface_arr(i,j,k) = anisotropy_val;
                   }
                }
@@ -178,9 +188,12 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //x_face 
-                M_xface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
-                M_xface(i,j,k,1) = 0._rt;
-                M_xface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+                M_xface(i,j,k,0) = 0._rt;
+                M_xface(i,j,k,1) = Ms_xface_arr(i,j,k);
+                M_xface(i,j,k,2) = 0._rt;
+               //  M_xface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_xface(i,j,k,1) = 0._rt;
+               //  M_xface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
                // M_xface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                // M_xface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                // M_xface(i,j,k,2) = 8.0e5 /sqrt(3.0);
@@ -216,9 +229,12 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //y_face
-                M_yface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
-                M_yface(i,j,k,1) = 0._rt;
-                M_yface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+                M_yface(i,j,k,0) = 0._rt;
+                M_yface(i,j,k,1) = Ms_yface_arr(i,j,k);
+                M_yface(i,j,k,2) = 0._rt;
+               //  M_yface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_yface(i,j,k,1) = 0._rt;
+               //  M_yface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
                //  M_yface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                //  M_yface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                //  M_yface(i,j,k,2) = 8.0e5 /sqrt(3.0);
@@ -253,9 +269,12 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + k * dx[2];
                
                 //z_face
-                M_zface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
-                M_zface(i,j,k,1) = 0._rt;
-                M_zface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+                M_zface(i,j,k,0) = 0._rt;
+                M_zface(i,j,k,1) = Ms_zface_arr(i,j,k);
+                M_zface(i,j,k,2) = 0._rt;
+               //  M_zface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_zface(i,j,k,1) = 0._rt;
+               //  M_zface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
                //  M_zface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                //  M_zface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                //  M_zface(i,j,k,2) = 8.0e5 /sqrt(3.0);
