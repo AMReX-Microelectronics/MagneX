@@ -10,7 +10,8 @@
 #include "myfunc.H"
 #include "Initialization.H"
 #include "MagnetostaticSolver.H"
-#include "MagLaplacian.H"
+#include "EffectiveDMIField.H"
+#include "CartesianAlgorithm.H"
 #include "Diagnostics.H"
 #include "EvolveM.H"
 #include "EvolveM_2nd.H"
@@ -170,6 +171,7 @@ void main_main ()
     //Array<MultiFab, AMREX_SPACEDIM> Mfield;
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
 
     amrex::Vector<MultiFab> Mfield(AMREX_SPACEDIM);
 
@@ -239,6 +241,11 @@ void main_main ()
       AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
 		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
 		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+
+      // face-centered H_DMIfield
+      AMREX_D_TERM(H_DMIfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+		   H_DMIfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
+		   H_DMIfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
       for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
         H_demagfield[dir].define(ba, dm, 1, 1); // demagnetization field H is cell centered
@@ -428,6 +435,10 @@ void main_main ()
 #endif
             // Calculate H from Phi
             ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+        }
+
+        if(DMI_coupling == 1){
+            CalculateH_DMI(Mfield,H_DMIfield, Ms, exchange, DMI, DMI_coupling, exchange_coupling, mu0, geom);
         }
     }
 
@@ -709,7 +720,7 @@ void main_main ()
         } else if (TimeIntegratorOption == 3) { // artemis way
         amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_DMIfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators

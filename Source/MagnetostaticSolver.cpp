@@ -1,5 +1,5 @@
 #include "MagnetostaticSolver.H"
-#include "MagLaplacian.H"
+#include "CartesianAlgorithm.H"
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        //Array<MultiFab, AMREX_SPACEDIM>& Mfield,

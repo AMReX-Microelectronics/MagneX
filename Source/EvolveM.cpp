@@ -1,5 +1,5 @@
 #include "EvolveM.H"
-#include "MagLaplacian.H"
+#include "CartesianAlgorithm.H"
 #include "ComputeLLG_RHS.H"
 
 void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,

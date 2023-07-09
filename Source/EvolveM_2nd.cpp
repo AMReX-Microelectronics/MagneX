@@ -1,7 +1,8 @@
 #include "EvolveM_2nd.H"
-#include "MagLaplacian.H"
+#include "CartesianAlgorithm.H"
 #include <AMReX_OpenBC.H>
 #include "MagnetostaticSolver.H"
+#include "EffectiveDMIField.H"
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
@@ -11,6 +12,7 @@ void EvolveM_2nd(
     amrex::Vector<MultiFab>& Mfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
+    std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
     MultiFab                              &PoissonRHS, 
     MultiFab                              &PoissonPhi, 
     std::array< MultiFab, AMREX_SPACEDIM >&   alpha,
@@ -956,6 +958,10 @@ void EvolveM_2nd(
 	      // Calculate H from Phi
 	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
 	   }
+
+       if (DMI_coupling == 1){
+          CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+       }
 
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed
         amrex::Real M_iter_maxerror = -1.;
