@@ -4,7 +4,7 @@ dt = 1.0e-14
 nsteps = 5000000
 plot_int = 500
 
-TimeIntegratorOrder = 1
+TimeIntegratorOption = 1
 
 # ######### this is my original setup ###########
 # prob_lo = -3450.e-9 -3450.0e-9 -345.0e-9

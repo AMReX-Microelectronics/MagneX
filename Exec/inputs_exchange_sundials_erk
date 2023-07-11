@@ -11,7 +11,7 @@ chk_int = 50
 Phi_Bc_hi = 0.0
 Phi_Bc_lo = 0.0
 
-TimeIntegratorOrder = 2
+TimeIntegratorOption = 2
 # INTEGRATION
 
 ## *** Selecting the integrator backend ***

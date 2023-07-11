@@ -7,7 +7,7 @@ plot_int = 20
 Phi_Bc_lo = 0.0
 Phi_Bc_hi = 0.0
 
-TimeIntegratorOrder = 1
+TimeIntegratorOption = 1
 
 prob_lo = -16.e-9 -16.e-9 0.0e-9
 prob_hi = 16.e-9 16.e-9 32.e-9
