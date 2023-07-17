@@ -2,6 +2,7 @@
 #include "CartesianAlgorithm.H"
 #include <AMReX_OpenBC.H>
 #include "MagnetostaticSolver.H"
+#include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
@@ -12,6 +13,7 @@ void EvolveM_2nd(
     amrex::Vector<MultiFab>& Mfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
+    std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
     std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
     MultiFab                              &PoissonRHS, 
     MultiFab                              &PoissonPhi, 
@@ -38,6 +40,10 @@ void EvolveM_2nd(
     // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
     std::array<MultiFab, 3> H_demagfield_old;    // H^(old_time) before the current time step
     std::array<MultiFab, 3> H_demagfield_prev;    // H^(new_time) of the (r-1)th iteration
+    std::array<MultiFab, 3> H_exchangefield_old;    // H^(old_time) before the current time step
+    std::array<MultiFab, 3> H_exchangefield_prev;    // H^(new_time) of the (r-1)th iteration
+    std::array<MultiFab, 3> H_DMIfield_old;    // H^(old_time) before the current time step
+    std::array<MultiFab, 3> H_DMIfield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_old;    // M^(old_time) before the current time step
     std::array<MultiFab, 3> Mfield_prev;   // M^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_error;  // The error of the M field between the two consecutive iterations
@@ -52,19 +58,31 @@ void EvolveM_2nd(
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
 
     for (int i = 0; i < 3; i++){
-        H_demagfield_old[i].define(ba, dm, 1, H_demagfield[i].nGrow());
+        H_demagfield_old[i].define(ba, dm, 1, H_demagfield[i].nGrow()); // only demag fields are cell centered
         H_demagfield_prev[i].define(ba, dm, 1, H_demagfield[i].nGrow());
+        H_exchangefield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_exchangefield[i].nGrow()); // match ghost cell number with main function
+        H_exchangefield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_exchangefield[i].nGrow());
+        H_DMIfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_DMIfield[i].nGrow()); // match ghost cell number with main function
+        H_DMIfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_DMIfield[i].nGrow());
         Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow()); // match ghost cell number with main function
         Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
         
         MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
         MultiFab::Copy(H_demagfield_old[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
+        MultiFab::Copy(H_exchangefield_old[i], H_exchangefield[i], 0, 0, 3, H_exchangefield[i].nGrow());
+        MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 3, H_exchangefield[i].nGrow());
+        MultiFab::Copy(H_DMIfield_old[i], H_DMIfield[i], 0, 0, 3, H_DMIfield[i].nGrow());
+        MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 3, H_DMIfield[i].nGrow());
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         
         // fill periodic ghost cells
         H_demagfield_old[i].FillBoundary(geom.periodicity());
         H_demagfield_prev[i].FillBoundary(geom.periodicity());
+        H_exchangefield_old[i].FillBoundary(geom.periodicity());
+        H_exchangefield_prev[i].FillBoundary(geom.periodicity());
+        H_DMIfield_old[i].FillBoundary(geom.periodicity());
+        H_DMIfield_prev[i].FillBoundary(geom.periodicity());
         Mfield_old[i].FillBoundary(geom.periodicity());
         Mfield_prev[i].FillBoundary(geom.periodicity());
 
@@ -121,6 +139,12 @@ void EvolveM_2nd(
         const Array4<Real>& Hx_demag_old = H_demagfield_old[0].array(mfi);   // Hx_old is the x component at |_x faces
         const Array4<Real>& Hy_demag_old = H_demagfield_old[1].array(mfi);   // Hy_old is the y component at |_y faces
         const Array4<Real>& Hz_demag_old = H_demagfield_old[2].array(mfi);   // Hz_old is the z component at |_z faces
+        const Array4<Real>& H_exchange_xface_old = H_exchangefield_old[0].array(mfi); // note H_exchange_xface_old include x,y,z components at |_x faces
+        const Array4<Real>& H_exchange_yface_old = H_exchangefield_old[1].array(mfi); // note H_exchange_yface_old include x,y,z components at |_y faces
+        const Array4<Real>& H_exchange_zface_old = H_exchangefield_old[2].array(mfi); // note H_exchange_zface_old include x,y,z components at |_z faces
+        const Array4<Real>& H_DMI_xface_old = H_DMIfield_old[0].array(mfi); // note H_DMI_xface_old include x,y,z components at |_x faces
+        const Array4<Real>& H_DMI_yface_old = H_DMIfield_old[1].array(mfi); // note H_DMI_yface_old include x,y,z components at |_y faces
+        const Array4<Real>& H_DMI_zface_old = H_DMIfield_old[2].array(mfi); // note H_DMI_zface_old include x,y,z components at |_z faces
         const Array4<Real>& M_xface_old = Mfield_old[0].array(mfi); // note M_xface include x,y,z components at |_x faces
         const Array4<Real>& M_yface_old = Mfield_old[1].array(mfi); // note M_yface include x,y,z components at |_y faces
         const Array4<Real>& M_zface_old = Mfield_old[2].array(mfi); // note M_zface include x,y,z components at |_z faces
@@ -176,36 +200,23 @@ void EvolveM_2nd(
                         if (exchange_xface_arr(i,j,k) == 0.) amrex::Abort("The exchange_xface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                         // H_exchange - use M^(old_time)
-                        amrex::Real const H_exchange_coeff = 2.0 * exchange_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
 
-                        amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k);
-                        amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k);
-                        amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k);
-                        amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k);
-                        amrex::Real Ms_lo_z = Ms_xface_arr(i, j, k-1);
-                        amrex::Real Ms_hi_z = Ms_xface_arr(i, j, k+1);
-
-                        Hx_eff_old += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
-                        Hy_eff_old += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
-                        Hz_eff_old += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+                        Hx_eff_old += H_exchange_xface_old(i, j, k, 0);
+                        Hy_eff_old += H_exchange_xface_old(i, j, k, 1);
+                        Hz_eff_old += H_exchange_xface_old(i, j, k, 2);
 
                     }
 
                     if (DMI_coupling == 1){
 
                         if (DMI_xface_arr(i,j,k) == 0.) amrex::Abort("The DMI_xface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+                        if (exchange_xface_arr(i,j,k) == 0.) amrex::Abort("The exchange_xface_arr(i,j,k) is 0.0 while DMI is turned on");
 
                         // H_DMI - use M^(old_time)
-                        amrex::Real const H_DMI_coeff = 2.0 * DMI_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
 
-                        amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k);
-                        amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k);
-                        amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k);
-                        amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k);
-
-                        Hx_eff_old += H_DMI_coeff * DMDx_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 0); // dMz/dx
-                        Hy_eff_old += H_DMI_coeff * DMDy_Mag(M_xface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 0); // dMz/dy
-                        Hz_eff_old += H_DMI_coeff * (- DMDx_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 0) - DMDy_Mag(M_xface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 0)); // -dMx/dx - dMy/dy
+                        Hx_eff_old += H_DMI_xface_old(i, j, k, 0);
+                        Hy_eff_old += H_DMI_xface_old(i, j, k, 1);
+                        Hz_eff_old += H_DMI_xface_old(i, j, k, 2);
 
                     }
 
@@ -277,37 +288,22 @@ void EvolveM_2nd(
                     if (exchange_coupling == 1){
 
                         if (exchange_yface_arr(i,j,k) == 0.) amrex::Abort("The exchange_yface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
-
+                        
                         // H_exchange - use M^(old_time)
-                        amrex::Real const H_exchange_coeff = 2.0 * exchange_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
-
-                        amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k);
-                        amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k);
-                        amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k);
-                        amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k);
-                        amrex::Real Ms_lo_z = Ms_yface_arr(i, j, k-1);
-                        amrex::Real Ms_hi_z = Ms_yface_arr(i, j, k+1);
-
-                        Hx_eff_old += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
-                        Hy_eff_old += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
-                        Hz_eff_old += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+                        Hx_eff_old += H_exchange_yface_old(i, j, k, 0);
+                        Hy_eff_old += H_exchange_yface_old(i, j, k, 1);
+                        Hz_eff_old += H_exchange_yface_old(i, j, k, 2);
                     }
 
                     if (DMI_coupling == 1){
 
                         if (DMI_yface_arr(i,j,k) == 0.) amrex::Abort("The DMI_yface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+                        if (exchange_yface_arr(i,j,k) == 0.) amrex::Abort("The exchange_yface_arr(i,j,k) is 0.0 while DMI is turned on");
 
                         // H_DMI - use M^(old_time)
-                        amrex::Real const H_DMI_coeff = 2.0 * DMI_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
-
-                        amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k);
-                        amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k);
-                        amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k);
-                        amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k);
-
-                        Hx_eff_old += H_DMI_coeff * DMDx_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 1); // dMz/dx
-                        Hy_eff_old += H_DMI_coeff * DMDy_Mag(M_yface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 1); // dMz/dy
-                        Hz_eff_old += H_DMI_coeff * (- DMDx_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 1) - DMDy_Mag(M_yface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 1)); // -dMx/dx-dMy/dy
+                        Hx_eff_old += H_DMI_yface_old(i, j, k, 0);
+                        Hy_eff_old += H_DMI_yface_old(i, j, k, 1);
+                        Hz_eff_old += H_DMI_yface_old(i, j, k, 2);
                     }
 
                     if (anisotropy_coupling == 1){
@@ -380,36 +376,22 @@ void EvolveM_2nd(
                         if (exchange_zface_arr(i,j,k) == 0.) amrex::Abort("The exchange_zface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                         // H_exchange - use M^(old_time)
-                        amrex::Real const H_exchange_coeff = 2.0 * exchange_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
 
-                        amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k);
-                        amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k);
-                        amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k);
-                        amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k);
-                        amrex::Real Ms_lo_z = Ms_zface_arr(i, j, k-1);
-                        amrex::Real Ms_hi_z = Ms_zface_arr(i, j, k+1);
-
-                        Hx_eff_old += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
-                        Hy_eff_old += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
-                        Hz_eff_old += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+                        Hx_eff_old += H_exchange_zface_old(i, j, k, 0);
+                        Hy_eff_old += H_exchange_zface_old(i, j, k, 1);
+                        Hz_eff_old += H_exchange_zface_old(i, j, k, 2);
 
                     }
 
                     if (DMI_coupling == 1){
 
                         if (DMI_zface_arr(i,j,k) == 0.) amrex::Abort("The DMI_zface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+                        if (exchange_zface_arr(i,j,k) == 0.) amrex::Abort("The exchange_zface_arr(i,j,k) is 0.0 while DMI is turned on");
 
                         // H_DMI - use M^(old_time)
-                        amrex::Real const H_DMI_coeff = 2.0 * DMI_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
-
-                        amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k);
-                        amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k);
-                        amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k);
-                        amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k);
-
-                        Hx_eff_old += H_DMI_coeff * DMDx_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 2); // dMz/dx
-                        Hy_eff_old += H_DMI_coeff * DMDy_Mag(M_zface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 2); // dMz/dy
-                        Hz_eff_old += H_DMI_coeff * (- DMDx_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 2) - DMDy_Mag(M_zface_old, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 2)); // -dMx/dx-dMy/dy
+                        Hx_eff_old += H_DMI_zface_old(i, j, k, 0);
+                        Hy_eff_old += H_DMI_zface_old(i, j, k, 1);
+                        Hz_eff_old += H_DMI_zface_old(i, j, k, 2);
 
                     }
 
@@ -508,6 +490,12 @@ void EvolveM_2nd(
             const Array4<Real>& Hx_demag_prev = H_demagfield_prev[0].array(mfi);           // Hx is the x component at |_x faces
             const Array4<Real>& Hy_demag_prev = H_demagfield_prev[1].array(mfi);           // Hy is the y component at |_y faces
             const Array4<Real>& Hz_demag_prev = H_demagfield_prev[2].array(mfi);           // Hz is the z component at |_z faces
+            const Array4<Real>& H_exchange_xface_prev = H_exchangefield_prev[0].array(mfi);           // H_exchange_xface include x,y,z component at |_x faces
+            const Array4<Real>& H_exchange_yface_prev = H_exchangefield_prev[1].array(mfi);           // H_exchange_yface include x,y,z component at |_y faces
+            const Array4<Real>& H_exchange_zface_prev = H_exchangefield_prev[2].array(mfi);           // H_exchange_zface include x,y,z component at |_z faces
+            const Array4<Real>& H_DMI_xface_prev = H_DMIfield_prev[0].array(mfi);           // H_DMI_xface include x,y,z component at |_x faces
+            const Array4<Real>& H_DMI_yface_prev = H_DMIfield_prev[1].array(mfi);           // H_DMI_yface include x,y,z component at |_y faces
+            const Array4<Real>& H_DMI_zface_prev = H_DMIfield_prev[2].array(mfi);           // H_DMI_zface include x,y,z component at |_z faces
 
             // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp_static
             const Array4<Real>& M_xface_prev = Mfield_prev[0].array(mfi);
@@ -569,35 +557,22 @@ void EvolveM_2nd(
                             if (exchange_xface_arr(i,j,k) == 0.) amrex::Abort("The exchange_xface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                             // H_exchange - use M^[(new_time),r-1]
-                            amrex::Real const H_exchange_coeff = 2.0 * exchange_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
-
-                            amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k);
-                            amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k);
-                            amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k);
-                            amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k);
-                            amrex::Real Ms_lo_z = Ms_xface_arr(i, j, k-1);
-                            amrex::Real Ms_hi_z = Ms_xface_arr(i, j, k+1);
-
-                            Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
-                            Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
-                            Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+                            
+                            Hx_eff_prev += H_exchange_xface_prev(i, j, k, 0);
+                            Hy_eff_prev += H_exchange_xface_prev(i, j, k, 1);
+                            Hz_eff_prev += H_exchange_xface_prev(i, j, k, 2);
                         }
 
                         if (DMI_coupling == 1){
 
                             if (DMI_xface_arr(i,j,k) == 0.) amrex::Abort("The DMI_xface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+                            if (exchange_xface_arr(i,j,k) == 0.) amrex::Abort("The exchange_xface_arr(i,j,k) is 0.0 while DMI is turned on");
 
                             // H_DMI - use M^[(new_time),r-1]
-                            amrex::Real const H_DMI_coeff = 2.0 * DMI_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
 
-                            amrex::Real Ms_lo_x = Ms_xface_arr(i-1, j, k);
-                            amrex::Real Ms_hi_x = Ms_xface_arr(i+1, j, k);
-                            amrex::Real Ms_lo_y = Ms_xface_arr(i, j-1, k);
-                            amrex::Real Ms_hi_y = Ms_xface_arr(i, j+1, k);
-
-                            Hx_eff_prev += H_DMI_coeff * DMDx_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 0); // dMz/dx
-                            Hy_eff_prev += H_DMI_coeff * DMDy_Mag(M_xface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 0); // dMz/dy
-                            Hz_eff_prev += H_DMI_coeff * (- DMDx_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 0) - DMDy_Mag(M_xface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 0)); // -dMx/dx-dMy/dy
+                            Hx_eff_prev += H_DMI_xface_prev(i,j,k,0);
+                            Hy_eff_prev += H_DMI_xface_prev(i,j,k,1);
+                            Hz_eff_prev += H_DMI_xface_prev(i,j,k,2);
                         }
 
                         if (anisotropy_coupling == 1){
@@ -703,35 +678,21 @@ void EvolveM_2nd(
                             if (exchange_yface_arr(i,j,k) == 0.) amrex::Abort("The exchange_yface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                             // H_exchange - use M^[(new_time),r-1]
-                            amrex::Real const H_exchange_coeff = 2.0 * exchange_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
-
-                            amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k);
-                            amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k);
-                            amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k);
-                            amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k);
-                            amrex::Real Ms_lo_z = Ms_yface_arr(i, j, k-1);
-                            amrex::Real Ms_hi_z = Ms_yface_arr(i, j, k+1);
-
-                            Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
-                            Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
-                            Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+                            
+                            Hx_eff_prev += H_exchange_yface_prev(i, j, k, 0);
+                            Hy_eff_prev += H_exchange_yface_prev(i, j, k, 1);
+                            Hz_eff_prev += H_exchange_yface_prev(i, j, k, 2);
                         }
 
                         if (DMI_coupling == 1){
 
                             if (DMI_yface_arr(i,j,k) == 0.) amrex::Abort("The DMI_yface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+                            if (exchange_yface_arr(i,j,k) == 0.) amrex::Abort("The exchange_yface_arr(i,j,k) is 0.0 while DMI is turned on");
 
                             // H_DMI - use M^[(new_time),r-1]
-                            amrex::Real const H_DMI_coeff = 2.0 * DMI_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
-
-                            amrex::Real Ms_lo_x = Ms_yface_arr(i-1, j, k);
-                            amrex::Real Ms_hi_x = Ms_yface_arr(i+1, j, k);
-                            amrex::Real Ms_lo_y = Ms_yface_arr(i, j-1, k);
-                            amrex::Real Ms_hi_y = Ms_yface_arr(i, j+1, k);
-
-                            Hx_eff_prev += H_DMI_coeff * DMDx_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 1); // dMz/dx
-                            Hy_eff_prev += H_DMI_coeff * DMDy_Mag(M_yface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 1); // dMz/dy
-                            Hz_eff_prev += H_DMI_coeff * (- DMDx_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 1) - DMDy_Mag(M_yface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 1)); // -dMx/dx-dMy/dy
+                            Hx_eff_prev += H_DMI_yface_prev(i,j,k,0);
+                            Hy_eff_prev += H_DMI_yface_prev(i,j,k,1);
+                            Hz_eff_prev += H_DMI_yface_prev(i,j,k,2);
                         }
 
                         if (anisotropy_coupling == 1){
@@ -837,35 +798,21 @@ void EvolveM_2nd(
                             if (exchange_zface_arr(i,j,k) == 0.) amrex::Abort("The exchange_zface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                             // H_exchange - use M^[(new_time),r-1]
-                            amrex::Real const H_exchange_coeff = 2.0 * exchange_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
-
-                            amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k);
-                            amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k);
-                            amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k);
-                            amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k);
-                            amrex::Real Ms_lo_z = Ms_zface_arr(i, j, k-1);
-                            amrex::Real Ms_hi_z = Ms_zface_arr(i, j, k+1);
-
-                            Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
-                            Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
-                            Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+                            
+                            Hx_eff_prev += H_exchange_zface_prev(i, j, k, 0);
+                            Hy_eff_prev += H_exchange_zface_prev(i, j, k, 1);
+                            Hz_eff_prev += H_exchange_zface_prev(i, j, k, 2);
                         }
 
                         if (DMI_coupling == 1){
 
                             if (DMI_zface_arr(i,j,k) == 0.) amrex::Abort("The DMI_zface_arr(i,j,k) is 0.0 while including the DMI coupling term H_DMI for H_eff");
+                            if (exchange_zface_arr(i,j,k) == 0.) amrex::Abort("The exchange_zface_arr(i,j,k) is 0.0 while DMI is turned on");
 
                             // H_DMI - use M^[(new_time),r-1]
-                            amrex::Real const H_DMI_coeff = 2.0 * DMI_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
-
-                            amrex::Real Ms_lo_x = Ms_zface_arr(i-1, j, k);
-                            amrex::Real Ms_hi_x = Ms_zface_arr(i+1, j, k);
-                            amrex::Real Ms_lo_y = Ms_zface_arr(i, j-1, k);
-                            amrex::Real Ms_hi_y = Ms_zface_arr(i, j+1, k);
-
-                            Hx_eff_prev += H_DMI_coeff * DMDx_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 2, 2); // dMz/dx
-                            Hy_eff_prev += H_DMI_coeff * DMDy_Mag(M_zface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 2, 2); // dMz/dy
-                            Hz_eff_prev += H_DMI_coeff * (- DMDx_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, i, j, k, dx, 0, 2) - DMDy_Mag(M_zface_prev, Ms_lo_y, Ms_hi_y, i, j, k, dx, 1, 2)); // -dMx/dx -dMy/dy
+                            Hx_eff_prev += H_DMI_zface_prev(i,j,k,0);
+                            Hy_eff_prev += H_DMI_zface_prev(i,j,k,1);
+                            Hz_eff_prev += H_DMI_zface_prev(i,j,k,2);
                         }
 
                         if (anisotropy_coupling == 1){
@@ -958,6 +905,10 @@ void EvolveM_2nd(
 	      // Calculate H from Phi
 	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
 	   }
+
+       if (exchange_coupling == 1){
+          CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+       }
 
        if (DMI_coupling == 1){
           CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
@@ -1068,8 +1019,12 @@ void EvolveM_2nd(
             for (int i = 0; i < 3; i++){
                 MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
                 MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
+                MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 3, H_exchangefield[i].nGrow());
+                MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 3, H_DMIfield[i].nGrow());
                 Mfield_prev[i].FillBoundary(geom.periodicity());
                 H_demagfield_prev[i].FillBoundary(geom.periodicity());
+                H_exchangefield_prev[i].FillBoundary(geom.periodicity());
+                H_DMIfield_prev[i].FillBoundary(geom.periodicity());
             }
         }
 

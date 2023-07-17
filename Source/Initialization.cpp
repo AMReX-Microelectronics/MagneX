@@ -188,9 +188,12 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //x_face 
-                M_xface(i,j,k,0) = 0._rt;
-                M_xface(i,j,k,1) = 0.11 * Ms_xface_arr(i,j,k);
-                M_xface(i,j,k,2) = 0.99 * Ms_xface_arr(i,j,k);
+               //  M_xface(i,j,k,0) = 0._rt;
+               //  M_xface(i,j,k,1) = 0.11 * Ms_xface_arr(i,j,k);
+               //  M_xface(i,j,k,2) = 0.99 * Ms_xface_arr(i,j,k);
+                M_xface(i,j,k,0) = (z < 0) ? Ms_xface_arr(i,j,k) : 0.;
+                M_xface(i,j,k,1) = 0._rt;
+                M_xface(i,j,k,2) = (z >= 0) ? Ms_xface_arr(i,j,k) : 0.;
                //  M_xface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
                //  M_xface(i,j,k,1) = 0._rt;
                //  M_xface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
@@ -229,9 +232,13 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //y_face
-                M_yface(i,j,k,0) = 0._rt;
-                M_yface(i,j,k,1) = 0.11 * Ms_yface_arr(i,j,k);
-                M_yface(i,j,k,2) = 0.99 * Ms_yface_arr(i,j,k);
+               //  M_yface(i,j,k,0) = 0._rt;
+               //  M_yface(i,j,k,1) = 0.11 * Ms_yface_arr(i,j,k);
+               //  M_yface(i,j,k,2) = 0.99 * Ms_yface_arr(i,j,k);
+                M_yface(i,j,k,0) = (z < 0) ? Ms_yface_arr(i,j,k) : 0.;
+                M_yface(i,j,k,1) = 0._rt;
+                M_yface(i,j,k,2) = (z >= 0) ? Ms_yface_arr(i,j,k) : 0.;
+
                //  M_yface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
                //  M_yface(i,j,k,1) = 0._rt;
                //  M_yface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
@@ -269,9 +276,13 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + k * dx[2];
                
                 //z_face
-                M_zface(i,j,k,0) = 0._rt;
-                M_zface(i,j,k,1) = 0.11 * Ms_zface_arr(i,j,k);
-                M_zface(i,j,k,2) = 0.99 * Ms_zface_arr(i,j,k);
+               //  M_zface(i,j,k,0) = 0._rt;
+               //  M_zface(i,j,k,1) = 0.11 * Ms_zface_arr(i,j,k);
+               //  M_zface(i,j,k,2) = 0.99 * Ms_zface_arr(i,j,k);
+               
+                M_zface(i,j,k,0) = (z < 0) ? Ms_zface_arr(i,j,k) : 0.;
+                M_zface(i,j,k,1) = 0._rt;
+                M_zface(i,j,k,2) = (z >= 0) ? Ms_zface_arr(i,j,k) : 0.;
                //  M_zface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
                //  M_zface(i,j,k,1) = 0._rt;
                //  M_zface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;

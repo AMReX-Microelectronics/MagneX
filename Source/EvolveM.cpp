@@ -116,9 +116,15 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                       amrex::Real Ms_hi_z = Ms_xface_arr(i, j, k+1);
 
 		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 0, 0);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 1, 0);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_xface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 2, 0);
 
                     }
                  
@@ -191,9 +197,15 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                       amrex::Real Ms_hi_z = Ms_yface_arr(i, j, k+1);
 
 		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 0, 1);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 1, 1);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_yface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 2, 1);
 
                     }
                  
@@ -266,9 +278,15 @@ void Compute_LLG_RHS(//std::array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                       amrex::Real Ms_hi_z = Ms_zface_arr(i, j, k+1);
 
 		      //if(i == 31 && j == 31 && k == 31) printf("Laplacian_x = %g \n", Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0));
-                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
-                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
-                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+                      Hx_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 0, 2);
+                      Hy_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 1, 2);
+                      Hz_eff += H_exchange_coeff * Laplacian_Mag(M_zface_old, Ms_lo_x, Ms_hi_x, 0.0, 0.0,
+                                                                              Ms_lo_y, Ms_hi_y, 0.0, 0.0,
+                                                                              Ms_lo_z, Ms_hi_z, 0.0, 0.0, i, j, k, dx, 2, 2);
 
                     }
                  

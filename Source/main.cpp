@@ -10,6 +10,7 @@
 #include "myfunc.H"
 #include "Initialization.H"
 #include "MagnetostaticSolver.H"
+#include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
 #include "CartesianAlgorithm.H"
 #include "Diagnostics.H"
@@ -171,6 +172,7 @@ void main_main ()
     //Array<MultiFab, AMREX_SPACEDIM> Mfield;
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_exchangefield;
     Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
 
     amrex::Vector<MultiFab> Mfield(AMREX_SPACEDIM);
@@ -242,6 +244,11 @@ void main_main ()
 		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
 		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
+      // face-centered H_exchangefield
+      AMREX_D_TERM(H_exchangefield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+		   H_exchangefield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
+		   H_exchangefield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+           
       // face-centered H_DMIfield
       AMREX_D_TERM(H_DMIfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
 		   H_DMIfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
@@ -351,7 +358,7 @@ void main_main ()
         LLG_RHS_avg[idim].setVal(0.);
     }
 
-    MultiFab Plt(ba, dm, 26, 0);
+    MultiFab Plt(ba, dm, 44, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -437,8 +444,12 @@ void main_main ()
             ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
         }
 
+        if (exchange_coupling == 1){
+            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
+
         if(DMI_coupling == 1){
-            CalculateH_DMI(Mfield,H_DMIfield, Ms, exchange, DMI, DMI_coupling, exchange_coupling, mu0, geom);
+            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }
     }
 
@@ -452,12 +463,12 @@ void main_main ()
         const std::string& pltfile = amrex::Concatenate("plt",plt_step,8);
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
-        mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
-        MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 0);
-        MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
-        MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
+        mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, Ms);
+        MultiFab::Copy(Plt, H_demagfield[0], 0, 39, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[1], 0, 40, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[2], 0, 41, 1, 0);
+        MultiFab::Copy(Plt, PoissonRHS, 0, 42, 1, 0);
+        MultiFab::Copy(Plt, PoissonPhi, 0, 43, 1, 0);
 
         WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
                                                 "Mx_xface","Mx_yface","Mx_zface",
@@ -466,6 +477,12 @@ void main_main ()
                                                 "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                 "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
                                                 "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
+                                                "Hx_exchange_xface", "Hx_exchange_yface", "Hx_exchange_zface",
+                                                "Hy_exchange_xface", "Hy_exchange_yface", "Hy_exchange_zface",
+                                                "Hz_exchange_xface", "Hz_exchange_yface", "Hz_exchange_zface",
+                                                "Hx_DMI_xface", "Hx_DMI_yface", "Hx_DMI_zface",
+                                                "Hy_DMI_xface", "Hy_DMI_yface", "Hy_DMI_zface",
+                                                "Hz_DMI_xface", "Hz_DMI_yface", "Hz_DMI_zface",
                                                 "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                 "PoissonRHS","PoissonPhi"},
                                                  geom, time, plt_step);
@@ -514,6 +531,14 @@ void main_main ()
 
                // Calculate H from Phi
                ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+           }
+
+           if (exchange_coupling == 1){
+              CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+           }
+
+           if(DMI_coupling == 1){
+              CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
            }
 
            //Evolve M
@@ -570,6 +595,14 @@ void main_main ()
 	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
 	   }
 
+       if (exchange_coupling == 1){
+            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
+
+        if(DMI_coupling == 1){
+            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
+
 	   // Compute f^{n} = f(M^{n}, H^{n})
 	   Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
 
@@ -594,6 +627,14 @@ void main_main ()
 		 // Calculate H from Phi
 		 ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
 	      }
+
+        if (exchange_coupling == 1){
+            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
+
+        if(DMI_coupling == 1){
+            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
 
 	      // LLG RHS with new H_demag and M_field_pre
 	      // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
@@ -720,7 +761,7 @@ void main_main ()
         } else if (TimeIntegratorOption == 3) { // artemis way
         amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_DMIfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
@@ -752,6 +793,14 @@ void main_main ()
                      // Calculate H from Phi
                      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
                  }
+
+                 if (exchange_coupling == 1){
+                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
+
+                if(DMI_coupling == 1){
+                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
 
                  // Compute f^n = f(M^n, H^n) 
                  Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
@@ -808,7 +857,7 @@ void main_main ()
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
 
             //Averaging face-centerd Multifabs to cell-centers for plotting 
-            mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
+            mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, Ms);
             MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 0);
             MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 0);
             MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 0);
@@ -822,6 +871,12 @@ void main_main ()
                                                     "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                     "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
                                                     "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
+                                                    "Hx_exchange_xface", "Hx_exchange_yface", "Hx_exchange_zface",
+                                                    "Hy_exchange_xface", "Hy_exchange_yface", "Hy_exchange_zface",
+                                                    "Hz_exchange_xface", "Hz_exchange_yface", "Hz_exchange_zface",
+                                                    "Hx_DMI_xface", "Hx_DMI_yface", "Hx_DMI_zface",
+                                                    "Hy_DMI_xface", "Hy_DMI_yface", "Hy_DMI_zface",
+                                                    "Hz_DMI_xface", "Hz_DMI_yface", "Hz_DMI_zface",
                                                     "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                     "PoissonRHS","PoissonPhi"},
                                                     geom, time, step);
