@@ -11,6 +11,7 @@ void EvolveM_2nd(
     std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
     std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
     std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
+    std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
     MultiFab                              &PoissonRHS, 
     MultiFab                              &PoissonPhi, 
     std::array< MultiFab, AMREX_SPACEDIM >&   alpha,

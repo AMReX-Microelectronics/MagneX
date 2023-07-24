@@ -71,19 +71,27 @@ void CalculateH_DMI(
                         // Neumann boundary condition in scalar form, dMz/dx = +/- 1/xi*Mx 
                         
                         // H_DMI_xface(i,j,k,0) = H_DMI_coeff * dMzdx;
-                        amrex::Real dMzdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
+                        // amrex::Real dMzdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
+                        // amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*M_xface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx 
+                        amrex::Real dMzdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
                         amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*M_xface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx 
                         H_DMI_xface(i,j,k,0) = H_DMI_coeff * DMDx_Mag(M_xface, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd, 2, 0); // z component at x nodality
 
                         //H_DMI_xface(i,j,k,1) = H_DMI_coeff * dMzdy;
-                        amrex::Real dMzdy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,1); // lower y BC: dMz/dy = -1/xi*My
+                        // amrex::Real dMzdy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,1); // lower y BC: dMz/dy = -1/xi*My
+                        // amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*M_xface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
+                        amrex::Real dMzdy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,1); // lower y BC: dMz/dy = -1/xi*My
                         amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*M_xface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
                         H_DMI_xface(i,j,k,1) = H_DMI_coeff * DMDy_Mag(M_xface, Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd, 2, 0); // z component at x nodality
 
                         // H_DMI_xface(i,j,k,2) = H_DMI_coeff * (-dMxdx - dMydy);
-                        amrex::Real dMxdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,2);  // lower x BC: dMx/dx = 1/xi*Mz
+                        // amrex::Real dMxdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,2);  // lower x BC: dMx/dx = 1/xi*Mz
+                        // amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*M_xface(i,j,k,2); // higher x BC: dMx/dx = -1/xi*Mz
+                        // amrex::Real dMydy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
+                        // amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*M_xface(i,j,k,2); // higher y BC: dMy/dy = -1/xi*Mz
+                        amrex::Real dMxdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,2);  // lower x BC: dMx/dx = 1/xi*Mz
                         amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*M_xface(i,j,k,2); // higher x BC: dMx/dx = -1/xi*Mz
-                        amrex::Real dMydy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
+                        amrex::Real dMydy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
                         amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*M_xface(i,j,k,2); // higher y BC: dMy/dy = -1/xi*Mz
                         H_DMI_xface(i,j,k,2) = H_DMI_coeff * (-DMDx_Mag(M_xface, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd, 0, 0) // x component at x nodality
                                                               -DMDy_Mag(M_xface, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd, 1, 0)); // y component at x nodality;
@@ -128,22 +136,30 @@ void CalculateH_DMI(
 
                         // Neumann boundary condition in scalar form, dMz/dx = +/- 1/xi*Mx 
                         // at y-faces, dM/dx do not overlap the BCs
-                        amrex::Real dMzdx_BC_lo_x = -1.0/xi_DMI*M_yface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
+                        // amrex::Real dMzdx_BC_lo_x = -1.0/xi_DMI*M_yface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
+                        // amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*M_yface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx 
+                        amrex::Real dMzdx_BC_lo_x =  1.0/xi_DMI*M_yface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
                         amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*M_yface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx 
                         // H_DMI_yface(i,j,k,0) = H_DMI_coeff * dMzdx; // dMz/dx
                         H_DMI_yface(i,j,k,0) = H_DMI_coeff * DMDx_Mag(M_yface, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd, 2, 1); // z component at y nodality
                         
                         // at y-faces, dM/dy = dM/dn
-                        amrex::Real dMzdy_BC_lo_y = -1.0/xi_DMI*M_yface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
+                        // amrex::Real dMzdy_BC_lo_y = -1.0/xi_DMI*M_yface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
+                        // amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*M_yface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
+                        amrex::Real dMzdy_BC_lo_y =  1.0/xi_DMI*M_yface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
                         amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*M_yface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
                         // H_DMI_yface(i,j,k,1) = H_DMI_coeff * dMzdy; // dMz/dy
                         H_DMI_yface(i,j,k,1) = H_DMI_coeff * DMDy_Mag(M_yface, Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd, 2, 1); // z component at y nodality
                         
                         // Neumann boundary condition in scalar form, dMx/dx = -/+ 1/xi*Mz 
                         // at y-face, dM/dx do not overlap with the BCs
-                        amrex::Real dMxdx_BC_lo_x =  1.0/xi_DMI*M_yface(i,j,k,2); // lower x BC : dMx/dx = 1/xi*Mz 
+                        // amrex::Real dMxdx_BC_lo_x =  1.0/xi_DMI*M_yface(i,j,k,2); // lower x BC : dMx/dx = 1/xi*Mz 
+                        // amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*M_yface(i,j,k,2); // higher x BC : dMx/dx = -1/xi*Mz 
+                        // amrex::Real dMydy_BC_lo_y =  1.0/xi_DMI*M_yface(i,j,k,2); // lower y BC: dMy/dy =  1/xi*Mz
+                        // amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*M_yface(i,j,k,2); // higher y BC: dMy/dy = - 1/xi*Mz
+                        amrex::Real dMxdx_BC_lo_x = -1.0/xi_DMI*M_yface(i,j,k,2); // lower x BC : dMx/dx = 1/xi*Mz 
                         amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*M_yface(i,j,k,2); // higher x BC : dMx/dx = -1/xi*Mz 
-                        amrex::Real dMydy_BC_lo_y =  1.0/xi_DMI*M_yface(i,j,k,2); // lower y BC: dMy/dy =  1/xi*Mz
+                        amrex::Real dMydy_BC_lo_y = -1.0/xi_DMI*M_yface(i,j,k,2); // lower y BC: dMy/dy =  1/xi*Mz
                         amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*M_yface(i,j,k,2); // higher y BC: dMy/dy = - 1/xi*Mz
                         // H_DMI_yface(i,j,k,2) = H_DMI_coeff * ( - dMxdx - dMydy); // -dMx/dx-dMy/dy
                         H_DMI_yface(i,j,k,2) = H_DMI_coeff * (-DMDx_Mag(M_yface, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd, 0, 1) // x component at y nodality
@@ -190,21 +206,29 @@ void CalculateH_DMI(
 
                         // // Neumann boundary condition dM/dn = -+ 1/xi*(z x n) x M
                         // at z-faces, dM/dx do not overlap with the BC
-                        amrex::Real dMzdx_BC_lo_x = -1.0/xi_DMI*M_zface(i,j,k,0); // lower x BC: dMz/dx = -1/xi*Mx
+                        // amrex::Real dMzdx_BC_lo_x = -1.0/xi_DMI*M_zface(i,j,k,0); // lower x BC: dMz/dx = -1/xi*Mx
+                        // amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*M_zface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx
+                        amrex::Real dMzdx_BC_lo_x =  1.0/xi_DMI*M_zface(i,j,k,0); // lower x BC: dMz/dx = -1/xi*Mx
                         amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*M_zface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx
                         // H_DMI_zface(i,j,k,0) = H_DMI_coeff * dMzdx;
                         H_DMI_zface(i,j,k,0) = H_DMI_coeff * DMDx_Mag(M_zface, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd, 2, 2); // z component at z nodality
                         
                         // at z-faces, dM/dy do not overlap with the BC
-                        amrex::Real dMzdy_BC_lo_y = -1.0/xi_DMI*M_zface(i,j,k,1); // lower y BC: dMz/dy = -1/xi*My
+                        // amrex::Real dMzdy_BC_lo_y = -1.0/xi_DMI*M_zface(i,j,k,1); // lower y BC: dMz/dy = -1/xi*My
+                        // amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*M_zface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
+                        amrex::Real dMzdy_BC_lo_y =  1.0/xi_DMI*M_zface(i,j,k,1); // lower y BC: dMz/dy = -1/xi*My
                         amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*M_zface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
                         // H_DMI_zface(i,j,k,1) = H_DMI_coeff * dMzdy;
                         H_DMI_zface(i,j,k,1) = H_DMI_coeff * DMDy_Mag(M_zface, Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd, 2, 2); // z component at z nodality
                         
                         // at z-faces, both dM/dx and dM/dy do not overlap with the BC
-                        amrex::Real dMxdx_BC_lo_x =  1.0/xi_DMI*M_zface(i,j,k,2); // lower x BC: dMx/dx = 1/xi*Mz
+                        // amrex::Real dMxdx_BC_lo_x =  1.0/xi_DMI*M_zface(i,j,k,2); // lower x BC: dMx/dx = 1/xi*Mz
+                        // amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*M_zface(i,j,k,2); // higher x BC: dMx/dx = - 1/xi*Mz
+                        // amrex::Real dMydy_BC_lo_y =  1.0/xi_DMI*M_zface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
+                        // amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*M_zface(i,j,k,2); // higher y BC: dMy/dy = -1/xi*Mz
+                        amrex::Real dMxdx_BC_lo_x = -1.0/xi_DMI*M_zface(i,j,k,2); // lower x BC: dMx/dx = 1/xi*Mz
                         amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*M_zface(i,j,k,2); // higher x BC: dMx/dx = - 1/xi*Mz
-                        amrex::Real dMydy_BC_lo_y =  1.0/xi_DMI*M_zface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
+                        amrex::Real dMydy_BC_lo_y = -1.0/xi_DMI*M_zface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
                         amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*M_zface(i,j,k,2); // higher y BC: dMy/dy = -1/xi*Mz
                         // H_DMI_zface(i,j,k,2) = H_DMI_coeff * ( - dMxdx - dMydy);
                         H_DMI_zface(i,j,k,2) = H_DMI_coeff * (-DMDx_Mag(M_zface, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd, 0, 2) // x component at z nodality

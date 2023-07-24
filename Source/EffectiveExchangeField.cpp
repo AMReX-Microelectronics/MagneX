@@ -19,7 +19,6 @@ void CalculateH_exchange(
     const Geometry& geom
 )
 {
-    // calculate the b_temp_static, a_temp_static
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         // extract dd from the geometry object
@@ -98,15 +97,25 @@ void CalculateH_exchange(
                             
                             xi_DMI = 2.0*exchange_xface_arr(i,j,k)/DMI_xface_arr(i,j,k);
 
-                            dMxdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower x BC: dMx/dx = 1/xi*Mz
+                            // dMxdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower x BC: dMx/dx = 1/xi*Mz
+                            // dMxdx_BC_hi_x = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher x BC: dMx/dx = -1/xi*Mz
+
+                            // dMydy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower y BC: dMy/dy = 1/xi*Mz
+                            // dMydy_BC_hi_y = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher y BC: dMy/dy = -1/xi*Mz
+
+                            // dMzdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,0);  // lower x BC: dMz/dx = -1/xi*Mx
+                            // dMzdx_BC_hi_x =  1.0/xi_DMI*M_xface(i,j,k,0);  // higher x BC: dMz/dx = 1/xi*Mx
+                            // dMzdy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,1);  // lower y BC: dMz/dy = -1/xi*My
+                            // dMzdy_BC_hi_y =  1.0/xi_DMI*M_xface(i,j,k,1);  // higher y BC: dMz/dy = 1/xi*My
+                            dMxdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,2) ; // lower x BC: dMx/dx = 1/xi*Mz
                             dMxdx_BC_hi_x = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher x BC: dMx/dx = -1/xi*Mz
 
-                            dMydy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower y BC: dMy/dy = 1/xi*Mz
+                            dMydy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,2) ; // lower y BC: dMy/dy = 1/xi*Mz
                             dMydy_BC_hi_y = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher y BC: dMy/dy = -1/xi*Mz
 
-                            dMzdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,0);  // lower x BC: dMz/dx = -1/xi*Mx
+                            dMzdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,0);  // lower x BC: dMz/dx = -1/xi*Mx
                             dMzdx_BC_hi_x =  1.0/xi_DMI*M_xface(i,j,k,0);  // higher x BC: dMz/dx = 1/xi*Mx
-                            dMzdy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,1);  // lower y BC: dMz/dy = -1/xi*My
+                            dMzdy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,1);  // lower y BC: dMz/dy = -1/xi*My
                             dMzdy_BC_hi_y =  1.0/xi_DMI*M_xface(i,j,k,1);  // higher y BC: dMz/dy = 1/xi*My
                         }
                         
@@ -186,15 +195,25 @@ void CalculateH_exchange(
                             if (DMI_yface_arr(i,j,k) == 0.) amrex::Abort("The DMI_yface_arr(i,j,k) is 0.0 while including the DMI coupling");
                             xi_DMI = 2.0*exchange_yface_arr(i,j,k)/DMI_yface_arr(i,j,k);
 
-                            dMxdx_BC_lo_x =   1.0/xi_DMI*M_yface(i,j,k,2); // lower x BC : dMx/dx = 1/xi*Mz 
+                            // dMxdx_BC_lo_x =   1.0/xi_DMI*M_yface(i,j,k,2); // lower x BC : dMx/dx = 1/xi*Mz 
+                            // dMxdx_BC_hi_x =  -1.0/xi_DMI*M_yface(i,j,k,2); // higher x BC : dMx/dx = -1/xi*Mz 
+
+                            // dMydy_BC_lo_y =   1.0/xi_DMI*M_yface(i,j,k,2); // lower y BC: dMy/dy =  1/xi*Mz
+                            // dMydy_BC_hi_y =  -1.0/xi_DMI*M_yface(i,j,k,2); // higher y BC: dMy/dy = - 1/xi*Mz
+
+                            // dMzdx_BC_lo_x =  -1.0/xi_DMI*M_yface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
+                            // dMzdx_BC_hi_x =   1.0/xi_DMI*M_yface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx 
+                            // dMzdy_BC_lo_y =  -1.0/xi_DMI*M_yface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
+                            // dMzdy_BC_hi_y =   1.0/xi_DMI*M_yface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
+                            dMxdx_BC_lo_x =  -1.0/xi_DMI*M_yface(i,j,k,2); // lower x BC : dMx/dx = 1/xi*Mz 
                             dMxdx_BC_hi_x =  -1.0/xi_DMI*M_yface(i,j,k,2); // higher x BC : dMx/dx = -1/xi*Mz 
 
-                            dMydy_BC_lo_y =   1.0/xi_DMI*M_yface(i,j,k,2); // lower y BC: dMy/dy =  1/xi*Mz
+                            dMydy_BC_lo_y =  -1.0/xi_DMI*M_yface(i,j,k,2); // lower y BC: dMy/dy =  1/xi*Mz
                             dMydy_BC_hi_y =  -1.0/xi_DMI*M_yface(i,j,k,2); // higher y BC: dMy/dy = - 1/xi*Mz
 
-                            dMzdx_BC_lo_x =  -1.0/xi_DMI*M_yface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
+                            dMzdx_BC_lo_x =   1.0/xi_DMI*M_yface(i,j,k,0); // lower x BC: dMz/dx = - 1/xi*Mx 
                             dMzdx_BC_hi_x =   1.0/xi_DMI*M_yface(i,j,k,0); // higher x BC: dMz/dx = 1/xi*Mx 
-                            dMzdy_BC_lo_y =  -1.0/xi_DMI*M_yface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
+                            dMzdy_BC_lo_y =   1.0/xi_DMI*M_yface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
                             dMzdy_BC_hi_y =   1.0/xi_DMI*M_yface(i,j,k,1); // higher y BC: dMz/dy = 1/xi*My
                         
                         }
@@ -276,15 +295,25 @@ void CalculateH_exchange(
                             if (DMI_zface_arr(i,j,k) == 0.) amrex::Abort("The DMI_zface_arr(i,j,k) is 0.0 while including the DMI coupling");
                             xi_DMI = 2.0*exchange_zface_arr(i,j,k)/DMI_zface_arr(i,j,k);
 
-                            dMxdx_BC_lo_x =  1.0/xi_DMI*M_zface(i,j,k,2); // lower x BC: dMx/dx = 1/xi*Mz
+                            // dMxdx_BC_lo_x =  1.0/xi_DMI*M_zface(i,j,k,2); // lower x BC: dMx/dx = 1/xi*Mz
+                            // dMxdx_BC_hi_x = -1.0/xi_DMI*M_zface(i,j,k,2); // higher x BC: dMx/dx = - 1/xi*Mz
+                            
+                            // dMydy_BC_lo_y =  1.0/xi_DMI*M_zface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
+                            // dMydy_BC_hi_y = -1.0/xi_DMI*M_zface(i,j,k,2); // higher y BC: dMy/dy = -1/xi*Mz
+                            
+                            // dMzdx_BC_lo_x = -1.0/xi_DMI*M_zface(i,j,k,0); // lower x BC: dMz/dx = 1/xi*Mx
+                            // dMzdx_BC_hi_x =  1.0/xi_DMI*M_zface(i,j,k,0); // higher x BC: dMz/dx = - 1/xi*Mx
+                            // dMzdy_BC_lo_y = -1.0/xi_DMI*M_zface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
+                            // dMzdy_BC_hi_y =  1.0/xi_DMI*M_zface(i,j,k,1); // higher y BC: dMz/dy = -1/xi*My
+                            dMxdx_BC_lo_x = -1.0/xi_DMI*M_zface(i,j,k,2); // lower x BC: dMx/dx = 1/xi*Mz
                             dMxdx_BC_hi_x = -1.0/xi_DMI*M_zface(i,j,k,2); // higher x BC: dMx/dx = - 1/xi*Mz
                             
-                            dMydy_BC_lo_y =  1.0/xi_DMI*M_zface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
+                            dMydy_BC_lo_y = -1.0/xi_DMI*M_zface(i,j,k,2); // lower y BC: dMy/dy = 1/xi*Mz
                             dMydy_BC_hi_y = -1.0/xi_DMI*M_zface(i,j,k,2); // higher y BC: dMy/dy = -1/xi*Mz
                             
-                            dMzdx_BC_lo_x = -1.0/xi_DMI*M_zface(i,j,k,0); // lower x BC: dMz/dx = 1/xi*Mx
+                            dMzdx_BC_lo_x =  1.0/xi_DMI*M_zface(i,j,k,0); // lower x BC: dMz/dx = 1/xi*Mx
                             dMzdx_BC_hi_x =  1.0/xi_DMI*M_zface(i,j,k,0); // higher x BC: dMz/dx = - 1/xi*Mx
-                            dMzdy_BC_lo_y = -1.0/xi_DMI*M_zface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
+                            dMzdy_BC_lo_y =  1.0/xi_DMI*M_zface(i,j,k,1); // lower y BC: dMz/dy = 1/xi*My
                             dMzdy_BC_hi_y =  1.0/xi_DMI*M_zface(i,j,k,1); // higher y BC: dMz/dy = -1/xi*My
                             
                         }

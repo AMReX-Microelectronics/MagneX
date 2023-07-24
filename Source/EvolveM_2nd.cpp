@@ -4,6 +4,7 @@
 #include "MagnetostaticSolver.H"
 #include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
+#include "EffectiveAnisotropyField.H"
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
@@ -15,6 +16,7 @@ void EvolveM_2nd(
     std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
     std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
     std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
+    std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
     MultiFab                              &PoissonRHS, 
     MultiFab                              &PoissonPhi, 
     std::array< MultiFab, AMREX_SPACEDIM >&   alpha,
@@ -44,6 +46,8 @@ void EvolveM_2nd(
     std::array<MultiFab, 3> H_exchangefield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> H_DMIfield_old;    // H^(old_time) before the current time step
     std::array<MultiFab, 3> H_DMIfield_prev;    // H^(new_time) of the (r-1)th iteration
+    std::array<MultiFab, 3> H_anisotropyfield_old;    // H^(old_time) before the current time step
+    std::array<MultiFab, 3> H_anisotropyfield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_old;    // M^(old_time) before the current time step
     std::array<MultiFab, 3> Mfield_prev;   // M^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_error;  // The error of the M field between the two consecutive iterations
@@ -64,6 +68,8 @@ void EvolveM_2nd(
         H_exchangefield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_exchangefield[i].nGrow());
         H_DMIfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_DMIfield[i].nGrow()); // match ghost cell number with main function
         H_DMIfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_DMIfield[i].nGrow());
+        H_anisotropyfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_anisotropyfield[i].nGrow()); // match ghost cell number with main function
+        H_anisotropyfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, H_anisotropyfield[i].nGrow());
         Mfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow()); // match ghost cell number with main function
         Mfield_prev[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 3, Mfield[i].nGrow());
         
@@ -73,6 +79,8 @@ void EvolveM_2nd(
         MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 3, H_exchangefield[i].nGrow());
         MultiFab::Copy(H_DMIfield_old[i], H_DMIfield[i], 0, 0, 3, H_DMIfield[i].nGrow());
         MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 3, H_DMIfield[i].nGrow());
+        MultiFab::Copy(H_anisotropyfield_old[i], H_anisotropyfield[i], 0, 0, 3, H_anisotropyfield[i].nGrow());
+        MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 3, H_anisotropyfield[i].nGrow());
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 3, Mfield[i].nGrow());
         
@@ -83,6 +91,8 @@ void EvolveM_2nd(
         H_exchangefield_prev[i].FillBoundary(geom.periodicity());
         H_DMIfield_old[i].FillBoundary(geom.periodicity());
         H_DMIfield_prev[i].FillBoundary(geom.periodicity());
+        H_anisotropyfield_old[i].FillBoundary(geom.periodicity());
+        H_anisotropyfield_prev[i].FillBoundary(geom.periodicity());
         Mfield_old[i].FillBoundary(geom.periodicity());
         Mfield_prev[i].FillBoundary(geom.periodicity());
 
@@ -145,6 +155,9 @@ void EvolveM_2nd(
         const Array4<Real>& H_DMI_xface_old = H_DMIfield_old[0].array(mfi); // note H_DMI_xface_old include x,y,z components at |_x faces
         const Array4<Real>& H_DMI_yface_old = H_DMIfield_old[1].array(mfi); // note H_DMI_yface_old include x,y,z components at |_y faces
         const Array4<Real>& H_DMI_zface_old = H_DMIfield_old[2].array(mfi); // note H_DMI_zface_old include x,y,z components at |_z faces
+        const Array4<Real>& H_anisotropy_xface_old = H_anisotropyfield_old[0].array(mfi); // note H_anisotropy_xface_old include x,y,z components at |_x faces
+        const Array4<Real>& H_anisotropy_yface_old = H_anisotropyfield_old[1].array(mfi); // note H_anisotropy_yface_old include x,y,z components at |_y faces
+        const Array4<Real>& H_anisotropy_zface_old = H_anisotropyfield_old[2].array(mfi); // note H_anisotropy_zface_old include x,y,z components at |_z faces
         const Array4<Real>& M_xface_old = Mfield_old[0].array(mfi); // note M_xface include x,y,z components at |_x faces
         const Array4<Real>& M_yface_old = Mfield_old[1].array(mfi); // note M_yface include x,y,z components at |_y faces
         const Array4<Real>& M_zface_old = Mfield_old[2].array(mfi); // note M_zface include x,y,z components at |_z faces
@@ -225,14 +238,9 @@ void EvolveM_2nd(
                         if (anisotropy_xface_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_xface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                         // H_anisotropy - use M^(old_time)
-                        amrex::Real M_dot_anisotropy_axis = 0.0;
-                        for (int comp=0; comp<3; ++comp) {
-                            M_dot_anisotropy_axis += M_xface_old(i, j, k, comp) * anisotropy_axis[comp];
-                        }
-                        amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
-                        Hx_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
-                        Hy_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
-                        Hz_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+                        Hx_eff_old += H_anisotropy_xface_old(i, j, k, 0);
+                        Hy_eff_old += H_anisotropy_xface_old(i, j, k, 1);
+                        Hz_eff_old += H_anisotropy_xface_old(i, j, k, 2);
                     }
 
                     // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
@@ -311,14 +319,9 @@ void EvolveM_2nd(
                         if (anisotropy_yface_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_yface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                         // H_anisotropy - use M^(old_time)
-                        amrex::Real M_dot_anisotropy_axis = 0.0;
-                        for (int comp=0; comp<3; ++comp) {
-                            M_dot_anisotropy_axis += M_yface_old(i, j, k, comp) * anisotropy_axis[comp];
-                        }
-                        amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
-                        Hx_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
-                        Hy_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
-                        Hz_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+                        Hx_eff_old += H_anisotropy_yface_old(i, j, k, 0);
+                        Hy_eff_old += H_anisotropy_yface_old(i, j, k, 1);
+                        Hz_eff_old += H_anisotropy_yface_old(i, j, k, 2);
                     }
 
                     // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
@@ -400,14 +403,9 @@ void EvolveM_2nd(
                         if (anisotropy_zface_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_zface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                         // H_anisotropy - use M^(old_time)
-                        amrex::Real M_dot_anisotropy_axis = 0.0;
-                        for (int comp=0; comp<3; ++comp) {
-                            M_dot_anisotropy_axis += M_zface_old(i, j, k, comp) * anisotropy_axis[comp];
-                        }
-                        amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
-                        Hx_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
-                        Hy_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
-                        Hz_eff_old += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+                        Hx_eff_old += H_anisotropy_zface_old(i, j, k, 0);
+                        Hy_eff_old += H_anisotropy_zface_old(i, j, k, 1);
+                        Hz_eff_old += H_anisotropy_zface_old(i, j, k, 2);
                     }
 
                     // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
@@ -496,6 +494,9 @@ void EvolveM_2nd(
             const Array4<Real>& H_DMI_xface_prev = H_DMIfield_prev[0].array(mfi);           // H_DMI_xface include x,y,z component at |_x faces
             const Array4<Real>& H_DMI_yface_prev = H_DMIfield_prev[1].array(mfi);           // H_DMI_yface include x,y,z component at |_y faces
             const Array4<Real>& H_DMI_zface_prev = H_DMIfield_prev[2].array(mfi);           // H_DMI_zface include x,y,z component at |_z faces
+            const Array4<Real>& H_anisotropy_xface_prev = H_anisotropyfield_prev[0].array(mfi);           // H_anisotropy_xface include x,y,z component at |_x faces
+            const Array4<Real>& H_anisotropy_yface_prev = H_anisotropyfield_prev[1].array(mfi);           // H_anisotropy_yface include x,y,z component at |_y faces
+            const Array4<Real>& H_anisotropy_zface_prev = H_anisotropyfield_prev[2].array(mfi);           // H_anisotropy_zface include x,y,z component at |_z faces
 
             // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp_static
             const Array4<Real>& M_xface_prev = Mfield_prev[0].array(mfi);
@@ -580,14 +581,9 @@ void EvolveM_2nd(
                             if (anisotropy_xface_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_xface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                             // H_anisotropy - use M^[(new_time),r-1]
-                            amrex::Real M_dot_anisotropy_axis = 0.0;
-                            for (int comp=0; comp<3; ++comp) {
-                                M_dot_anisotropy_axis += M_xface_prev(i, j, k, comp) * anisotropy_axis[comp];
-                            }
-                            amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_xface_arr(i,j,k) / mu0 / Ms_xface_arr(i,j,k) / Ms_xface_arr(i,j,k);
-                            Hx_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
-                            Hy_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
-                            Hz_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+                            Hx_eff_prev += H_anisotropy_xface_prev(i,j,k,0);
+                            Hy_eff_prev += H_anisotropy_xface_prev(i,j,k,1);
+                            Hz_eff_prev += H_anisotropy_xface_prev(i,j,k,2);
                         }
 
                         // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
@@ -700,14 +696,9 @@ void EvolveM_2nd(
                             if (anisotropy_yface_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_yface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                             // H_anisotropy - use M^[(new_time),r-1]
-                            amrex::Real M_dot_anisotropy_axis = 0.0;
-                            for (int comp=0; comp<3; ++comp) {
-                                M_dot_anisotropy_axis += M_yface_prev(i, j, k, comp) * anisotropy_axis[comp];
-                            }
-                            amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_yface_arr(i,j,k) / mu0 / Ms_yface_arr(i,j,k) / Ms_yface_arr(i,j,k);
-                            Hx_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
-                            Hy_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
-                            Hz_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+                            Hx_eff_prev += H_anisotropy_yface_prev(i,j,k,0);
+                            Hy_eff_prev += H_anisotropy_yface_prev(i,j,k,1);
+                            Hz_eff_prev += H_anisotropy_yface_prev(i,j,k,2);
                         }
 
                         // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
@@ -820,14 +811,9 @@ void EvolveM_2nd(
                             if (anisotropy_zface_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_zface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
                             // H_anisotropy - use M^[(new_time),r-1]
-                            amrex::Real M_dot_anisotropy_axis = 0.0;
-                            for (int comp=0; comp<3; ++comp) {
-                                M_dot_anisotropy_axis += M_zface_prev(i, j, k, comp) * anisotropy_axis[comp];
-                            }
-                            amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_zface_arr(i,j,k) / mu0 / Ms_zface_arr(i,j,k) / Ms_zface_arr(i,j,k);
-                            Hx_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
-                            Hy_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
-                            Hz_eff_prev += H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
+                            Hx_eff_prev += H_anisotropy_zface_prev(i,j,k,0);
+                            Hy_eff_prev += H_anisotropy_zface_prev(i,j,k,1);
+                            Hz_eff_prev += H_anisotropy_zface_prev(i,j,k,2);
                         }
 
                         // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
@@ -912,6 +898,10 @@ void EvolveM_2nd(
 
        if (DMI_coupling == 1){
           CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+       }
+
+       if(anisotropy_coupling == 1){
+         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
        }
 
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed
@@ -1021,10 +1011,12 @@ void EvolveM_2nd(
                 MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
                 MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 3, H_exchangefield[i].nGrow());
                 MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 3, H_DMIfield[i].nGrow());
+                MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 3, H_anisotropyfield[i].nGrow());
                 Mfield_prev[i].FillBoundary(geom.periodicity());
                 H_demagfield_prev[i].FillBoundary(geom.periodicity());
                 H_exchangefield_prev[i].FillBoundary(geom.periodicity());
                 H_DMIfield_prev[i].FillBoundary(geom.periodicity());
+                H_anisotropyfield_prev[i].FillBoundary(geom.periodicity());
             }
         }
 
