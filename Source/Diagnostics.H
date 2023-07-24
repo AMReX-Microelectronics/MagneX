@@ -9,4 +9,5 @@ void mf_avg_fc_to_cc(MultiFab&  Plt,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_exchangefield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   H_DMIfield,
+                   std::array< MultiFab, AMREX_SPACEDIM >&   H_anisotropyfield,
                    std::array< MultiFab, AMREX_SPACEDIM >&   Ms);
