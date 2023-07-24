@@ -4,7 +4,7 @@ dt = 1.0e-13
 nsteps = 8
 plot_int = 2
 
-TimeIntegratorOrder = 1
+TimeIntegratorOption = 1
 
 ######### this is my original setup ###########
 # n_cell = 256 64 8

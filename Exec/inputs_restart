@@ -6,7 +6,7 @@ plot_int = 1
 chk_int = 1
 #restart = 3
 
-TimeIntegratorOrder = 1
+TimeIntegratorOption = 1
 
 # ######### this is my original setup ###########
 # prob_lo = -3450.e-9 -3450.0e-9 -345.0e-9

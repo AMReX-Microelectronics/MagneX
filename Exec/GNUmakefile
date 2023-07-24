@@ -9,6 +9,7 @@ COMP         = gnu
 DIM          = 3
 
 NEUMANN = FALSE
+USE_TIME_INTEGRATOR = FALSE
 USE_SUNDIALS = FALSE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs

@@ -17,7 +17,9 @@
 #include "EvolveM.H"
 #include "EvolveM_2nd.H"
 #include "Checkpoint.H"
+#ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>
+#endif
 
 using namespace amrex;
 
@@ -504,8 +506,10 @@ void main_main ()
 
     }
 
+#ifdef USE_TIME_INTEGRATOR
     TimeIntegrator<Vector<MultiFab> > integrator(Mfield_old);
-    
+#endif 
+
     for (int step = start_step; step <= nsteps; ++step)
     {
 
@@ -765,7 +769,9 @@ void main_main ()
 
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
-        amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
+
+#ifdef USE_TIME_INTEGRATOR
+            amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
 
 	    // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real /*time*/){
@@ -828,6 +834,7 @@ void main_main ()
             
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.advance(Mfield_old, Mfield, time, dt);
+#endif
 
         }  else {
             amrex::Abort("Time integrator order not recognized");
