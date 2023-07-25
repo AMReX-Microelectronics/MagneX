@@ -1,0 +1,32 @@
+n_cell = 8 8 64
+max_grid_size = 64
+# dt = 1.0e-14
+dt = 1.618054254500000e-15
+nsteps = 7300000
+plot_int = 500
+
+TimeIntegratorOption = 3
+
+integration.type = 1
+integration.rk.type = 1
+
+prob_lo = -3450.e-7 -3450.0e-7 -345.0e-7
+prob_hi =  3450.e-7  3450.0e-7  345.0e-7
+
+mag_lo = -3450.e-7 -3450.0e-7 -172.5e-7
+mag_hi =  3450.e-7  3450.0e-7  172.5e-7
+
+mu0 = 1.25663706212e-6 
+alpha_val = 0.005
+Ms_val = 1.4e5
+gamma_val = -1.759e11
+exchange_val = 3.1e-8
+DMI_val = 0
+anisotropy_val = -139.26
+anisotropy_axis = 0.0 1.0 0.0
+
+demag_coupling = 0
+M_normalization = 1
+exchange_coupling = 1
+DMI_coupling = 0
+anisotropy_coupling = 0

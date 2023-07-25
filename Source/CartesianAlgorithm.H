@@ -1,4 +1,8 @@
-//Algorithm to calculate Laplacian for exchange term in LLG equation
+#include <AMReX_Gpu.H>
+// Algorithm to calculate 
+// 1. Laplacian for exchange term in LLG equation
+// 2. Divergence for demagnetization term
+// 3. Spatial derivative for DMI term
 
 /**
  * Perform derivative along x on a nodal grid, from a cell-centered field `F`*/
@@ -72,29 +76,30 @@ static amrex::Real DownwardDz (
     return inv_dz*( F(i,j,k,ncomp) - F(i,j,k-1,ncomp) );
 }
 
+// 1. Laplacian for exchange term in LLG equation
 /**
   * Perform divergence of gradient along x on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real LaplacianDx_Mag (
     amrex::Array4<amrex::Real const> const& F,
-    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x,
+    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x, 
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
     amrex::Real const inv_dx = 1./dx[0];
     if (nodality == 0){ // x face (normal face) dM/dx = 0
        if ( Ms_hi_x == 0.) {
-           return 0.5 * inv_dx * inv_dx * (8. * F(i-1, j, k, ncomp) - F(i-2, j, k, ncomp) - 7. * F(i, j, k, ncomp));
+           return 0.5 * inv_dx * inv_dx * (8. * F(i-1, j, k, ncomp) - F(i-2, j, k, ncomp) - 7. * F(i, j, k, ncomp) + 6. * dx[0] * BC_hi_x);
        } else if ( Ms_lo_x == 0.){
-           return 0.5 * inv_dx * inv_dx * (8. * F(i+1, j, k, ncomp) - F(i+2, j, k, ncomp) - 7. * F(i, j, k, ncomp));
+           return 0.5 * inv_dx * inv_dx * (8. * F(i+1, j, k, ncomp) - F(i+2, j, k, ncomp) - 7. * F(i, j, k, ncomp) - 6. * dx[0] * BC_lo_x);
        } else {
            return inv_dx*(UpwardDx(F, i, j, k, dx, ncomp) - DownwardDx(F, i, j, k, dx, ncomp));
        }
 
     } else { //y or z face
        if ( Ms_hi_x == 0.) {
-           return inv_dx*(0. - DownwardDx(F, i, j, k, dx, ncomp));
+           return inv_dx*(BC_hi_x - DownwardDx(F, i, j, k, dx, ncomp));
        } else if ( Ms_lo_x == 0.){
-           return inv_dx*(UpwardDx(F, i, j, k, dx, ncomp) - 0.);
+           return inv_dx*(UpwardDx(F, i, j, k, dx, ncomp) - BC_lo_x);
        } else {
            return inv_dx*(UpwardDx(F, i, j, k, dx, ncomp) - DownwardDx(F, i, j, k, dx, ncomp));
        }
@@ -108,24 +113,24 @@ static amrex::Real DownwardDz (
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real LaplacianDy_Mag (
     amrex::Array4<amrex::Real const> const& F,
-    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y,
+    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const BC_lo_y, amrex::Real const BC_hi_y,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
     amrex::Real const inv_dy = 1./dx[1];
     if (nodality == 1){ // y face (normal face) dM/dy = 0
        if ( Ms_hi_y == 0.) {
-           return 0.5 * inv_dy * inv_dy * (8. * F(i, j-1, k, ncomp) - F(i, j-2, k, ncomp) - 7. * F(i, j, k, ncomp));
+           return 0.5 * inv_dy * inv_dy * (8. * F(i, j-1, k, ncomp) - F(i, j-2, k, ncomp) - 7. * F(i, j, k, ncomp) + 6. * dx[1] * BC_hi_y);
        } else if ( Ms_lo_y == 0.){
-           return 0.5 * inv_dy * inv_dy * (8. * F(i, j+1, k, ncomp) - F(i, j+2, k, ncomp) - 7. * F(i, j, k, ncomp));
+           return 0.5 * inv_dy * inv_dy * (8. * F(i, j+1, k, ncomp) - F(i, j+2, k, ncomp) - 7. * F(i, j, k, ncomp) - 6. * dx[1] * BC_lo_y);
        } else {
            return inv_dy*(UpwardDy(F, i, j, k, dx, ncomp) - DownwardDy(F, i, j, k, dx, ncomp));
        }
 
     } else { // x or z face
        if ( Ms_hi_y == 0.) {
-           return inv_dy*(0. - DownwardDy(F, i, j, k, dx, ncomp));
+           return inv_dy*(BC_hi_y - DownwardDy(F, i, j, k, dx, ncomp));
        } else if ( Ms_lo_y == 0.){
-           return inv_dy*(UpwardDy(F, i, j, k, dx, ncomp) - 0.);
+           return inv_dy*(UpwardDy(F, i, j, k, dx, ncomp) - BC_lo_y);
        } else {
            return inv_dy*(UpwardDy(F, i, j, k, dx, ncomp) - DownwardDy(F, i, j, k, dx, ncomp));
        }
@@ -139,24 +144,24 @@ static amrex::Real DownwardDz (
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real LaplacianDz_Mag (
     amrex::Array4<amrex::Real const> const& F,
-    amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
+    amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real const BC_lo_z, amrex::Real const BC_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
     amrex::Real const inv_dz = 1./dx[2];
     if (nodality == 2){ // z face (normal face) dM/dz = 0
        if ( Ms_hi_z == 0.) {
-           return 0.5 * inv_dz * inv_dz * (8. * F(i, j, k-1, ncomp) - F(i, j, k-2, ncomp) - 7. * F(i, j, k, ncomp));
+           return 0.5 * inv_dz * inv_dz * (8. * F(i, j, k-1, ncomp) - F(i, j, k-2, ncomp) - 7. * F(i, j, k, ncomp) + 6. * dx[2] * BC_hi_z);
        } else if ( Ms_lo_z == 0.){
-           return 0.5 * inv_dz * inv_dz * (8. * F(i, j, k+1, ncomp) - F(i, j, k+2, ncomp) - 7. * F(i, j, k, ncomp));
+           return 0.5 * inv_dz * inv_dz * (8. * F(i, j, k+1, ncomp) - F(i, j, k+2, ncomp) - 7. * F(i, j, k, ncomp) - 6. * dx[2] * BC_lo_z);
        } else {
            return inv_dz*(UpwardDz(F, i, j, k, dx, ncomp) - DownwardDz(F, i, j, k, dx, ncomp));
        }
 
     } else { // x or y face
        if ( Ms_hi_z == 0.) {
-           return inv_dz*(0. - DownwardDz(F, i, j, k, dx, ncomp));
+           return inv_dz*(BC_hi_z - DownwardDz(F, i, j, k, dx, ncomp));
        } else if ( Ms_lo_z == 0.){
-           return inv_dz*(UpwardDz(F, i, j, k, dx, ncomp) - 0.);
+           return inv_dz*(UpwardDz(F, i, j, k, dx, ncomp) - BC_lo_z);
        } else {
            return inv_dz*(UpwardDz(F, i, j, k, dx, ncomp) - DownwardDz(F, i, j, k, dx, ncomp));
        }
@@ -169,13 +174,16 @@ static amrex::Real DownwardDz (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
  static amrex::Real Laplacian_Mag (
      amrex::Array4<amrex::Real const> const& F,
-     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z,
+     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real BC_lo_x, amrex::Real BC_hi_x, 
+     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real BC_lo_y, amrex::Real BC_hi_y, 
+     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real BC_lo_z, amrex::Real BC_hi_z,
      int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
      //amrex::Print() << "This is called " << Ms_lo_x << "\n";
-     return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, i, j, k, dx, ncomp, nodality) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, i, j, k, dx, ncomp, nodality) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, i, j, k, dx, ncomp, nodality);
+     return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, BC_lo_x, BC_hi_x, i, j, k, dx, ncomp, nodality) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, BC_lo_y, BC_hi_y, i, j, k, dx, ncomp, nodality) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, BC_lo_z, BC_hi_z, i, j, k, dx, ncomp, nodality);
  }
 
+// 2. Divergence for demagnetization term
  /**
   * Perform divergence  along x on M field */
  AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -207,7 +215,97 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
      return UpwardDz(F, i, j, k, dx, ncomp);
  }
 
+ // 3. Spatial derivative for DMI term
+/**
+  * Perform divergence of gradient along x on M field */
+ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+ static amrex::Real DMDx_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
 
+    amrex::Real const inv_dx = 1./dx[0];
+    if (nodality == 0){ // x face (normal face) dM/dx = 0
+       if ( Ms_hi_x == 0.) {
+           return BC_hi_x;
+       } else if ( Ms_lo_x == 0.){
+           return BC_lo_x;
+       } else {
+           return 0.5 *(UpwardDx(F, i, j, k, dx, ncomp) + DownwardDx(F, i, j, k, dx, ncomp));
+       }
+
+    } else { //y or z face
+       if ( Ms_hi_x == 0.) {
+           return 0.5 *(BC_hi_x + DownwardDx(F, i, j, k, dx, ncomp));
+       } else if ( Ms_lo_x == 0.){
+           return 0.5 *(UpwardDx(F, i, j, k, dx, ncomp) + BC_lo_x);
+       } else {
+           return 0.5 *(UpwardDx(F, i, j, k, dx, ncomp) + DownwardDx(F, i, j, k, dx, ncomp));
+       }
+    }
+
+ }
+
+ /**
+  * Perform divergence of gradient along y on M field */
+ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+ static amrex::Real DMDy_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const BC_lo_y, amrex::Real const BC_hi_y,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
+
+    amrex::Real const inv_dy = 1./dx[1];
+    if (nodality == 1){ // y face (normal face) dM/dy = 0
+       if ( Ms_hi_y == 0.) {
+           return BC_hi_y;
+       } else if ( Ms_lo_y == 0.){
+           return BC_lo_y;
+       } else {
+           return 0.5 *(UpwardDy(F, i, j, k, dx, ncomp) + DownwardDy(F, i, j, k, dx, ncomp));
+       }
+
+    } else { // x or z face
+       if ( Ms_hi_y == 0.) {
+           return 0.5 *(BC_hi_y + DownwardDy(F, i, j, k, dx, ncomp));
+       } else if ( Ms_lo_y == 0.){
+           return 0.5 *(UpwardDy(F, i, j, k, dx, ncomp) + BC_lo_y);
+       } else {
+           return 0.5 *(UpwardDy(F, i, j, k, dx, ncomp) + DownwardDy(F, i, j, k, dx, ncomp));
+       }
+    }
+
+ }
+
+
+/**
+  * Perform divergence of gradient along z on M field */
+ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+ static amrex::Real DMDz_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real const BC_lo_z, amrex::Real const BC_hi_z,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx, int const ncomp, int const nodality) {
+
+    amrex::Real const inv_dz = 1./dx[2];
+    if (nodality == 2){ // z face (normal face) dM/dz = 0
+       if ( Ms_hi_z == 0.) {
+           return BC_hi_z;
+       } else if ( Ms_lo_z == 0.){
+           return BC_lo_z;
+       } else {
+           return 0.5 *(UpwardDz(F, i, j, k, dx, ncomp) + DownwardDz(F, i, j, k, dx, ncomp));
+       }
+
+    } else { // x or y face
+       if ( Ms_hi_z == 0.) {
+           return 0.5 *(BC_hi_z + DownwardDz(F, i, j, k, dx, ncomp));
+       } else if ( Ms_lo_z == 0.){
+           return 0.5 *(UpwardDz(F, i, j, k, dx, ncomp) + BC_lo_z);
+       } else {
+           return 0.5 *(UpwardDz(F, i, j, k, dx, ncomp) + DownwardDz(F, i, j, k, dx, ncomp));
+       }
+    }
+
+ }
 
 /** \brief
          * This GPU kernel averages a face-centered field onto a (possibly different nodality) face.
