@@ -2,7 +2,7 @@ dt = 1.0e-14
 nsteps = 80
 plot_int = 2
 
-TimeIntegratorOrder = 2
+TimeIntegratorOption = 2
 
 ######### this is my original setup ###########
 # n_cell = 256 128 128
@@ -48,8 +48,10 @@ gamma_val = -1.759e11
 exchange_val = 1.3e-11
 anisotropy_val = -139.26
 anisotropy_axis = 0.0 1.0 0.0
+DMI_val = 0.0 # unit is J/m^2
 
 demag_coupling = 1 # this parameter switches on/off the Open BC Poisson; demag_coupling = 1 : Open BC on; demag_coupling = 0: Open BC off
 M_normalization = 1
 exchange_coupling = 1
 anisotropy_coupling = 0
+DMI_coupling = 0
