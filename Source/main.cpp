@@ -357,6 +357,61 @@ void main_main ()
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
+                                       
+    // MultiFab storage for the real and imaginary parts of the dft
+    MultiFab mf_dft_real(ba, dm, 1, 0);
+    MultiFab mf_dft_imag(ba, dm, 1, 0);
+
+    // Multifab storage for the input Mfield and output Mfield
+    MultiFab mf         (ba, dm, 1, 0);
+    MultiFab mf_2       (ba, dm, 1, 0);
+    
+    mf.setVal(1.);
+
+    // extract dx from the geometry object
+    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();    
+    
+    double omega = M_PI/2.0;
+
+    // loop over boxes
+    for (MFIter mfi(mf); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        const Array4<Real>& mf_ptr = mf.array(mfi);
+
+        // set phi = 1 + e^(-(r-0.5)^2)
+        ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
+        {
+            // **********************************
+            // SET VALUES FOR EACH CELL
+            // **********************************
+
+            Real x = (i+0.5) * dx[0];
+            Real y = (j+0.5) * dx[1];
+            Real z = (AMREX_SPACEDIM==3) ? (k+0.5) * dx[2] : 0.;
+            mf_ptr(i,j,k) = std::sin(62*M_PI*x/prob_hi[0] + omega)*std::sin(4*M_PI*y/prob_hi[1] + omega) ;
+            // mf_ptr(i,j,k) = std::exp(-10.*(0.5*(x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)));
+            if (AMREX_SPACEDIM == 3) {
+                mf_ptr(i,j,k) *= std::sin(2*M_PI*z/prob_hi[2] + omega);
+            }
+        });
+    }
+
+              //!!!!!!!!!!!!!!!!!!!!!
+		     // Take in the Mfield and store the real and imaginary parts of the forward FFT in the 2nd and 3rd arguments 
+		     ComputeForwardFFT(mf, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom);
+
+		     // Take the real and imaginary parts of the forward FFT and compute the inverse FFT, storing the result back in Mfield
+                     ComputeInverseFFT(mf_2, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom);
+		     //write results of these to plot file ^^
+		     //
+		     //
+		     // ComputeHFieldFFT();
+		     VisMF::Write(mf_2,"mf_2");
+		     VisMF::Write(mf,"mf");
+
+		     Abort("Reached");
 
     PoissonPhi.setVal(0.);
     PoissonRHS.setVal(0.);
