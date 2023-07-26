@@ -498,15 +498,15 @@ void main_main ()
            }
 
            if (exchange_coupling == 1){
-              CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+              CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
            }
 
            if(DMI_coupling == 1){
-              CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+              CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
            }
 
            if(anisotropy_coupling == 1){
-              CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+              CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
            }
 
            //Evolve M
@@ -515,7 +515,7 @@ void main_main ()
 
            // M^{n+1} = M^n + dt * f^n
 	   for(int i = 0; i < 3; i++){
-	      MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, 0);
+	      MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 1, 0);
 	   }
 
            NormalizeM(Mfield, Ms, M_normalization);
@@ -529,7 +529,7 @@ void main_main ()
            // copy new solution into old solution
            for(int comp = 0; comp < 3; comp++)
            {
-              MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
+              MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
 
               // fill periodic ghost cells
               Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -563,15 +563,15 @@ void main_main ()
 	   }
 
        if (exchange_coupling == 1){
-            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }
 
         if(DMI_coupling == 1){
-            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }
 
         if(anisotropy_coupling == 1){
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+            CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
         }
 
 	   // Compute f^{n} = f(M^{n}, H^{n})
@@ -600,15 +600,15 @@ void main_main ()
 	      }
 
         if (exchange_coupling == 1){
-            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateH_exchange(Mfield_prev_iter, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }
 
         if(DMI_coupling == 1){
-            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateH_DMI(Mfield_prev_iter, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }
 
         if(anisotropy_coupling == 1){
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+            CalculateH_anisotropy(Mfield_prev_iter, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
         }
 
 	      // LLG RHS with new H_demag and M_field_pre

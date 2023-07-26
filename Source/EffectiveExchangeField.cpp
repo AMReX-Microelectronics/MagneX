@@ -107,16 +107,16 @@ void CalculateH_exchange(
                         }
                         
                         Hx_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, 
-                                                                                        Ms_lo_y, Ms_hi_y, dMxdy_BC_lo_y, dMxdy_BC_hi_y,
-                                                                                        Ms_lo_z, Ms_hi_z, dMxdz_BC_lo_z, dMxdz_BC_hi_z, i, j, k, dd);
+                                                                                  Ms_lo_y, Ms_hi_y, dMxdy_BC_lo_y, dMxdy_BC_hi_y,
+                                                                                  Ms_lo_z, Ms_hi_z, dMxdz_BC_lo_z, dMxdz_BC_hi_z, i, j, k, dd);
                         
                         Hy_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(My, Ms_lo_x, Ms_hi_x, dMydx_BC_lo_x, dMydx_BC_hi_x, 
-                                                                                        Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, 
-                                                                                        Ms_lo_z, Ms_hi_z, dMydz_BC_lo_z, dMydz_BC_hi_z, i, j, k, dd);
+                                                                                  Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, 
+                                                                                  Ms_lo_z, Ms_hi_z, dMydz_BC_lo_z, dMydz_BC_hi_z, i, j, k, dd);
                         
                         Hz_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mz, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x,
-                                                                                              Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y,
-                                                                                              Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd);
+                                                                                  Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y,
+                                                                                  Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd);
 
                     }
                 }
