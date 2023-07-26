@@ -3,7 +3,7 @@
 #include <AMReX_MultiFabUtil.H>
 
 using namespace amrex;
-
+/*
 void EvolveM_2nd(
     //std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     amrex::Vector<MultiFab>& Mfield,
@@ -33,3 +33,4 @@ void EvolveM_2nd(
     amrex::Real const dt,
     const Real time
 );
+*/

@@ -172,14 +172,19 @@ void main_main ()
     // time = starting time in the simulation
     Real time = 0.0;	
 
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_prev_iter;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_error;
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
     Array<MultiFab, AMREX_SPACEDIM> H_exchangefield;
     Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
     Array<MultiFab, AMREX_SPACEDIM> H_anisotropyfield;
 
-    amrex::Vector<MultiFab> Mfield(AMREX_SPACEDIM);
+    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
+    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
+    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
 
     BoxArray ba;
     DistributionMapping dm;
@@ -229,117 +234,41 @@ void main_main ()
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
     // Nghost = number of ghost cells for each array
-    int Nghost = 2;
+    int Nghost = 1;
+    int Ncomp = 1;
 
     // How Boxes are distrubuted among MPI processes
     if (restart == -1) {
       dm.define(ba);
     }
 
+   
     // Allocate multifabs
     if (restart == -1) {
-      // face-centered Mfield
-      AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-		   Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-		   Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
-
-      // face-centered H_biasfield
-      AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
-		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-      // face-centered H_exchangefield
-      AMREX_D_TERM(H_exchangefield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_exchangefield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
-		   H_exchangefield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-           
-      // face-centered H_DMIfield
-      AMREX_D_TERM(H_DMIfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_DMIfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
-		   H_DMIfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-      // face-centered H_anisotropyfield
-      AMREX_D_TERM(H_anisotropyfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_anisotropyfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);, // M fields are face centered
-		   H_anisotropyfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-      for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-        H_demagfield[dir].define(ba, dm, 1, 1); // demagnetization field H is cell centered
-        H_demagfield[dir].setVal(0.);
-      }
+       for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+       {
+           //Cell-centered fields
+           Mfield[dir].define(ba, dm, Ncomp, Nghost);
+           Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
+           Mfield_prev_iter[dir].define(ba, dm, Ncomp, Nghost);
+           Mfield_error[dir].define(ba, dm, Ncomp, Nghost);
+           H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
+           H_exchangefield[dir].define(ba, dm, Ncomp, 0);
+           H_DMIfield[dir].define(ba, dm, Ncomp, 0);
+           H_anisotropyfield[dir].define(ba, dm, Ncomp, 0);
+           H_demagfield[dir].define(ba, dm, 1, Nghost);
+           LLG_RHS[dir].define(ba, dm, 1, 0);
+           LLG_RHS_pre[dir].define(ba, dm, 1, 0);
+           LLG_RHS_avg[dir].define(ba, dm, 1, 0);
+       }
     }
 
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
-    amrex::Vector<MultiFab> Mfield_old(AMREX_SPACEDIM);
-    // face-centered Mfield_old
-    AMREX_D_TERM(Mfield_old[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield_old[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield_old[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
-
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield_prev_iter;
-    amrex::Vector<MultiFab> Mfield_prev_iter(AMREX_SPACEDIM);
-    // face-centered Mfield at predictor step (for 2nd order time integrator)
-    AMREX_D_TERM(Mfield_prev_iter[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield_prev_iter[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield_prev_iter[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
-
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield_error;
-    amrex::Vector<MultiFab> Mfield_error(AMREX_SPACEDIM);
-    // face-centered Mfield at predictor step (for 2nd order time integrator)
-    AMREX_D_TERM(Mfield_error[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 Mfield_error[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 Mfield_error[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    //Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
-    amrex::Vector<MultiFab> LLG_RHS(AMREX_SPACEDIM);
-    // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 LLG_RHS[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 LLG_RHS[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    //Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
-    amrex::Vector<MultiFab> LLG_RHS_pre(AMREX_SPACEDIM);
-    // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS_pre[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 LLG_RHS_pre[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 LLG_RHS_pre[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
-    // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS_avg[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 LLG_RHS_avg[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 LLG_RHS_avg[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    //Face-centered magnetic properties
-    std::array< MultiFab, AMREX_SPACEDIM > alpha;
-    AMREX_D_TERM(alpha[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 alpha[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 alpha[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > gamma;
-    AMREX_D_TERM(gamma[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 gamma[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 gamma[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > Ms;
-    AMREX_D_TERM(Ms[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 1);,
-                 Ms[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 1);,
-                 Ms[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 1););
-
-    std::array< MultiFab, AMREX_SPACEDIM > exchange;
-    AMREX_D_TERM(exchange[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 exchange[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 exchange[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > DMI;
-    AMREX_D_TERM(DMI[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 DMI[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 DMI[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > anisotropy;
-    AMREX_D_TERM(anisotropy[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 anisotropy[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 anisotropy[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+    MultiFab alpha(ba, dm, Ncomp, 0);
+    MultiFab gamma(ba, dm, Ncomp, 0);
+    MultiFab Ms(ba, dm, Ncomp, Nghost);
+    MultiFab exchange(ba, dm, Ncomp, 0);
+    MultiFab DMI(ba, dm, Ncomp, 0);
+    MultiFab anisotropy(ba, dm, Ncomp, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
@@ -365,9 +294,10 @@ void main_main ()
         LLG_RHS[idim].setVal(0.);
         LLG_RHS_pre[idim].setVal(0.);
         LLG_RHS_avg[idim].setVal(0.);
+        H_demagfield[idim].setVal(0.);
     }
 
-    MultiFab Plt(ba, dm, 53, 0);
+    MultiFab Plt(ba, dm, 21, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -476,29 +406,45 @@ void main_main ()
         const std::string& pltfile = amrex::Concatenate("plt",plt_step,8);
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
-        mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, Ms);
-        MultiFab::Copy(Plt, H_demagfield[0], 0, 49, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[1], 0, 50, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[2], 0, 51, 1, 0);
-        MultiFab::Copy(Plt, PoissonRHS, 0, 52, 1, 0);
-        MultiFab::Copy(Plt, PoissonPhi, 0, 53, 1, 0);
+        //mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, Ms);
+        MultiFab::Copy(Plt, Ms, 0, 0, 1, 0);
+        MultiFab::Copy(Plt, Mfield[0], 0, 1, 1, 0);
+        MultiFab::Copy(Plt, Mfield[1], 0, 2, 1, 0);
+        MultiFab::Copy(Plt, Mfield[2], 0, 3, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[0], 0, 4, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[1], 0, 5, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[2], 0, 6, 1, 0);
+        MultiFab::Copy(Plt, H_exchangefield[0], 0, 7, 1, 0);
+        MultiFab::Copy(Plt, H_exchangefield[1], 0, 8, 1, 0);
+        MultiFab::Copy(Plt, H_exchangefield[2], 0, 9, 1, 0);
+        MultiFab::Copy(Plt, H_DMIfield[0], 0, 10, 1, 0);
+        MultiFab::Copy(Plt, H_DMIfield[1], 0, 11, 1, 0);
+        MultiFab::Copy(Plt, H_DMIfield[2], 0, 12, 1, 0);
+        MultiFab::Copy(Plt, H_anisotropyfield[0], 0, 13, 1, 0);
+        MultiFab::Copy(Plt, H_anisotropyfield[1], 0, 14, 1, 0);
+        MultiFab::Copy(Plt, H_anisotropyfield[2], 0, 15, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[0], 0, 16, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[1], 0, 17, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[2], 0, 18, 1, 0);
+        MultiFab::Copy(Plt, PoissonRHS, 0, 19, 1, 0);
+        MultiFab::Copy(Plt, PoissonPhi, 0, 20, 1, 0);
 
-        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
-                                                "Mx_xface","Mx_yface","Mx_zface",
-                                                "My_xface", "My_yface", "My_zface",
-                                                "Mz_xface", "Mz_yface", "Mz_zface",
-                                                "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
-                                                "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
-                                                "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
-                                                "Hx_exchange_xface", "Hx_exchange_yface", "Hx_exchange_zface",
-                                                "Hy_exchange_xface", "Hy_exchange_yface", "Hy_exchange_zface",
-                                                "Hz_exchange_xface", "Hz_exchange_yface", "Hz_exchange_zface",
-                                                "Hx_DMI_xface", "Hx_DMI_yface", "Hx_DMI_zface",
-                                                "Hy_DMI_xface", "Hy_DMI_yface", "Hy_DMI_zface",
-                                                "Hz_DMI_xface", "Hz_DMI_yface", "Hz_DMI_zface",
-                                                "Hx_anisotropy_xface", "Hx_anisotropy_yface", "Hx_anisotropy_zface",
-                                                "Hy_anisotropy_xface", "Hy_anisotropy_yface", "Hy_anisotropy_zface",
-                                                "Hz_anisotropy_xface", "Hz_anisotropy_yface", "Hz_anisotropy_zface",
+        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms",
+                                                "Mx",
+                                                "My",
+                                                "Mz",
+                                                "Hx_bias",
+                                                "Hy_bias",
+                                                "Hz_bias",
+                                                "Hx_exchange",
+                                                "Hy_exchange",
+                                                "Hz_exchange",
+                                                "Hx_DMI",
+                                                "Hy_DMI",
+                                                "Hz_DMI",
+                                                "Hx_anisotropy",
+                                                "Hy_anisotropy",
+                                                "Hz_anisotropy",
                                                 "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                 "PoissonRHS","PoissonPhi"},
                                                  geom, time, plt_step);
@@ -509,9 +455,9 @@ void main_main ()
     // copy new solution into old solution
     for(int comp = 0; comp < 3; comp++)
     {
-       MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
-       MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
-       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, 0);
+       MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+       MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, Nghost);
+       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 1, Nghost);
 
        // fill periodic ghost cells
        Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -564,9 +510,8 @@ void main_main ()
            }
 
            //Evolve M
-
            // Compute f^n = f(M^n, H^n)
-           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
            // M^{n+1} = M^n + dt * f^n
 	   for(int i = 0; i < 3; i++){
@@ -630,7 +575,7 @@ void main_main ()
         }
 
 	   // Compute f^{n} = f(M^{n}, H^{n})
-	   Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
            while(!stop_iter){
 
@@ -668,88 +613,53 @@ void main_main ()
 
 	      // LLG RHS with new H_demag and M_field_pre
 	      // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-	      Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+              Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
 	      // Corrector step update M
 	      // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
 	      for(int i = 0; i < 3; i++){
-		MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, 0);
-		MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 3, 0);
+		MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 1, 0);
+		MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 1, 0);
 	      }
 
 	      // Normalize M
 	      NormalizeM(Mfield, Ms, M_normalization);
 
 #if 1
-              for (MFIter mfi(Ms[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+              for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+ 
+                  const Box& bx = mfi.validbox();
 
-                  Array4<Real> const& Ms_xface = Ms[0].array(mfi);
-                  Array4<Real> const& Ms_yface = Ms[1].array(mfi);
-                  Array4<Real> const& Ms_zface = Ms[2].array(mfi);
+                  Array4<Real> const& Ms_arr = Ms.array(mfi);
 
-                  Array4<Real> const& Mfield_error_xface = Mfield_error[0].array(mfi);
-                  Array4<Real> const& Mfield_error_yface = Mfield_error[1].array(mfi);
-                  Array4<Real> const& Mfield_error_zface = Mfield_error[2].array(mfi);
+                  Array4<Real> const& Mx_error = Mfield_error[0].array(mfi);
+                  Array4<Real> const& My_error = Mfield_error[1].array(mfi);
+                  Array4<Real> const& Mz_error = Mfield_error[2].array(mfi);
 
-                  Array4<Real> const& Mfield_xface = Mfield[0].array(mfi);
-                  Array4<Real> const& Mfield_yface = Mfield[1].array(mfi);
-                  Array4<Real> const& Mfield_zface = Mfield[2].array(mfi);
+                  Array4<Real> const& Mx = Mfield[0].array(mfi);
+                  Array4<Real> const& My = Mfield[1].array(mfi);
+                  Array4<Real> const& Mz = Mfield[2].array(mfi);
 
-                  Array4<Real> const& Mfield_prev_iter_xface = Mfield_prev_iter[0].array(mfi);
-                  Array4<Real> const& Mfield_prev_iter_yface = Mfield_prev_iter[1].array(mfi);
-                  Array4<Real> const& Mfield_prev_iter_zface = Mfield_prev_iter[2].array(mfi);
+                  Array4<Real> const& Mx_prev_iter = Mfield_prev_iter[0].array(mfi);
+                  Array4<Real> const& My_prev_iter = Mfield_prev_iter[1].array(mfi);
+                  Array4<Real> const& Mz_prev_iter = Mfield_prev_iter[2].array(mfi);
 
-                  Box const &tbx = mfi.tilebox(IntVect(1,0,0));
-                  Box const &tby = mfi.tilebox(IntVect(0,1,0));
-                  Box const &tbz = mfi.tilebox(IntVect(0,0,1));
-
-                  amrex::ParallelFor(tbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                      if (Ms_xface(i,j,k) > 0) {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_xface(i,j,k,n) = amrex::Math::abs(Mfield_xface(i,j,k,n) - Mfield_prev_iter_xface(i,j,k,n)) / Ms_xface(i,j,k);
-                          }
+                  amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                      if (Ms_arr(i,j,k) > 0) {
+                         Mx_error(i,j,k) = amrex::Math::abs(Mx(i,j,k) - Mx_prev_iter(i,j,k)) / Ms_arr(i,j,k);
+                         My_error(i,j,k) = amrex::Math::abs(My(i,j,k) - My_prev_iter(i,j,k)) / Ms_arr(i,j,k);
+                         Mz_error(i,j,k) = amrex::Math::abs(Mz(i,j,k) - Mz_prev_iter(i,j,k)) / Ms_arr(i,j,k);
                       } else {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_xface(i,j,k,n) = 0.;
-                          }
+                         Mx_error(i,j,k) = 0.;
+                         My_error(i,j,k) = 0.;
+                         Mz_error(i,j,k) = 0.;
                       }
                   });
-
-                  amrex::ParallelFor(tby, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                      if (Ms_yface(i,j,k) > 0) {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_yface(i,j,k,n) = amrex::Math::abs(Mfield_yface(i,j,k,n) - Mfield_prev_iter_yface(i,j,k,n)) / Ms_yface(i,j,k);
-                          }
-                      } else {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_yface(i,j,k,n) = 0.;
-                          }
-                      }
-                  });
-
-                  amrex::ParallelFor(tbz, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                      if (Ms_zface(i,j,k) > 0) {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_zface(i,j,k,n) = amrex::Math::abs(Mfield_zface(i,j,k,n) - Mfield_prev_iter_zface(i,j,k,n)) / Ms_zface(i,j,k);
-                          }
-                      } else {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_zface(i,j,k,n) = 0.;
-                          }
-                      }
-                  });
-
               }
 
               amrex::Real M_mag_error_max = -1.;
-              for (int face = 0; face < 3; face++){
-                  for (int comp = 0; comp < 3; comp++){
-                      Real M_iter_error = Mfield_error[face].norm0(comp);
-                      if (M_iter_error >= M_mag_error_max){
-                          M_mag_error_max = M_iter_error;
-                      }
-                  }
-              }
+              M_mag_error_max = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
+              M_mag_error_max = std::max(M_mag_error_max, Mfield_error[2].norm0());
 
 #else
 	      Real M_mag_error_max = -1.;
@@ -768,7 +678,7 @@ void main_main ()
 	      // copy new solution into Mfield_pre_iter
 	      for(int comp = 0; comp < 3; comp++)
 	      {
-	         MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
+	         MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, Nghost);
 		 // fill periodic ghost cells
 		 Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
 	      }
@@ -783,24 +693,24 @@ void main_main ()
            // copy new solution into old solution
            for (int comp = 0; comp < 3; comp++)
            {
- 	      MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
+ 	      MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
 	      // fill periodic ghost cells
 	      Mfield_old[comp].FillBoundary(geom.periodicity());
            }
 
         } else if (TimeIntegratorOption == 3) { // artemis way
-        amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
-
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
-
-
+//        amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
+//
+//            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
+//
+//
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
-
+/*
 #ifdef USE_TIME_INTEGRATOR
             amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
 
 	    // Create a RHS source function we will integrate
-            auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real /*time*/){
+            auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ){
 
                  // User function to calculate the rhs MultiFab given the state MultiFab
                  for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -843,7 +753,7 @@ void main_main ()
             };
 
 	    // Create a function to call after updating a state
-            auto post_update_fun = [&](Vector<MultiFab>& state, const Real /*time*/) {
+            auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
                  // Call user function to update state MultiFab, e.g. fill BCs
                  NormalizeM(state, Ms, M_normalization);
 
@@ -865,7 +775,7 @@ void main_main ()
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.advance(Mfield_old, Mfield, time, dt);
 #endif
-
+*/
         }  else {
             amrex::Abort("Time integrator order not recognized");
         }
@@ -873,7 +783,7 @@ void main_main ()
 	// copy new solution into old solution
         for(int comp = 0; comp < 3; comp++)
         {
-           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
+           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
 
            // fill periodic ghost cells
            Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -893,33 +803,47 @@ void main_main ()
         {
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
 
-            //Averaging face-centerd Multifabs to cell-centers for plotting 
-            mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, Ms);
-            MultiFab::Copy(Plt, H_demagfield[0], 0, 49, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[1], 0, 50, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[2], 0, 51, 1, 0);
-            MultiFab::Copy(Plt, PoissonRHS, 0, 52, 1, 0);
-            MultiFab::Copy(Plt, PoissonPhi, 0, 53, 1, 0);
+            MultiFab::Copy(Plt, Ms, 0, 0, 1, 0);
+            MultiFab::Copy(Plt, Mfield[0], 0, 1, 1, 0);
+            MultiFab::Copy(Plt, Mfield[1], 0, 2, 1, 0);
+            MultiFab::Copy(Plt, Mfield[2], 0, 3, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[0], 0, 4, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[1], 0, 5, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[2], 0, 6, 1, 0);
+            MultiFab::Copy(Plt, H_exchangefield[0], 0, 7, 1, 0);
+            MultiFab::Copy(Plt, H_exchangefield[1], 0, 8, 1, 0);
+            MultiFab::Copy(Plt, H_exchangefield[2], 0, 9, 1, 0);
+            MultiFab::Copy(Plt, H_DMIfield[0], 0, 10, 1, 0);
+            MultiFab::Copy(Plt, H_DMIfield[1], 0, 11, 1, 0);
+            MultiFab::Copy(Plt, H_DMIfield[2], 0, 12, 1, 0);
+            MultiFab::Copy(Plt, H_anisotropyfield[0], 0, 13, 1, 0);
+            MultiFab::Copy(Plt, H_anisotropyfield[1], 0, 14, 1, 0);
+            MultiFab::Copy(Plt, H_anisotropyfield[2], 0, 15, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[0], 0, 16, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[1], 0, 17, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[2], 0, 18, 1, 0);
+            MultiFab::Copy(Plt, PoissonRHS, 0, 19, 1, 0);
+            MultiFab::Copy(Plt, PoissonPhi, 0, 20, 1, 0);
 
-            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
-                                                    "Mx_xface","Mx_yface","Mx_zface",
-                                                    "My_xface", "My_yface", "My_zface",
-                                                    "Mz_xface", "Mz_yface", "Mz_zface",
-                                                    "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
-                                                    "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
-                                                    "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
-                                                    "Hx_exchange_xface", "Hx_exchange_yface", "Hx_exchange_zface",
-                                                    "Hy_exchange_xface", "Hy_exchange_yface", "Hy_exchange_zface",
-                                                    "Hz_exchange_xface", "Hz_exchange_yface", "Hz_exchange_zface",
-                                                    "Hx_DMI_xface", "Hx_DMI_yface", "Hx_DMI_zface",
-                                                    "Hy_DMI_xface", "Hy_DMI_yface", "Hy_DMI_zface",
-                                                    "Hz_DMI_xface", "Hz_DMI_yface", "Hz_DMI_zface",
-                                                    "Hx_anisotropy_xface", "Hx_anisotropy_yface", "Hx_anisotropy_zface",
-                                                    "Hy_anisotropy_xface", "Hy_anisotropy_yface", "Hy_anisotropy_zface",
-                                                    "Hz_anisotropy_xface", "Hz_anisotropy_yface", "Hz_anisotropy_zface",
+            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms",
+                                                    "Mx",
+                                                    "My",
+                                                    "Mz",
+                                                    "Hx_bias",
+                                                    "Hy_bias",
+                                                    "Hz_bias",
+                                                    "Hx_exchange",
+                                                    "Hy_exchange",
+                                                    "Hz_exchange",
+                                                    "Hx_DMI",
+                                                    "Hy_DMI",
+                                                    "Hz_DMI",
+                                                    "Hx_anisotropy",
+                                                    "Hy_anisotropy",
+                                                    "Hz_anisotropy",
                                                     "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                     "PoissonRHS","PoissonPhi"},
-                                                    geom, time, step);
+                                                     geom, time, step);
 
         }
 

@@ -15,10 +15,9 @@ namespace {
 
 void WriteCheckPoint(int step,
                      const amrex::Real time,
-		     amrex::Vector<MultiFab>& Mfield,
-                     //std::array< MultiFab, AMREX_SPACEDIM>& Mfield,
-                     std::array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
-		     std::array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
+                     Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+                     Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
+		     Array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
 {
     // timer for profiling
     BL_PROFILE_VAR("WriteCheckPoint()",WriteCheckPoint);
@@ -93,10 +92,9 @@ void WriteCheckPoint(int step,
 
 void ReadCheckPoint(int& restart,
 		    amrex::Real& time,
-		    amrex::Vector<MultiFab>& Mfield,
-		    //std::array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    std::array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
-		    std::array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+		    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+		    Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
+		    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
 		    BoxArray& ba,
 		    DistributionMapping& dm)
 {
@@ -136,16 +134,18 @@ void ReadCheckPoint(int& restart,
 
 	int Nghost = 2;
 	
-	AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-		     Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-		     Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost);)
-	
-	AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		     H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-		     H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
+//	AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
+//		     Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
+//		     Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost);)
+//	
+//	AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
+//		     H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
+//		     H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
 	for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+	  Mfield[dir].define(ba, dm, 1, Nghost);
 	  H_demagfield[dir].define(ba, dm, 1, 1);
+	  H_biasfield[dir].define(ba, dm, 1, 0);
 	}
     }
 
