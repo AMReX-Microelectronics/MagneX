@@ -241,25 +241,29 @@ void main_main ()
     if (restart == -1) {
       dm.define(ba);
     }
-
    
     // Allocate multifabs
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+    {
+        //Cell-centered fields
+        Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
+        Mfield_prev_iter[dir].define(ba, dm, Ncomp, Nghost);
+        Mfield_error[dir].define(ba, dm, Ncomp, Nghost);
+        H_exchangefield[dir].define(ba, dm, Ncomp, 0);
+        H_DMIfield[dir].define(ba, dm, Ncomp, 0);
+        H_anisotropyfield[dir].define(ba, dm, Ncomp, 0);
+        LLG_RHS[dir].define(ba, dm, 1, 0);
+        LLG_RHS_pre[dir].define(ba, dm, 1, 0);
+        LLG_RHS_avg[dir].define(ba, dm, 1, 0);
+    }
+
     if (restart == -1) {
        for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
        {
            //Cell-centered fields
            Mfield[dir].define(ba, dm, Ncomp, Nghost);
-           Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
-           Mfield_prev_iter[dir].define(ba, dm, Ncomp, Nghost);
-           Mfield_error[dir].define(ba, dm, Ncomp, Nghost);
            H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
-           H_exchangefield[dir].define(ba, dm, Ncomp, 0);
-           H_DMIfield[dir].define(ba, dm, Ncomp, 0);
-           H_anisotropyfield[dir].define(ba, dm, Ncomp, 0);
            H_demagfield[dir].define(ba, dm, 1, Nghost);
-           LLG_RHS[dir].define(ba, dm, 1, 0);
-           LLG_RHS_pre[dir].define(ba, dm, 1, 0);
-           LLG_RHS_avg[dir].define(ba, dm, 1, 0);
        }
     }
 

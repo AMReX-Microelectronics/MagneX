@@ -132,7 +132,7 @@ void ReadCheckPoint(int& restart,
         // create a distribution mapping
         dm.define(ba, ParallelDescriptor::NProcs());
 
-	int Nghost = 2;
+	int Nghost = 1;
 	
 //	AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
 //		     Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
@@ -145,7 +145,7 @@ void ReadCheckPoint(int& restart,
 	for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
 	  Mfield[dir].define(ba, dm, 1, Nghost);
 	  H_demagfield[dir].define(ba, dm, 1, 1);
-	  H_biasfield[dir].define(ba, dm, 1, 0);
+	  H_biasfield[dir].define(ba, dm, 1, 1);
 	}
     }
 
