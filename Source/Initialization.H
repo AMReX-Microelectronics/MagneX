@@ -4,12 +4,13 @@
 
 using namespace amrex;
 
-void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   Ms, 
-                   std::array< MultiFab, AMREX_SPACEDIM >&   gamma,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   exchange,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   DMI,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   anisotropy,
+void InitializeMagneticProperties(
+                   MultiFab&  alpha,
+                   MultiFab&   Ms, 
+                   MultiFab&   gamma,
+                   MultiFab&   exchange,
+                   MultiFab&   DMI,
+                   MultiFab&   anisotropy,
                    Real        alpha_val,
                    Real        Ms_val,
                    Real        gamma_val,
@@ -23,9 +24,10 @@ void InitializeMagneticProperties(std::array< MultiFab, AMREX_SPACEDIM >&  alpha
                    const       Geometry& geom);
 
 
-void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
-                   std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
+void InitializeFields( 
+                   Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
+                   Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
+                   MultiFab&   Ms,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
                    const       Geometry& geom);
