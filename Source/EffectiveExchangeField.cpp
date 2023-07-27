@@ -119,6 +119,8 @@ void CalculateH_exchange(
                                                                                   Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd);
 
                     }
+                } else {
+                    Hx_exchange(i,j,k) = Hy_exchange(i,j,k) = Hz_exchange(i,j,k) = 0.;
                 }
             });
         
