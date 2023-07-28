@@ -8,7 +8,7 @@
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
-
+/*
 void EvolveM_2nd(
     //std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     amrex::Vector<MultiFab>& Mfield,
@@ -1032,3 +1032,4 @@ void EvolveM_2nd(
     } // end the iteration
 
 }
+*/
