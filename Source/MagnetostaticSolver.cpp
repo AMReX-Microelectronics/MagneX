@@ -220,6 +220,11 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
 		      int                                    max_grid_size,
                       const Geometry&                        geom)
 {
+   
+    // **********************************
+    // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
+    // **********************************
+
     // Calculate the Mx, My, and Mz fft's at the current time step     
     ComputeForwardFFT(M_field[0], mf_dft_real_x, mf_dft_imag_x, prob_lo, prob_hi, n_cell, max_grid_size, geom);
     ComputeForwardFFT(M_field[1], mf_dft_real_y, mf_dft_imag_y, prob_lo, prob_hi, n_cell, max_grid_size, geom);
@@ -268,10 +273,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
 
 
 
-// Function accepts a multifab 'mf' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs 
-// For this application it will accept a
-
-
+// Function accepts a multifab 'mf' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
 void ComputeForwardFFT(const MultiFab&    mf,
 		       MultiFab&          mf_dft_real,
 		       MultiFab&          mf_dft_imag,
@@ -279,7 +281,8 @@ void ComputeForwardFFT(const MultiFab&    mf,
                        GpuArray<Real, 3>  prob_hi,
                        GpuArray<int, 3>   n_cell,
 		       int                max_grid_size,
-		       const Geometry&    geom)
+		       const Geometry&    geom,
+		       long               npts)
 { 
     // **********************************
     // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
@@ -309,9 +312,8 @@ void ComputeForwardFFT(const MultiFab&    mf,
     using FFTcomplex = fftw_complex;
 #endif
 
-    // number of points in the domain
-    // long npts = domain.numPts();
-    // Real sqrtnpts = std::sqrt(npts);
+    // For scaling on forward FFTW
+    Real sqrtnpts = std::sqrt(npts);
 
     // contain to store FFT - note it is shrunk by "half" in x
     Vector<std::unique_ptr<BaseFab<GpuComplex<Real> > > > spectral_field;
@@ -429,24 +431,9 @@ void ComputeForwardFFT(const MultiFab&    mf,
               realpart(i,j,k) = spectral(i,j,k).real();
               imagpart(i,j,k) = spectral(i,j,k).imag();
 
-          }/* else {
-              // copy complex conjugate
-              int iloc = bx.length(0)-i;
-              int jloc, kloc;
-
-              jloc = (j == 0) ? 0 : bx.length(1)-j;
-#if (AMREX_SPACEDIM == 2)
-              kloc = 0;
-#elif (AMREX_SPACEDIM == 3)
-              kloc = (k == 0) ? 0 : bx.length(2)-k;
-#endif
-
-              realpart(i,j,k) =  spectral(iloc,jloc,kloc).real();
-              imagpart(i,j,k) = -spectral(iloc,jloc,kloc).imag();
-          }
-          */
-          // realpart(i,j,k) /= sqrtnpts;
-          // imagpart(i,j,k) /= sqrtnpts;
+          }    
+          realpart(i,j,k) /= sqrtnpts;
+          imagpart(i,j,k) /= sqrtnpts;
       });
     }
   

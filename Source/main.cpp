@@ -217,6 +217,8 @@ void main_main ()
       ba.maxSize(max_grid_size);
     }
 
+    long npts = domain.numPts();
+
     // This defines the physical box in each direction.
     RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
                      {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
@@ -400,7 +402,7 @@ void main_main ()
 
               //!!!!!!!!!!!!!!!!!!!!!
 		     // Take in the Mfield and store the real and imaginary parts of the forward FFT in the 2nd and 3rd arguments 
-		     ComputeForwardFFT(mf, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom);
+		     ComputeForwardFFT(mf, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom, npts);
 
 		     // Take the real and imaginary parts of the forward FFT and compute the inverse FFT, storing the result back in Mfield
                      ComputeInverseFFT(mf_2, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom);

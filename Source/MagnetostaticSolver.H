@@ -35,7 +35,8 @@ void ComputeForwardFFT(const MultiFab&                  mf,
                        amrex::GpuArray<amrex::Real, 3>  prob_hi,
                        amrex::GpuArray<int, 3>          n_cell,
 		       int                              max_grid_size,
-                       const Geometry&                  geom);
+                       const Geometry&                  geom,
+		       long                             npts);
 
 /*
 // Function accepts the geometry of the problem and then defines the demagnetization tensor in space.  
