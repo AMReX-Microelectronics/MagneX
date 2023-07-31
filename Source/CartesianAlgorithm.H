@@ -79,8 +79,8 @@ static amrex::Real DownwardDz (
 // 1. Laplacian for exchange term in LLG equation
 /**
   * Perform divergence of gradient along x on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real LaplacianDx_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real LaplacianDx_Mag (
     amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x, 
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
@@ -99,8 +99,8 @@ static amrex::Real DownwardDz (
 
 /**
   * Perform divergence of gradient along y on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real LaplacianDy_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real LaplacianDy_Mag (
     amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const BC_lo_y, amrex::Real const BC_hi_y,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
@@ -119,8 +119,8 @@ static amrex::Real DownwardDz (
 
 /**
   * Perform divergence of gradient along z on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real LaplacianDz_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real LaplacianDz_Mag (
     amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real const BC_lo_z, amrex::Real const BC_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
@@ -140,54 +140,54 @@ static amrex::Real DownwardDz (
 /**
   * Compute the sum to get Laplacian of M field */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real Laplacian_Mag (
-     amrex::Array4<amrex::Real const> const& F,
-     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real BC_lo_x, amrex::Real BC_hi_x, 
-     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real BC_lo_y, amrex::Real BC_hi_y, 
-     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real BC_lo_z, amrex::Real BC_hi_z,
-     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
+static amrex::Real Laplacian_Mag (
+    amrex::Array4<amrex::Real const> const& F,
+    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real BC_lo_x, amrex::Real BC_hi_x, 
+    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real BC_lo_y, amrex::Real BC_hi_y, 
+    amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real BC_lo_z, amrex::Real BC_hi_z,
+    int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-     //amrex::Print() << "This is called " << Ms_lo_x << "\n";
-     return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, BC_lo_x, BC_hi_x, i, j, k, dx) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, BC_lo_y, BC_hi_y, i, j, k, dx) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, BC_lo_z, BC_hi_z, i, j, k, dx);
+        //amrex::Print() << "This is called " << Ms_lo_x << "\n";
+        return LaplacianDx_Mag(F, Ms_lo_x, Ms_hi_x, BC_lo_x, BC_hi_x, i, j, k, dx) + LaplacianDy_Mag(F, Ms_lo_y, Ms_hi_y, BC_lo_y, BC_hi_y, i, j, k, dx) + LaplacianDz_Mag(F, Ms_lo_z, Ms_hi_z, BC_lo_z, BC_hi_z, i, j, k, dx);
  }
 
 // 2. Divergence for demagnetization term
- /**
+/**
   * Perform divergence  along x on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real DivergenceDx_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real DivergenceDx_Mag (
     amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-     return UpwardDx(F, i, j, k, dx);
+    return UpwardDx(F, i, j, k, dx);
  }
 
 
 /**
   * Perform divergence along y on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real DivergenceDy_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real DivergenceDy_Mag (
     amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-     return UpwardDy(F, i, j, k, dx);
+    return UpwardDy(F, i, j, k, dx);
  }
 
  /**
   * Perform divergence along z on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real DivergenceDz_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real DivergenceDz_Mag (
     amrex::Array4<amrex::Real const> const& F,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-     return UpwardDz(F, i, j, k, dx);
+    return UpwardDz(F, i, j, k, dx);
  }
 
  // 3. Spatial derivative for DMI term
 /**
   * Perform divergence of gradient along x on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real DMDx_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real DMDx_Mag (
     amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
@@ -205,8 +205,8 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 
  /**
   * Perform divergence of gradient along y on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real DMDy_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real DMDy_Mag (
     amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const BC_lo_y, amrex::Real const BC_hi_y,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
@@ -225,8 +225,8 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 
 /**
   * Perform divergence of gradient along z on M field */
- AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
- static amrex::Real DMDz_Mag (
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real DMDz_Mag (
     amrex::Array4<amrex::Real const> const& F,
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real const BC_lo_z, amrex::Real const BC_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
