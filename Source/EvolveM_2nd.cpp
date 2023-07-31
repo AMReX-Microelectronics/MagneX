@@ -321,14 +321,6 @@ void EvolveM_2nd(
                         amrex::Real Hy_eff_prev = Hy_bias(i,j,k);
                         amrex::Real Hz_eff_prev = Hz_bias(i,j,k);
 
-                        // PSSW validation
-                        amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
-                        amrex::Real frequency = 1.5e9; // frequency of input microwave H
-                        amrex::Real TP = 1./frequency;
-                        Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
-                        Hy_bias(i,j,k) = 2.387324146378430e4; // 300 Oe
-                        Hz_bias(i,j,k) = 0.;
-
                         if (demag_coupling == 1){
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
