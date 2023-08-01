@@ -3,10 +3,9 @@
 #include <AMReX_MultiFabUtil.H>
 
 using namespace amrex;
-/*
+
 void EvolveM_2nd(
-    //std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
-    amrex::Vector<MultiFab>& Mfield,
+    std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
     std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
     std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
@@ -14,12 +13,12 @@ void EvolveM_2nd(
     std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
     MultiFab                              &PoissonRHS, 
     MultiFab                              &PoissonPhi, 
-    std::array< MultiFab, AMREX_SPACEDIM >&   alpha,
-    std::array< MultiFab, AMREX_SPACEDIM >&   Ms,
-    std::array< MultiFab, AMREX_SPACEDIM >&   gamma,
-    std::array< MultiFab, AMREX_SPACEDIM >&   exchange,
-    std::array< MultiFab, AMREX_SPACEDIM >&   DMI,
-    std::array< MultiFab, AMREX_SPACEDIM >&   anisotropy,
+    MultiFab                              &alpha,
+    MultiFab                              &Ms,
+    MultiFab                              &gamma,
+    MultiFab                              &exchange,
+    MultiFab                              &DMI,
+    MultiFab                              &anisotropy,
     int demag_coupling,
     int exchange_coupling,
     int DMI_coupling,
@@ -33,4 +32,3 @@ void EvolveM_2nd(
     amrex::Real const dt,
     const Real time
 );
-*/
