@@ -290,132 +290,7 @@ void main_main ()
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
-
-    // Julian's additions start
-    // !!!!!!!!!!!!!!!!!!!!!!!
-    // !!!!!!!!!!!!!!!!!!!!!!!
-   
-    // !!!!!!!!!!!!!! 
-    // This part is not solid... need to redfine gemoetry for multifab for a demag tensor and magnetization that are twice the size
-    // !!!!!!!!!!!!!!
     
-    /*
-    BoxArray ba;
-    DistributionMapping dm;
-
-    // **********************************
-    // SIMULATION SETUP
-    // make BoxArray and Geometry
-    // ba will contain a list of boxes that cover the domain
-    // geom contains information such as the physical domain size,
-    //               number of points in the domain, and periodicity
-
-    // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
-    IntVect 2dom_lo(AMREX_D_DECL(       0,        0,        0));
-    IntVect 2dom_hi(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
-
-    // Make a single box that is the entire domain
-    Box 2domain(2dom_lo, 2dom_hi);
-
-    if (restart == -1) {
-      // Initialize the boxarray "ba" from the single box "domain"
-      ba.define(2domain);
-
-      // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-      ba.maxSize(max_grid_size);
-    }
-     
-     
-     // This defines the physical box in each direction.
-     // RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
-                     {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
-
-    // periodic in x and y directions
-    // Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
-
-    // This defines a Geometry object
-    Geometry geom;
-    geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
-
-    // Nghost = number of ghost cells for each array
-    int Nghost = 1;
-    int Ncomp = 1;
-
-    // How Boxes are distrubuted among MPI processes
-    if (restart == -1) {
-      dm.define(ba);
-    }
-
-    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
-    
-    if (restart == -1) {
-       for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-       {
-           //Cell-centered fields
-           Mfield_padded[dir].define(ba, dm, Ncomp, Nghost);
-	   Mfield_padded[dir].setVal(0.);
-	   Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-       }
-    }
-    */
-/*
-    VisMF::Write(Mfield[0],"Mfield_x");
-    VisMF::Write(Mfield[1],"Mfield_y");
-    VisMF::Write(Mfield[2],"Mfield_z");
-
-    Abort("Reached");
-
-
-    // MultiFab storage for the demag tensor
-    // TWICE AS BIG AS THE DOMAIN OF THE PROBLEM!!!!!!!!
-    MultiFab Kxx (ba, dm, 1, 0);
-    MultiFab Kxy (ba, dm, 1, 0);
-    MultiFab Kxz (ba, dm, 1, 0);
-    MultiFab Kyy (ba, dm, 1, 0);
-    MultiFab Kyz (ba, dm, 1, 0);
-    MultiFab Kzz (ba, dm, 1, 0);
-
-    // Compute the demag tensor and store in 6 different multifabs
-    ComputeDemagTensor(Kxx, Kxy, Kxz, Kyy, Kyz, Kzz, n_cell, geom);
-
-    // Allocate the demag tensor fft multifabs
-    MultiFab Kxx_dft_real (ba, dm, 1, 0);
-    MultiFab Kxx_dft_imag (ba, dm, 1, 0);
-    MultiFab Kxy_dft_real (ba, dm, 1, 0);
-    MultiFab Kxy_dft_imag (ba, dm, 1, 0);
-    MultiFab Kxz_dft_real (ba, dm, 1, 0);
-    MultiFab Kxz_dft_imag (ba, dm, 1, 0);
-    MultiFab Kyy_dft_real (ba, dm, 1, 0);
-    MultiFab Kyy_dft_imag (ba, dm, 1, 0);
-    MultiFab Kyz_dft_real (ba, dm, 1, 0);
-    MultiFab Kyz_dft_imag (ba, dm, 1, 0);
-    MultiFab Kzz_dft_real (ba, dm, 1, 0);
-    MultiFab Kzz_dft_imag (ba, dm, 1, 0);
-
-    // For scaling in Fourier space ForwardFFT function
-    long npts = domain.numPts();
-
-    // Compute the fft's of each of the demag tensors
-    ComputeForwardFFT(Kxx, Kxx_dft_real, Kxx_dft_imag, geom, npts);
-    ComputeForwardFFT(Kxy, Kxy_dft_real, Kxy_dft_imag, geom, npts);
-    ComputeForwardFFT(Kxz, Kxz_dft_real, Kxz_dft_imag, geom, npts);
-    ComputeForwardFFT(Kyy, Kyy_dft_real, Kyy_dft_imag, geom, npts);
-    ComputeForwardFFT(Kyz, Kyz_dft_real, Kyz_dft_imag, geom, npts);
-    ComputeForwardFFT(Kzz, Kzz_dft_real, Kzz_dft_imag, geom, npts);
-
-    ComputeHFieldFFT(Mfield, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom);
-
-    VisMF::Write(H_demagfield[0],"Hfield_x");
-    VisMF::Write(H_demagfield[1],"Hfield_y");
-    VisMF::Write(H_demagfield[2],"Hfield_z");
-    
-    VisMF::Write(Mfield[0],"Mfield_x");
-    VisMF::Write(Mfield[1],"Mfield_y");
-    VisMF::Write(Mfield[2],"Mfield_z");
-
-    Abort("Reached");
-
-*/
     /*
     // BELOW HERE IS TESTING THE FORWARD AND INVERSE TRANSFORM 
 
@@ -586,6 +461,124 @@ void main_main ()
             CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
         }
     }
+
+
+    /*
+    if (restart < 0) {
+    // Julian's additions start
+    // !!!!!!!!!!!!!!!!!!!!!!!
+    // !!!!!!!!!!!!!!!!!!!!!!!
+   
+    // !!!!!!!!!!!!!! 
+    // This part is not solid... need to redfine gemoetry for multifab for a demag tensor and magnetization that are twice the size
+    // !!!!!!!!!!!!!!
+    
+    BoxArray ba_large;
+    DistributionMapping dm_large;
+
+    // **********************************
+    // SIMULATION SETUP
+    // make BoxArray and Geometry
+    // ba will contain a list of boxes that cover the domain
+    // geom contains information such as the physical domain size,
+    // number of points in the domain, and periodicity
+
+    // Create a
+    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
+    n_cell_large[0] = 2*n_cell[0];
+    n_cell_large[1] = 2*n_cell[1];
+    n_cell_large[2] = 2*n_cell[2];
+
+    // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
+    IntVect dom_lo_large(AMREX_D_DECL(       0,        0,        0));
+    IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
+
+    // Make a single box that is the entire domain
+    Box domain_large(dom_lo_large, dom_hi_large);
+
+    if (restart == -1) {
+      // Initialize the boxarray "ba" from the single box "domain"
+      ba_large.define(domain_large);
+
+      // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+      ba_large.maxSize(max_grid_size);
+    }
+     
+     
+     // This defines the physical box in each direction.
+     // RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
+     //                  {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
+ 
+    // periodic in x and y directions
+    // Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
+
+    // This defines a Geometry object
+    Geometry geom_large;
+    geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
+
+    long npts_large = domain_large.numPts();
+
+    // Nghost = number of ghost cells for each array
+    int Nghost = 1;
+    int Ncomp = 1;
+
+    // How Boxes are distrubuted among MPI processes
+    if (restart == -1) {
+      dm_large.define(ba_large);
+    }
+
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
+    
+    if (restart == -1) {
+       for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+       {
+           //Cell-centered fields
+           Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
+	   Mfield_padded[dir].setVal(0.);
+	   Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+       }
+    }
+
+
+    // Allocate the demag tensor fft multifabs
+    MultiFab Kxx_dft_real (ba_large, dm_large, 1, 0);
+    MultiFab Kxx_dft_imag (ba_large, dm_large, 1, 0);
+    MultiFab Kxy_dft_real (ba_large, dm_large, 1, 0);
+    MultiFab Kxy_dft_imag (ba_large, dm_large, 1, 0);
+    MultiFab Kxz_dft_real (ba_large, dm_large, 1, 0);
+    MultiFab Kxz_dft_imag (ba_large, dm_large, 1, 0);
+    MultiFab Kyy_dft_real (ba_large, dm_large, 1, 0);
+    MultiFab Kyy_dft_imag (ba_large, dm_large, 1, 0);
+    MultiFab Kyz_dft_real (ba_large, dm_large, 1, 0);
+    MultiFab Kyz_dft_imag (ba_large, dm_large, 1, 0);
+    MultiFab Kzz_dft_real (ba_large, dm_large, 1, 0);
+    MultiFab Kzz_dft_imag (ba_large, dm_large, 1, 0);
+
+    ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
+
+    ComputeHFieldFFT(Mfield_padded, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
+
+    VisMF::Write(H_demagfield[0],"Hfield_x");
+    VisMF::Write(H_demagfield[1],"Hfield_y");
+    VisMF::Write(H_demagfield[2],"Hfield_z");
+    
+    VisMF::Write(Mfield[0],"Mfield_x");
+    VisMF::Write(Mfield[1],"Mfield_y");
+    VisMF::Write(Mfield[2],"Mfield_z");
+
+    Abort("Reached");
+
+
+    }
+    */
+
+
+
+
+
+
+
+
 
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)

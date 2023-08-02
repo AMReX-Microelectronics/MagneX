@@ -27,14 +27,21 @@ void ComputeInverseFFT(MultiFab&        mf_2,
                        GpuArray<int, 3> n_cell,
                        const Geometry&  geom);
 
-void ComputeDemagTensor(MultiFab&        Kxx,
-                        MultiFab&        Kxy,
-                        MultiFab&        Kxz,
-                        MultiFab&        Kyy,
-                        MultiFab&        Kyz,
-                        MultiFab&        Kzz,
-			GpuArray<int, 3> n_cell,
-                        const Geometry&  geom);
+void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
+                        MultiFab&                        Kxx_fft_imag,
+                        MultiFab&                        Kxy_fft_real,
+                        MultiFab&                        Kxy_fft_imag,
+                        MultiFab&                        Kxz_fft_real,
+                        MultiFab&                        Kxz_fft_imag,
+                        MultiFab&                        Kyy_fft_real,
+                        MultiFab&                        Kyy_fft_imag,
+                        MultiFab&                        Kyz_fft_real,
+                        MultiFab&                        Kyz_fft_imag,
+                        MultiFab&                        Kzz_fft_real,
+                        MultiFab&                        Kzz_fft_imag,
+                        GpuArray<int, 3>                 n_cell_large,
+			const Geometry&                  geom_large,
+                        long                             npts_large);
 
 void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
                       Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
@@ -50,9 +57,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
                       const MultiFab&                        Kyz_fft_imag,
                       const MultiFab&                        Kzz_fft_real,
                       const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<Real, 3>                      prob_lo,
-                      GpuArray<Real, 3>                      prob_hi,
-                      GpuArray<int, 3>                       n_cell,
-                      int                                    max_grid_size,
-                      const Geometry&                        geom);
+                      GpuArray<int, 3>                       n_cell_large,
+                      const Geometry&                        geom_large,
+		      long                                   npts_large);
  
