@@ -59,6 +59,9 @@ void main_main ()
     // step to restart from
     int restart;
 
+    // which solver to use... either MLMG or FFT
+    int solve;
+
     // time step
     Real dt;
     
@@ -111,6 +114,7 @@ void main_main ()
         pp.get("DMI_val",DMI_val);
         pp.get("anisotropy_val",anisotropy_val);
 
+	pp.get("solve",solve);
         pp.get("demag_coupling",demag_coupling);
         pp.get("M_normalization", M_normalization);
         pp.get("exchange_coupling", exchange_coupling);
@@ -288,68 +292,6 @@ void main_main ()
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
-    
-    /*
-    // BELOW HERE IS TESTING THE FORWARD AND INVERSE TRANSFORM 
-
-    // MultiFab storage for the real and imaginary parts of the dft
-    MultiFab mf_dft_real(ba, dm, 1, 0);
-    MultiFab mf_dft_imag(ba, dm, 1, 0);
-
-    // Multifab storage for the input Mfield and output Mfield
-    MultiFab mf         (ba, dm, 1, 0);
-    MultiFab mf_2       (ba, dm, 1, 0);
-  
-    // For scaling in Fourier space ForwardFFT function
-    long npts = domain.numPts();
-
-    mf.setVal(1.);
-
-    // extract dx from the geometry object
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();    
-    
-    double omega = M_PI/2.0;
-
-    // loop over boxes
-    for (MFIter mfi(mf); mfi.isValid(); ++mfi)
-    {
-        const Box& bx = mfi.validbox();
-
-        const Array4<Real>& mf_ptr = mf.array(mfi);
-
-        // set phi = 1 + e^(-(r-0.5)^2)
-        ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
-        {
-            // **********************************
-            // SET VALUES FOR EACH CELL
-            // **********************************
-
-            Real x = (i+0.5) * dx[0];
-            Real y = (j+0.5) * dx[1];
-            Real z = (AMREX_SPACEDIM==3) ? (k+0.5) * dx[2] : 0.;
-            mf_ptr(i,j,k) = std::sin(62*M_PI*x/prob_hi[0] + omega)*std::sin(4*M_PI*y/prob_hi[1] + omega) ;
-            // mf_ptr(i,j,k) = std::exp(-10.*(0.5*(x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)));
-            if (AMREX_SPACEDIM == 3) {
-                mf_ptr(i,j,k) *= std::sin(2*M_PI*z/prob_hi[2] + omega);
-            }
-        });
-    }
-
-                     //!!!!!!!!!!!!!!!!!!!!!
-		     // Take in the Mfield and store the real and imaginary parts of the forward FFT in the 2nd and 3rd arguments 
-		     ComputeForwardFFT(mf, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom, npts);
-
-		     // Take the real and imaginary parts of the forward FFT and compute the inverse FFT, storing the result back in Mfield
-                     ComputeInverseFFT(mf_2, mf_dft_real, mf_dft_imag, prob_lo, prob_hi, n_cell, max_grid_size, geom);
-		     //write results of these to plot file ^^
-		     //
-		     //
-		     // ComputeHFieldFFT();
-		     VisMF::Write(mf_2,"mf_2");
-		     VisMF::Write(mf,"mf");
-
-		     Abort("Reached");
-    */
 
     PoissonPhi.setVal(0.);
     PoissonRHS.setVal(0.);
@@ -443,8 +385,122 @@ void main_main ()
 #else
             openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
-            // Calculate H from Phi
-            ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+            if (solve = 0){
+		    
+		    // Calculate H from Phi
+		    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+		    
+		    
+		    VisMF::Write(H_demagfield[0],"H_demagfieldx_MLMG");
+		    VisMF::Write(H_demagfield[1],"H_demagfieldy_MLMG");
+		    VisMF::Write(H_demagfield[2],"H_demagfieldz_MLMG");
+		    Abort("Finished MLMG solve");
+		    
+	    }
+	    else {
+		    // Julian's additions start
+		    // !!!!!!!!!!!!!!!!!!!!!!!
+		    // !!!!!!!!!!!!!!!!!!!!!!!
+		   
+		    // !!!!!!!!!!!!!! 
+		    // This part is not solid... Need to fix scaling
+		    // !!!!!!!!!!!!!!
+		    
+		    BoxArray ba_large;
+		    DistributionMapping dm_large;
+
+		    // **********************************
+		    // SIMULATION SETUP
+		    // make BoxArray and Geometry
+		    // ba will contain a list of boxes that cover the domain
+		    // geom contains information such as the physical domain size,
+		    // number of points in the domain, and periodicity
+
+		    // Create a
+		    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
+		    n_cell_large[0] = 2*n_cell[0];
+		    n_cell_large[1] = 2*n_cell[1];
+		    n_cell_large[2] = 2*n_cell[2];
+
+		    // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
+		    IntVect dom_lo_large(AMREX_D_DECL(       0,        0,        0));
+		    IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
+
+		    // Make a single box that is the entire domain
+		    Box domain_large(dom_lo_large, dom_hi_large);
+
+		    if (restart == -1) {
+		      // Initialize the boxarray "ba" from the single box "domain"
+		      ba_large.define(domain_large);
+
+		      // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+		      ba_large.maxSize(max_grid_size);
+		    }
+		     
+		     
+		     // This defines the physical box in each direction.
+		     // RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
+		     //                  {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
+		 
+		    // periodic in x and y directions
+		    // Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
+
+		    // This defines a Geometry object
+		    Geometry geom_large;
+		    geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
+
+		    long npts_large = domain_large.numPts();
+
+		    // Nghost = number of ghost cells for each array
+		    int Nghost = 1;
+		    int Ncomp = 1;
+
+		    // How Boxes are distrubuted among MPI processes
+		    if (restart == -1) {
+		      dm_large.define(ba_large);
+		    }
+
+		    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
+		    
+		    if (restart == -1) {
+		       for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
+		       {
+			   //Cell-centered fields
+			   Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
+			   Mfield_padded[dir].setVal(0.);
+			   Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+		       }
+		    }
+
+
+		    // Allocate the demag tensor fft multifabs
+		    MultiFab Kxx_dft_real (ba_large, dm_large, 1, 0);
+		    MultiFab Kxx_dft_imag (ba_large, dm_large, 1, 0);
+		    MultiFab Kxy_dft_real (ba_large, dm_large, 1, 0);
+		    MultiFab Kxy_dft_imag (ba_large, dm_large, 1, 0);
+		    MultiFab Kxz_dft_real (ba_large, dm_large, 1, 0);
+		    MultiFab Kxz_dft_imag (ba_large, dm_large, 1, 0);
+		    MultiFab Kyy_dft_real (ba_large, dm_large, 1, 0);
+		    MultiFab Kyy_dft_imag (ba_large, dm_large, 1, 0);
+		    MultiFab Kyz_dft_real (ba_large, dm_large, 1, 0);
+		    MultiFab Kyz_dft_imag (ba_large, dm_large, 1, 0);
+		    MultiFab Kzz_dft_real (ba_large, dm_large, 1, 0);
+		    MultiFab Kzz_dft_imag (ba_large, dm_large, 1, 0);
+
+		    ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
+
+		    ComputeHFieldFFT(Mfield_padded, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
+
+		    VisMF::Write(H_demagfield[0],"H_demagfieldx_FFT");
+		    VisMF::Write(H_demagfield[1],"H_demagfieldy_FFT");
+		    VisMF::Write(H_demagfield[2],"H_demagfieldz_FFT");
+		    
+		    VisMF::Write(Mfield[0],"Mfield_x");
+		    VisMF::Write(Mfield[1],"Mfield_y");
+		    VisMF::Write(Mfield[2],"Mfield_z");
+
+		    Abort("Finished FFT solve");
+	    }
         }
 
         if (exchange_coupling == 1){
@@ -459,124 +515,6 @@ void main_main ()
             CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
         }
     }
-
-
-    /*
-    if (restart < 0) {
-    // Julian's additions start
-    // !!!!!!!!!!!!!!!!!!!!!!!
-    // !!!!!!!!!!!!!!!!!!!!!!!
-   
-    // !!!!!!!!!!!!!! 
-    // This part is not solid... need to redfine gemoetry for multifab for a demag tensor and magnetization that are twice the size
-    // !!!!!!!!!!!!!!
-    
-    BoxArray ba_large;
-    DistributionMapping dm_large;
-
-    // **********************************
-    // SIMULATION SETUP
-    // make BoxArray and Geometry
-    // ba will contain a list of boxes that cover the domain
-    // geom contains information such as the physical domain size,
-    // number of points in the domain, and periodicity
-
-    // Create a
-    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
-    n_cell_large[0] = 2*n_cell[0];
-    n_cell_large[1] = 2*n_cell[1];
-    n_cell_large[2] = 2*n_cell[2];
-
-    // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
-    IntVect dom_lo_large(AMREX_D_DECL(       0,        0,        0));
-    IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
-
-    // Make a single box that is the entire domain
-    Box domain_large(dom_lo_large, dom_hi_large);
-
-    if (restart == -1) {
-      // Initialize the boxarray "ba" from the single box "domain"
-      ba_large.define(domain_large);
-
-      // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-      ba_large.maxSize(max_grid_size);
-    }
-     
-     
-     // This defines the physical box in each direction.
-     // RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
-     //                  {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
- 
-    // periodic in x and y directions
-    // Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
-
-    // This defines a Geometry object
-    Geometry geom_large;
-    geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
-
-    long npts_large = domain_large.numPts();
-
-    // Nghost = number of ghost cells for each array
-    int Nghost = 1;
-    int Ncomp = 1;
-
-    // How Boxes are distrubuted among MPI processes
-    if (restart == -1) {
-      dm_large.define(ba_large);
-    }
-
-    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
-    
-    if (restart == -1) {
-       for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-       {
-           //Cell-centered fields
-           Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
-	   Mfield_padded[dir].setVal(0.);
-	   Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-       }
-    }
-
-
-    // Allocate the demag tensor fft multifabs
-    MultiFab Kxx_dft_real (ba_large, dm_large, 1, 0);
-    MultiFab Kxx_dft_imag (ba_large, dm_large, 1, 0);
-    MultiFab Kxy_dft_real (ba_large, dm_large, 1, 0);
-    MultiFab Kxy_dft_imag (ba_large, dm_large, 1, 0);
-    MultiFab Kxz_dft_real (ba_large, dm_large, 1, 0);
-    MultiFab Kxz_dft_imag (ba_large, dm_large, 1, 0);
-    MultiFab Kyy_dft_real (ba_large, dm_large, 1, 0);
-    MultiFab Kyy_dft_imag (ba_large, dm_large, 1, 0);
-    MultiFab Kyz_dft_real (ba_large, dm_large, 1, 0);
-    MultiFab Kyz_dft_imag (ba_large, dm_large, 1, 0);
-    MultiFab Kzz_dft_real (ba_large, dm_large, 1, 0);
-    MultiFab Kzz_dft_imag (ba_large, dm_large, 1, 0);
-
-    ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
-
-    ComputeHFieldFFT(Mfield_padded, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
-
-    VisMF::Write(H_demagfield[0],"Hfield_x");
-    VisMF::Write(H_demagfield[1],"Hfield_y");
-    VisMF::Write(H_demagfield[2],"Hfield_z");
-    
-    VisMF::Write(Mfield[0],"Mfield_x");
-    VisMF::Write(Mfield[1],"Mfield_y");
-    VisMF::Write(Mfield[2],"Mfield_z");
-
-    Abort("Reached");
-
-
-    }
-    */
-
-
-
-
-
-
-
-
 
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
