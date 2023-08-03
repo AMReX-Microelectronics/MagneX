@@ -123,6 +123,5 @@ void CalculateH_exchange(
                     Hx_exchange(i,j,k) = Hy_exchange(i,j,k) = Hz_exchange(i,j,k) = 0.;
                 }
             });
-        
     }
 }

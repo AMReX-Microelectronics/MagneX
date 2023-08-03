@@ -17,7 +17,7 @@ void WriteCheckPoint(int step,
                      const amrex::Real time,
                      Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                      Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
-		     Array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
+		             Array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
 {
     // timer for profiling
     BL_PROFILE_VAR("WriteCheckPoint()",WriteCheckPoint);
@@ -132,7 +132,7 @@ void ReadCheckPoint(int& restart,
         // create a distribution mapping
         dm.define(ba, ParallelDescriptor::NProcs());
 
-	int Nghost = 1;
+	    int Nghost = 1;
 	
 //	AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
 //		     Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
@@ -142,11 +142,11 @@ void ReadCheckPoint(int& restart,
 //		     H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
 //		     H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
 
-	for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-	  Mfield[dir].define(ba, dm, 1, Nghost);
-	  H_demagfield[dir].define(ba, dm, 1, 1);
-	  H_biasfield[dir].define(ba, dm, 1, 1);
-	}
+	    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+	        Mfield[dir].define(ba, dm, 1, Nghost);
+	        H_demagfield[dir].define(ba, dm, 1, 1);
+	        H_biasfield[dir].define(ba, dm, 1, 1);
+	    }
     }
 
     // read in the MultiFab data

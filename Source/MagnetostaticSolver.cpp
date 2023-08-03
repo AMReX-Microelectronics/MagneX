@@ -10,8 +10,8 @@
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       MultiFab& Ms,
-                       const Geometry&                 geom)
+                       MultiFab&                        Ms,
+                       const Geometry&                  geom)
 {
     for ( MFIter mfi(PoissonRHS); mfi.isValid(); ++mfi )
         {
@@ -28,9 +28,9 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
 
-               rhs(i,j,k) =  DivergenceDx_Mag(Mx, i, j, k, dx)
-                           + DivergenceDy_Mag(My, i, j, k, dx)
-                           + DivergenceDz_Mag(Mz, i, j, k, dx);
+                rhs(i,j,k) =  DivergenceDx_Mag(Mx, i, j, k, dx)
+                            + DivergenceDy_Mag(My, i, j, k, dx)
+                            + DivergenceDz_Mag(Mz, i, j, k, dx);
                 
             });
         }
@@ -60,12 +60,11 @@ void ComputeHfromPhi(MultiFab&                        PoissonPhi,
 
             amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                     Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
-                     Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
-                     Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
-             });
+                Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
+                Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
+                Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
+            });
         }
-
 }
 
 // Function accepts the geometry of the problem and then defines the demagnetization tensor in space.  
@@ -695,4 +694,3 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
     }
 
 }
-

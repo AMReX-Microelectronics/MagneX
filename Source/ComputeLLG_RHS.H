@@ -1,4 +1,3 @@
-
 /**
  * Compute the x component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -35,7 +34,6 @@ static amrex::Real LLG_RHS_y(
     return (mu0 * mag_gammaL) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff
                               + alpha(i,j,k) / M_magnitude * (Mz(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff) - Mx(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff)));
 }
-
 
 
 /**

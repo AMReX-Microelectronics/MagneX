@@ -26,15 +26,15 @@ void CalculateH_DMI(
         // extract dd from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();
 
-        const Array4<Real>& Mx = Mfield[0].array(mfi); // note M_xface include x,y,z components at |_x faces
-        const Array4<Real>& My = Mfield[1].array(mfi); // note M_yface include x,y,z components at |_y faces
-        const Array4<Real>& Mz = Mfield[2].array(mfi); // note M_zface include x,y,z components at |_z faces
+        const Array4<Real>& Mx = Mfield[0].array(mfi); // note M_x include x components
+        const Array4<Real>& My = Mfield[1].array(mfi); // note M_y include y components
+        const Array4<Real>& Mz = Mfield[2].array(mfi); // note M_z include z components
         const Array4<Real>& Ms_arr = Ms.array(mfi);
         const Array4<Real>& DMI_arr = DMI.array(mfi);
         const Array4<Real>& exchange_arr = exchange.array(mfi);
-        const Array4<Real>& Hx_DMI = H_DMIfield[0].array(mfi);   // x,y,z component at |_x faces
-        const Array4<Real>& Hy_DMI = H_DMIfield[1].array(mfi);   // x,y,z component at |_y faces
-        const Array4<Real>& Hz_DMI = H_DMIfield[2].array(mfi);   // x,y,z component at |_z faces
+        const Array4<Real>& Hx_DMI = H_DMIfield[0].array(mfi);   // x component
+        const Array4<Real>& Hy_DMI = H_DMIfield[1].array(mfi);   // y component
+        const Array4<Real>& Hz_DMI = H_DMIfield[2].array(mfi);   // z component
 
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) {
@@ -81,7 +81,7 @@ void CalculateH_DMI(
                         amrex::Real dMydy_BC_lo_y = -1.0/xi_DMI*Mz(i,j,k); // lower y BC: dMy/dy = 1/xi*Mz
                         amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*Mz(i,j,k); // higher y BC: dMy/dy = -1/xi*Mz
                         Hz_DMI(i,j,k) = H_DMI_coeff * (-DMDx_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd) // x component at x nodality
-                                                              -DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd)); // y component at x nodality;
+                                                        -DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd)); // y component at x nodality;
 
                     }
                 }
