@@ -5,6 +5,7 @@
 #include <fftw3-mpi.h>
 #endif
 
+#include <complex>
 #include "MagnetostaticSolver.H"
 #include "CartesianAlgorithm.H"
 
@@ -273,15 +274,36 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
                 // Take the dot product in fourier space of M and K and store that in 6 different multifabs  
-	        H_dft_real_x_ptr(i,j,k) = Mx_real(i,j,k) * Kxx_real(i,j,k) + My_real(i,j,k) * Kxy_real(i,j,k) + Mz_real(i,j,k) * Kxz_real(i,j,k);
-	        H_dft_imag_x_ptr(i,j,k) = Mx_real(i,j,k) * Kxx_imag(i,j,k) + My_imag(i,j,k) * Kxy_imag(i,j,k) + Mz_imag(i,j,k) * Kxz_imag(i,j,k);
-                
-		H_dft_real_y_ptr(i,j,k) = Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
-                H_dft_imag_y_ptr(i,j,k) = Mx_real(i,j,k) * Kxy_imag(i,j,k) + My_imag(i,j,k) * Kyy_imag(i,j,k) + Mz_imag(i,j,k) * Kyz_imag(i,j,k);
-                
-		H_dft_real_z_ptr(i,j,k) = Mx_real(i,j,k) * Kxz_real(i,j,k) + My_real(i,j,k) * Kyz_real(i,j,k) + Mz_real(i,j,k) * Kzz_real(i,j,k);
-                H_dft_imag_z_ptr(i,j,k) = Mx_real(i,j,k) * Kxz_imag(i,j,k) + My_imag(i,j,k) * Kyz_imag(i,j,k) + Mz_imag(i,j,k) * Kzz_imag(i,j,k);
-         
+	        H_dft_real_x_ptr(i,j,k) =  Mx_real(i,j,k) * Kxx_real(i,j,k) + My_real(i,j,k) * Kxy_real(i,j,k) + Mz_real(i,j,k) * Kxz_real(i,j,k);
+                H_dft_real_x_ptr(i,j,k) += Mx_imag(i,j,k) * Kxx_imag(i,j,k) + My_imag(i,j,k) * Kxy_imag(i,j,k) + Mz_imag(i,j,k) * Kxz_imag(i,j,k);
+                // H_dft_real_x_ptr(i,j,k) += Mx_real(i,j,k) * Kxx_imag(i,j,k) + My_real(i,j,k) * Kxy_imag(i,j,k) + Mz_real(i,j,k) * Kxz_imag(i,j,k);
+		// H_dft_real_x_ptr(i,j,k) += Mx_imag(i,j,k) * Kxx_real(i,j,k) + My_imag(i,j,k) * Kxy_real(i,j,k) + Mz_imag(i,j,k) * Kxz_real(i,j,k);
+
+	        H_dft_imag_x_ptr(i,j,k) =  Mx_real(i,j,k) * Kxx_imag(i,j,k) + My_real(i,j,k) * Kxy_imag(i,j,k) + Mz_real(i,j,k) * Kxz_imag(i,j,k);
+                H_dft_imag_x_ptr(i,j,k) += Mx_imag(i,j,k) * Kxx_real(i,j,k) + My_imag(i,j,k) * Kxy_real(i,j,k) + Mz_imag(i,j,k) * Kxz_real(i,j,k);
+                // H_dft_imag_x_ptr(i,j,k) += Mx_real(i,j,k) * Kxx_real(i,j,k) + My_real(i,j,k) * Kxy_real(i,j,k) + Mz_real(i,j,k) * Kxz_real(i,j,k);
+		// H_dft_imag_x_ptr(i,j,k) += Mx_real(i,j,k) * Kxx_real(i,j,k) + My_real(i,j,k) * Kxy_real(i,j,k) + Mz_real(i,j,k) * Kxz_real(i,j,k);
+
+	        H_dft_real_y_ptr(i,j,k) =  Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
+                H_dft_real_y_ptr(i,j,k) += Mx_imag(i,j,k) * Kxy_imag(i,j,k) + My_imag(i,j,k) * Kyy_imag(i,j,k) + Mz_imag(i,j,k) * Kyz_imag(i,j,k);
+                // H_dft_real_y_ptr(i,j,k) += Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
+		// H_dft_real_y_ptr(i,j,k) += Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
+
+	        H_dft_imag_y_ptr(i,j,k) =  Mx_real(i,j,k) * Kxy_imag(i,j,k) + My_real(i,j,k) * Kyy_imag(i,j,k) + Mz_real(i,j,k) * Kyz_imag(i,j,k);
+                H_dft_imag_y_ptr(i,j,k) += Mx_imag(i,j,k) * Kxy_real(i,j,k) + My_imag(i,j,k) * Kyy_real(i,j,k) + Mz_imag(i,j,k) * Kyz_real(i,j,k);
+                // H_dft_imag_y_ptr(i,j,k) += Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
+		// H_dft_imag_y_ptr(i,j,k) += Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
+
+	        H_dft_real_z_ptr(i,j,k) =  Mx_real(i,j,k) * Kxz_real(i,j,k) + My_real(i,j,k) * Kyz_real(i,j,k) + Mz_real(i,j,k) * Kxz_real(i,j,k);
+                H_dft_real_z_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxz_imag(i,j,k) + My_imag(i,j,k) * Kyz_imag(i,j,k) + Mz_imag(i,j,k) * Kxz_imag(i,j,k);
+                // H_dft_real_z_ptr(i,j,k) += Mx_real(i,j,k) * Kxz_imag(i,j,k) + My_real(i,j,k) * Kyz_imag(i,j,k) + Mz_real(i,j,k) * Kxz_imag(i,j,k);
+	        // H_dft_real_z_ptr(i,j,k) += Mx_imag(i,j,k) * Kxz_real(i,j,k) + My_imag(i,j,k) * Kyz_real(i,j,k) + Mz_imag(i,j,k) * Kxz_real(i,j,k);
+
+		// H_dft_imag_z_ptr(i,j,k) =  Mx_real(i,j,k) * Kxz_real(i,j,k) + My_real(i,j,k) * Kyz_real(i,j,k) + Mz_real(i,j,k) * Kzz_real(i,j,k);
+                // H_dft_imag_z_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxz_imag(i,j,k) + My_imag(i,j,k) * Kyz_imag(i,j,k) + Mz_imag(i,j,k) * Kzz_imag(i,j,k);
+                H_dft_imag_z_ptr(i,j,k) = Mx_real(i,j,k) * Kxz_imag(i,j,k) + My_real(i,j,k) * Kyz_imag(i,j,k) + Mz_real(i,j,k) * Kzz_imag(i,j,k);
+		H_dft_imag_z_ptr(i,j,k) += Mx_imag(i,j,k) * Kxz_real(i,j,k) + My_imag(i,j,k) * Kyz_real(i,j,k) + Mz_imag(i,j,k) * Kzz_real(i,j,k);
+        
 	    });
      }
 
@@ -506,8 +528,8 @@ void ComputeForwardFFT(const MultiFab&    mf,
               realpart(i,j,k) = spectral(i,j,k).real();
               imagpart(i,j,k) = spectral(i,j,k).imag();
 
-	      realpart(i,j,k) /= std::sqrt(npts);
-              imagpart(i,j,k) /= std::sqrt(npts);
+	      // realpart(i,j,k) /= std::sqrt(npts);
+              // imagpart(i,j,k) /= std::sqrt(npts);
 
           }
           else{

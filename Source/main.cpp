@@ -374,7 +374,7 @@ void main_main ()
             //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
             //Compute RHS of Poisson equation
             ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
-        
+            if (solve == 0){ 
             //Initial guess for phi
             PoissonPhi.setVal(0.);
 #ifdef NEUMANN
@@ -385,8 +385,6 @@ void main_main ()
 #else
             openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
-            if (solve = 0){
-		    
 		    // Calculate H from Phi
 		    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
 		    
@@ -437,14 +435,6 @@ void main_main ()
 		      ba_large.maxSize(max_grid_size);
 		    }
 		     
-		     
-		     // This defines the physical box in each direction.
-		     // RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
-		     //                  {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
-		 
-		    // periodic in x and y directions
-		    // Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
-
 		    // This defines a Geometry object
 		    Geometry geom_large;
 		    geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
@@ -495,9 +485,9 @@ void main_main ()
 		    VisMF::Write(H_demagfield[1],"H_demagfieldy_FFT");
 		    VisMF::Write(H_demagfield[2],"H_demagfieldz_FFT");
 		    
-		    VisMF::Write(Mfield[0],"Mfield_x");
-		    VisMF::Write(Mfield[1],"Mfield_y");
-		    VisMF::Write(Mfield[2],"Mfield_z");
+		    // VisMF::Write(Mfield[0],"Mfield_x");
+		    // VisMF::Write(Mfield[1],"Mfield_y");
+		    // VisMF::Write(Mfield[2],"Mfield_z");
 
 		    Abort("Finished FFT solve");
 	    }
