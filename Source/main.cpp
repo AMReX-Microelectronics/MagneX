@@ -392,6 +392,11 @@ void main_main ()
 		    VisMF::Write(H_demagfield[0],"H_demagfieldx_MLMG");
 		    VisMF::Write(H_demagfield[1],"H_demagfieldy_MLMG");
 		    VisMF::Write(H_demagfield[2],"H_demagfieldz_MLMG");
+		    
+		    VisMF::Write(Mfield[0],"M_fieldx_MLMG");
+                    VisMF::Write(Mfield[1],"M_fieldy_MLMG");
+                    VisMF::Write(Mfield[2],"M_fieldz_MLMG");
+		    
 		    Abort("Finished MLMG solve");
 		    
 	    }
@@ -479,15 +484,25 @@ void main_main ()
 
 		    ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
 
+                     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
+                     BoxArray ba_onegrid(geom.Domain());
+                     DistributionMapping dm_onegrid(ba_onegrid);
+
+		     // Storage for the small 1 grid Hfield
+                     MultiFab Hx_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+                     MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+                     MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+
+
 		    ComputeHFieldFFT(Mfield_padded, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
 
 		    VisMF::Write(H_demagfield[0],"H_demagfieldx_FFT");
 		    VisMF::Write(H_demagfield[1],"H_demagfieldy_FFT");
 		    VisMF::Write(H_demagfield[2],"H_demagfieldz_FFT");
 		    
-		    // VisMF::Write(Mfield[0],"Mfield_x");
-		    // VisMF::Write(Mfield[1],"Mfield_y");
-		    // VisMF::Write(Mfield[2],"Mfield_z");
+		    VisMF::Write(Mfield_padded[0],"M_fieldx_FFT");
+		    VisMF::Write(Mfield_padded[1],"M_fieldy_FFT");
+		    VisMF::Write(Mfield_padded[2],"M_fieldz_FFT");
 
 		    Abort("Finished FFT solve");
 	    }
