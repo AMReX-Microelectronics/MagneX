@@ -2,19 +2,16 @@ nx = 8; % number of cells on x direction
 ny = 8;
 nz = 8;
 
-dx = 1; % cell size on x direction, in nanometers
-dy = 1;
-dz = 1;
+dx = 1.e-9; % cell size on x direction, in nanometers
+dy = 1.e-9;
+dz = 1.e-9;
 
-dt = 5E-6; % timestep
-timesteps = 150000;
 alpha = 0.5; % damping constant
-exchConstant = 1.3E-11 * 1E18; % nanometer/nanosecond units
-% exchConstant = 1E-13 * 1E18; % nanometer/nanosecond units
-mu_0 = 1.256636; % = 4 * pi / 10
+
 Ms = 800; % saturation magnetization
+
 My = repmat(Ms, [nx ny nz]);
-% Mx = repmat(Ms/sqrt(3), [nx ny nz]); % magnetization on x direction
+
 Mx = zeros([nx ny nz]); % TODO: reduce truncation and zeropadding into one step
 Mz = Mx;
 
@@ -79,7 +76,6 @@ for K = -nz + 1 : nz - 1 % Calculation of Demag tensor, see NAKATANI JJAP 1989
         end
     end
 end % calculation of demag tensor done
-% Kxx = permute (Kxx, [3 2 1]);
 
 Kxx_fft = fftn(Kxx); % fast fourier transform of demag tensor
 Kxy_fft = fftn(Kxy); % need to be done only once
@@ -90,27 +86,28 @@ Kzz_fft = fftn(Kzz);
 
 outFile = fopen('Mdata.txt', 'w');
 
-    Mx(end + nx, end + ny, end + nz) = 0; % zero padding
-    My(end + nx, end + ny, end + nz) = 0;
-    Mz(end + nx, end + ny, end + nz) = 0;
+Mx(end + nx, end + ny, end + nz) = 0; % zero padding
+My(end + nx, end + ny, end + nz) = 0;
+Mz(end + nx, end + ny, end + nz) = 0;
 
-    Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
-    Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
-    Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
+Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
+Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
+Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
 
-    Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
-    Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
-    Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
+Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
+Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
+Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 
-        for k = 1 : nz
-            for j = 1 : ny
-                for i = 1 : nx
-                    fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
-                        i, j, k, Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
-                end
-            end
+for k = 1 : nz
+    for j = 1 : ny
+        for i = 1 : nx
+            fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
+                    i, j, k, Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
         end
-        fprintf(outFile,'\r\n');
+    end
+end
+
+fprintf(outFile,'\r\n');
 
 fclose('all');
 
