@@ -1,5 +1,5 @@
-n_cell = 128 128 256
-max_grid_size = 64
+n_cell = 8 8 8
+max_grid_size = 8
 dt = 1.0e-14
 nsteps = 4
 plot_int = 1

@@ -77,6 +77,19 @@ for K = -nz + 1 : nz - 1 % Calculation of Demag tensor, see NAKATANI JJAP 1989
     end
 end % calculation of demag tensor done
 
+outFile = fopen('Kdata.txt', 'w');
+
+for k = 1 : nz
+    for j = 1 : ny
+        for i = 1 : nx
+            fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
+                    i, j, k, Kyy(i,j,k), Kyz(i,j,k), Kzz(i,j,k) );
+        end
+    end
+end
+
+fprintf(outFile,'\r\n');
+
 Kxx_fft = fftn(Kxx); % fast fourier transform of demag tensor
 Kxy_fft = fftn(Kxy); % need to be done only once
 Kxz_fft = fftn(Kxz);
@@ -84,7 +97,7 @@ Kyy_fft = fftn(Kyy);
 Kyz_fft = fftn(Kyz);
 Kzz_fft = fftn(Kzz);
 
-outFile = fopen('Mdata.txt', 'w');
+outFile = fopen('Hdata.txt', 'w');
 
 Mx(end + nx, end + ny, end + nz) = 0; % zero padding
 My(end + nx, end + ny, end + nz) = 0;

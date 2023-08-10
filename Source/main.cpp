@@ -374,7 +374,8 @@ void main_main ()
             //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
             //Compute RHS of Poisson equation
             ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
-            if (solve == 0){ 
+            
+	    if (solve == 0){ 
             //Initial guess for phi
             PoissonPhi.setVal(0.);
 #ifdef NEUMANN
@@ -387,7 +388,6 @@ void main_main ()
 #endif
 		    // Calculate H from Phi
 		    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-		    
 		    
 		    VisMF::Write(H_demagfield[0],"H_demagfieldx_MLMG");
 		    VisMF::Write(H_demagfield[1],"H_demagfieldy_MLMG");
@@ -403,11 +403,7 @@ void main_main ()
 	    else {
 		    // Julian's additions start
 		    // !!!!!!!!!!!!!!!!!!!!!!!
-		    // !!!!!!!!!!!!!!!!!!!!!!!
-		   
-		    // !!!!!!!!!!!!!! 
-		    // This part is not solid... Need to fix scaling
-		    // !!!!!!!!!!!!!!
+		    // !!!!!!!!!!!!!!!!!!!!!!! 
 		    
 		    BoxArray ba_large;
 		    DistributionMapping dm_large;
@@ -419,7 +415,7 @@ void main_main ()
 		    // geom contains information such as the physical domain size,
 		    // number of points in the domain, and periodicity
 
-		    // Create a
+		    // Create a double-sized n_cell array
 		    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
 		    n_cell_large[0] = 2*n_cell[0];
 		    n_cell_large[1] = 2*n_cell[1];
@@ -463,9 +459,14 @@ void main_main ()
 			   //Cell-centered fields
 			   Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
 			   Mfield_padded[dir].setVal(0.);
-			   Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+			   // Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
 		       }
 		    }
+
+                    Mfield_padded[0].ParallelCopy(Mfield[0], 0, 0, 1);
+		    Mfield_padded[1].ParallelCopy(Mfield[1], 0, 0, 1);
+                    Mfield_padded[2].ParallelCopy(Mfield[2], 0, 0, 1);
+
 
 
 		    // Allocate the demag tensor fft multifabs
@@ -496,18 +497,50 @@ void main_main ()
 
 		    ComputeHFieldFFT(Mfield_padded, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
 
-		    VisMF::Write(H_demagfield[0],"H_demagfieldx_FFT");
-		    VisMF::Write(H_demagfield[1],"H_demagfieldy_FFT");
-		    VisMF::Write(H_demagfield[2],"H_demagfieldz_FFT");
+		    // VisMF::Write(H_demagfield[0],"H_demagfieldx_FFT");
+		    // VisMF::Write(H_demagfield[1],"H_demagfieldy_FFT");
+		    // VisMF::Write(H_demagfield[2],"H_demagfieldz_FFT");
 		    
-		    VisMF::Write(Mfield_padded[0],"M_fieldx_FFT");
-		    VisMF::Write(Mfield_padded[1],"M_fieldy_FFT");
-		    VisMF::Write(Mfield_padded[2],"M_fieldz_FFT");
+		    // VisMF::Write(Mfield_padded[0],"M_fieldx_FFT");
+		    // VisMF::Write(Mfield_padded[1],"M_fieldy_FFT");
+		    // VisMF::Write(Mfield_padded[2],"M_fieldz_FFT");
 
-		    Abort("Finished FFT solve");
+                    MultiFab Plt(ba, dm, 3, 0);
+
+                    MultiFab::Copy(Plt, Mfield_padded[0], 0, 0, 1, 0);
+                    MultiFab::Copy(Plt, Mfield_padded[1], 0, 1, 1, 0);
+                    MultiFab::Copy(Plt, Mfield_padded[2], 0, 2, 1, 0);
+
+                   // time and step are dummy variables required to WriteSingleLevelPlotfile
+                   Real time = 0.;
+                   int step = 0;
+
+                   WriteSingleLevelPlotfile("plt", Plt, {"Mx_padded",
+                                                         "My_padded",
+                                                         "Mz_padded",},
+                                                geom_large, time, step);
+		    
+		    /*
+		    MultiFab Plt(ba, dm, 3, 0);
+
+		    MultiFab::Copy(Plt, H_demagfield[0], 0, 0, 1, 0);
+                    MultiFab::Copy(Plt, H_demagfield[1], 0, 1, 1, 0);
+                    MultiFab::Copy(Plt, H_demagfield[2], 0, 2, 1, 0);
+
+                   // time and step are dummy variables required to WriteSingleLevelPlotfile
+                   Real time = 0.;
+                   int step = 0;
+
+                  WriteSingleLevelPlotfile("plt", Plt, {"Hx",
+                                                        "Hy",
+                                                        "Hz",},
+                                             geom, time, step);
+	          */
+
+		  Abort("Finished FFT solve");
 	    }
-        }
-
+	}
+        
         if (exchange_coupling == 1){
             CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }

@@ -5,6 +5,8 @@
 #include <fftw3-mpi.h>
 #endif
 
+#include <AMReX_PlotFileUtil.H>
+
 #include "MagnetostaticSolver.H"
 #include "CartesianAlgorithm.H"
 
@@ -106,6 +108,17 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
     Kyz.setVal(0.);
     Kzz.setVal(0.);
 
+    GpuArray<Real,AMREX_SPACEDIM> dx = geom_large.CellSizeArray();
+
+    dx[0] *= 2.;
+    dx[1] *= 2.;
+    dx[2] *= 2.;
+
+
+    Print() << "dx = " << dx[0] << std::endl;
+    Print() << "dy = " << dx[1] << std::endl;
+    Print() << "dz = " << dx[2] << std::endl;
+
     Real prefactor = 1. / 4. / 3.14159265;
 
 
@@ -132,11 +145,11 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
             }
 
             // Need a negative notion of index where demag is centered at the origin, so we make an aritificial copy of it
-            int I = L - n_cell_large[0]/2;
-            int J = M - n_cell_large[1]/2;
-            int K = N - n_cell_large[2]/2;
+            int I = L - n_cell_large[0]/2 + 1;
+            int J = M - n_cell_large[1]/2 + 1;
+            int K = N - n_cell_large[2]/2 + 1;
 
-	    if (I == 0 && J == 0 && K == 0){
+	    if (L == 0 && M == 0 && N == 0){
 	        return;
 	    }
 
@@ -148,17 +161,17 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                     for (int k = 0; k <= 1; k++) { 
                         Real r = std::sqrt ((I+i-0.5)*(I+i-0.5)*dx[0]*dx[0] + (J+j-0.5)*(J+j-0.5)*dx[1]*dx[1] + (K+k-0.5)*(K+k-0.5)*dx[2]*dx[2]);
                         
-                        Kxx_ptr(L,M,N) = Kxx_ptr(L,M,N) + std::pow(-1,i+j+k) * std::atan ((K+k-0.5) * (J+j-0.5) * dx[2] * dx[1] / r / (I+i-0.5) / dx[0]);
+                        Kxx_ptr(L,M,N) = Kxx_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::atan ((K+k-0.5) * (J+j-0.5) * dx[2] * dx[1] / r / (I+i-0.5) / dx[0])));
                         
-                        Kxy_ptr(L,M,N) = Kxy_ptr(L,M,N) + std::pow(-1,i+j+k) * std::log ((K+k-0.5) * dx[2] + r);
+                        Kxy_ptr(L,M,N) = Kxy_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::log ((K+k-0.5) * dx[2] + r)));
                         
-                        Kxz_ptr(L,M,N) = Kxz_ptr(L,M,N) + std::pow(-1,i+j+k) * std::log ((J+j-0.5) * dx[1] + r);
+                        Kxz_ptr(L,M,N) = Kxz_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::log ((J+j-0.5) * dx[1] + r)));
                         
-                        Kyy_ptr(L,M,N) = Kyy_ptr(L,M,N) + std::pow(-1,i+j+k) * std::atan ((I+i-0.5) * (K+k-0.5) * dx[0] * dx[2] / r / (J+j-0.5) / dx[1]);
+                        Kyy_ptr(L,M,N) = Kyy_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::atan ((I+i-0.5) * (K+k-0.5) * dx[0] * dx[2] / r / (J+j-0.5) / dx[1])));
                         
-                        Kyz_ptr(L,M,N) = Kyz_ptr(L,M,N) + std::pow(-1,i+j+k) * std::log ((I+i-0.5) * dx[0] + r);
+                        Kyz_ptr(L,M,N) = Kyz_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::log ((I+i-0.5) * dx[0] + r)));
                         
-                        Kzz_ptr(L,M,N) = Kzz_ptr(L,M,N) + std::pow(-1,i+j+k) * std::atan ((J+j-0.5) * (I+i-0.5) * dx[1] * dx[0] / r / (K+k-0.5) / dx[2]);
+                        Kzz_ptr(L,M,N) = Kzz_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * std::atan ((J+j-0.5) * (I+i-0.5) * dx[1] * dx[0] / r / (K+k-0.5) / dx[2]));
                     }
                 }
             }
@@ -172,7 +185,34 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 
         });
     }
- 
+
+
+    /* 
+    MultiFab Plt(ba_large, dm_large, 3, 0);
+
+    // MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
+    // MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
+    // MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
+    MultiFab::Copy(Plt, Kyy, 0, 0, 1, 0);
+    MultiFab::Copy(Plt, Kyz, 0, 1, 1, 0);
+    MultiFab::Copy(Plt, Kzz, 0, 2, 1, 0);
+
+    // time and step are dummy variables required to WriteSingleLevelPlotfile
+    Real time = 0.;
+    int step = 0;
+
+    WriteSingleLevelPlotfile("plt", Plt, {// "Kxx",
+		                            // "Kxy",
+					    // "Kxz",
+					    "Kyy",
+					    "Kyz",
+					    "Kzz",},
+					     geom_large, time, step);
+
+
+    Abort("Finished computing demag tensors");
+    */
+
     ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag, geom_large, npts_large);
@@ -340,10 +380,13 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
   
   	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                if (i >= n_cell_large[0]/2 && j >= n_cell_large[1]/2 && k >= n_cell_large[2]/2){
-		    int l = i - n_cell_large[0]/2;
-		    int m = j - n_cell_large[1]/2;
-		    int n = k - n_cell_large[2]/2;
+                if (i >= ((n_cell_large[0]/2)-1) && j >= ((n_cell_large[1]/2)-1) && k >= ((n_cell_large[2]/2)-1)){
+		    if (i >= n_cell_large[0]-1 || j >= n_cell_large[1]-1 || k >= n_cell_large[2]-1){
+                        return;
+                    }
+		    int l = i - n_cell_large[0]/2 + 1;
+		    int m = j - n_cell_large[1]/2 + 1;
+		    int n = k - n_cell_large[2]/2 + 1;
                     Hx_small_onegrid_ptr(l,m,n) = Hx_large_onegrid_ptr(i,j,k);
 		    Hy_small_onegrid_ptr(l,m,n) = Hy_large_onegrid_ptr(i,j,k);
 		    Hz_small_onegrid_ptr(l,m,n) = Hz_large_onegrid_ptr(i,j,k);
