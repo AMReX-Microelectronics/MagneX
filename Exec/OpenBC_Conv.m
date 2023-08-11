@@ -79,11 +79,11 @@ end % calculation of demag tensor done
 
 outFile = fopen('Kdata.txt', 'w');
 
-for k = 1 : nz
-    for j = 1 : ny
-        for i = 1 : nx
+for k = 1 : 2*nz
+    for j = 1 : 2*ny
+        for i = 1 : 2*nx
             fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
-                    i, j, k, Kyy(i,j,k), Kyz(i,j,k), Kzz(i,j,k) );
+                    i, j, k, Kyy(i,j,k), Kyy(i,j,k), Kyy(i,j,k));
         end
     end
 end
@@ -94,10 +94,40 @@ Kxx_fft = fftn(Kxx); % fast fourier transform of demag tensor
 Kxy_fft = fftn(Kxy); % need to be done only once
 Kxz_fft = fftn(Kxz);
 Kyy_fft = fftn(Kyy);
+
+outFile = fopen('KfftXdata.txt', 'w');
+
+for k = 1 : 2*nz
+    for j = 1 : 2*ny
+        for i = 1 : 2*nx
+            fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
+                    i, j, k, real(Kyy_fft(i,j,k)), imag(Kyy_fft(i,j,k)), imag(Kyy_fft(i,j,k)));
+        end
+    end
+end
+
+fprintf(outFile,'\r\n');
+
 Kyz_fft = fftn(Kyz);
+
+outFile = fopen('KfftYdata.txt', 'w');
+
+for k = 1 : 2*nz
+    for j = 1 : 2*ny
+        for i = 1 : 2*nx
+            fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
+                    i, j, k, real(Kyz_fft(i,j,k)), imag(Kyz_fft(i,j,k)), imag(Kyz_fft(i,j,k)));
+        end
+    end
+end
+
+fprintf(outFile,'\r\n');
+
 Kzz_fft = fftn(Kzz);
 
 outFile = fopen('Hdata.txt', 'w');
+
+outFile2 = fopen('fftHdata.txt', 'w');
 
 Mx(end + nx, end + ny, end + nz) = 0; % zero padding
 My(end + nx, end + ny, end + nz) = 0;
@@ -107,6 +137,9 @@ Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % c
 Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
 
+fftHx = fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft;
+fftHy = fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft;
+
 Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
 Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
@@ -114,6 +147,8 @@ Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 for k = 1 : nz
     for j = 1 : ny
         for i = 1 : nx
+            %fprintf(outFile2, '%d\t%d\t%d\t%f\t%f\t\n', ...
+                    %i, j, k, real(fftHy(i,j,k)), imag(fftHy(i,j,k)));
             fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
                     i, j, k, Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
         end

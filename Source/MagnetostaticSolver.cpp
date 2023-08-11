@@ -143,6 +143,9 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 	    if (L == n_cell_large[0]-1 || M == n_cell_large[1]-1 || N == n_cell_large[2]-1){
                 return;
             }
+	    if (L == n_cell_large[0]/2-1 && M == n_cell_large[1]/2-1 && N == n_cell_large[2]/2-1){
+                return;
+            }
 
             // Need a negative notion of index where demag is centered at the origin, so we make an aritificial copy of it
             int I = L - n_cell_large[0]/2 + 1;
@@ -187,7 +190,7 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
     }
 
 
-    /* 
+    /*
     MultiFab Plt(ba_large, dm_large, 3, 0);
 
     // MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
@@ -219,6 +222,28 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
     ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag, geom_large, npts_large);
+
+    /*
+    MultiFab Plt(ba_large, dm_large, 2, 0);
+
+    // MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
+    // MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
+    // MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
+    MultiFab::Copy(Plt, Kyy_fft_real, 0, 0, 1, 0);
+    MultiFab::Copy(Plt, Kyy_fft_imag, 0, 1, 1, 0);
+
+    // time and step are dummy variables required to WriteSingleLevelPlotfile
+    Real time = 0.;
+    int step = 0;
+
+    WriteSingleLevelPlotfile("plt", Plt, {  "Kyy_real",
+                                            "Kyy_imag",},
+                                             geom_large, time, step);
+
+
+    Abort("Computed forward transform of the demag tensor");
+   */
+    
 
 }
 
@@ -319,13 +344,17 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 	        H_dft_imag_x_ptr(i,j,k) =  Mx_real(i,j,k) * Kxx_imag(i,j,k) + My_real(i,j,k) * Kxy_imag(i,j,k) + Mz_real(i,j,k) * Kxz_imag(i,j,k);
                 H_dft_imag_x_ptr(i,j,k) += Mx_imag(i,j,k) * Kxx_real(i,j,k) + My_imag(i,j,k) * Kxy_real(i,j,k) + Mz_imag(i,j,k) * Kxz_real(i,j,k);
 
+		Print() << "HACK " << i << " " << j << " " << k << " " << H_dft_real_x_ptr(i,j,k) << " " << H_dft_imag_x_ptr(i,j,k) << std::endl;
+
 	        H_dft_real_y_ptr(i,j,k) =  Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
                 H_dft_real_y_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxy_imag(i,j,k) + My_imag(i,j,k) * Kyy_imag(i,j,k) + Mz_imag(i,j,k) * Kyz_imag(i,j,k);
 
 	        H_dft_imag_y_ptr(i,j,k) =  Mx_real(i,j,k) * Kxy_imag(i,j,k) + My_real(i,j,k) * Kyy_imag(i,j,k) + Mz_real(i,j,k) * Kyz_imag(i,j,k);
                 H_dft_imag_y_ptr(i,j,k) += Mx_imag(i,j,k) * Kxy_real(i,j,k) + My_imag(i,j,k) * Kyy_real(i,j,k) + Mz_imag(i,j,k) * Kyz_real(i,j,k);
 
-	        H_dft_real_z_ptr(i,j,k) =  Mx_real(i,j,k) * Kxz_real(i,j,k) + My_real(i,j,k) * Kyz_real(i,j,k) + Mz_real(i,j,k) * Kzz_real(i,j,k);
+//		Print() << "HACK " << i << " " << j << " " << k << " " << H_dft_real_y_ptr(i,j,k) << " " << H_dft_imag_y_ptr(i,j,k) << std::endl;
+
+		H_dft_real_z_ptr(i,j,k) =  Mx_real(i,j,k) * Kxz_real(i,j,k) + My_real(i,j,k) * Kyz_real(i,j,k) + Mz_real(i,j,k) * Kzz_real(i,j,k);
                 H_dft_real_z_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxz_imag(i,j,k) + My_imag(i,j,k) * Kyz_imag(i,j,k) + Mz_imag(i,j,k) * Kzz_imag(i,j,k);
 
                 H_dft_imag_z_ptr(i,j,k) = Mx_real(i,j,k) * Kxz_imag(i,j,k) + My_real(i,j,k) * Kyz_imag(i,j,k) + Mz_real(i,j,k) * Kzz_imag(i,j,k);
@@ -334,7 +363,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 	    });
      }
 
-    // Allocate Multifabs to store large H_field
+    // Allocate Multifabs to store large H_fieldi
     MultiFab Hx_large(ba_large, dm_large, 1, 0);
     MultiFab Hy_large(ba_large, dm_large, 1, 0);
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
@@ -563,8 +592,20 @@ void ComputeForwardFFT(const MultiFab&    mf,
 
           }
           else{
-	      realpart(i,j,k) = 0.;
-              imagpart(i,j,k) = 0.;
+	      // copy complex conjugate
+              int iloc = bx.length(0)-i;
+              int jloc, kloc;
+
+              jloc = (j == 0) ? 0 : bx.length(1)-j;
+#if (AMREX_SPACEDIM == 2)
+              kloc = 0;
+#elif (AMREX_SPACEDIM == 3)
+              kloc = (k == 0) ? 0 : bx.length(2)-k;
+#endif
+
+              realpart(i,j,k) =  spectral(iloc,jloc,kloc).real();
+              imagpart(i,j,k) = -spectral(iloc,jloc,kloc).imag();
+
 	  }	  
       });
     }

@@ -504,8 +504,9 @@ void main_main ()
 		    // VisMF::Write(Mfield_padded[0],"M_fieldx_FFT");
 		    // VisMF::Write(Mfield_padded[1],"M_fieldy_FFT");
 		    // VisMF::Write(Mfield_padded[2],"M_fieldz_FFT");
-
-                    MultiFab Plt(ba, dm, 3, 0);
+                   
+		    /*
+                    MultiFab Plt(ba_large, dm_large, 3, 0);
 
                     MultiFab::Copy(Plt, Mfield_padded[0], 0, 0, 1, 0);
                     MultiFab::Copy(Plt, Mfield_padded[1], 0, 1, 1, 0);
@@ -519,8 +520,8 @@ void main_main ()
                                                          "My_padded",
                                                          "Mz_padded",},
                                                 geom_large, time, step);
+		    */
 		    
-		    /*
 		    MultiFab Plt(ba, dm, 3, 0);
 
 		    MultiFab::Copy(Plt, H_demagfield[0], 0, 0, 1, 0);
@@ -535,7 +536,6 @@ void main_main ()
                                                         "Hy",
                                                         "Hz",},
                                              geom, time, step);
-	          */
 
 		  Abort("Finished FFT solve");
 	    }
