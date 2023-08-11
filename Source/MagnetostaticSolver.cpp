@@ -110,17 +110,12 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 
     GpuArray<Real,AMREX_SPACEDIM> dx = geom_large.CellSizeArray();
 
+    // Account for double-sized domain
     dx[0] *= 2.;
     dx[1] *= 2.;
     dx[2] *= 2.;
 
-
-    Print() << "dx = " << dx[0] << std::endl;
-    Print() << "dy = " << dx[1] << std::endl;
-    Print() << "dz = " << dx[2] << std::endl;
-
     Real prefactor = 1. / 4. / 3.14159265;
-
 
     // Loop through demag tensor and fill with values
     for (MFIter mfi(Kxx); mfi.isValid(); ++mfi)
@@ -146,15 +141,14 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 	    if (L == n_cell_large[0]/2-1 && M == n_cell_large[1]/2-1 && N == n_cell_large[2]/2-1){
                 return;
             }
+	    if (L == 0 && M == 0 && N == 0){
+	        return;
+	    }
 
             // Need a negative notion of index where demag is centered at the origin, so we make an aritificial copy of it
             int I = L - n_cell_large[0]/2 + 1;
             int J = M - n_cell_large[1]/2 + 1;
             int K = N - n_cell_large[2]/2 + 1;
-
-	    if (L == 0 && M == 0 && N == 0){
-	        return;
-	    }
 
             // **********************************
             // SET VALUES FOR EACH CELL
@@ -189,62 +183,12 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
         });
     }
 
-
-    /*
-    MultiFab Plt(ba_large, dm_large, 3, 0);
-
-    // MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
-    // MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
-    // MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
-    MultiFab::Copy(Plt, Kyy, 0, 0, 1, 0);
-    MultiFab::Copy(Plt, Kyz, 0, 1, 1, 0);
-    MultiFab::Copy(Plt, Kzz, 0, 2, 1, 0);
-
-    // time and step are dummy variables required to WriteSingleLevelPlotfile
-    Real time = 0.;
-    int step = 0;
-
-    WriteSingleLevelPlotfile("plt", Plt, {// "Kxx",
-		                            // "Kxy",
-					    // "Kxz",
-					    "Kyy",
-					    "Kyz",
-					    "Kzz",},
-					     geom_large, time, step);
-
-
-    Abort("Finished computing demag tensors");
-    */
-
     ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag, geom_large, npts_large);
     ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag, geom_large, npts_large);
-
-    /*
-    MultiFab Plt(ba_large, dm_large, 2, 0);
-
-    // MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
-    // MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
-    // MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
-    MultiFab::Copy(Plt, Kyy_fft_real, 0, 0, 1, 0);
-    MultiFab::Copy(Plt, Kyy_fft_imag, 0, 1, 1, 0);
-
-    // time and step are dummy variables required to WriteSingleLevelPlotfile
-    Real time = 0.;
-    int step = 0;
-
-    WriteSingleLevelPlotfile("plt", Plt, {  "Kyy_real",
-                                            "Kyy_imag",},
-                                             geom_large, time, step);
-
-
-    Abort("Computed forward transform of the demag tensor");
-   */
-    
-
 }
 
 // THIS COMES LAST!!!!!!!!! COULD BE THE TRICKY PART...
@@ -344,15 +288,11 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 	        H_dft_imag_x_ptr(i,j,k) =  Mx_real(i,j,k) * Kxx_imag(i,j,k) + My_real(i,j,k) * Kxy_imag(i,j,k) + Mz_real(i,j,k) * Kxz_imag(i,j,k);
                 H_dft_imag_x_ptr(i,j,k) += Mx_imag(i,j,k) * Kxx_real(i,j,k) + My_imag(i,j,k) * Kxy_real(i,j,k) + Mz_imag(i,j,k) * Kxz_real(i,j,k);
 
-		Print() << "HACK " << i << " " << j << " " << k << " " << H_dft_real_x_ptr(i,j,k) << " " << H_dft_imag_x_ptr(i,j,k) << std::endl;
-
 	        H_dft_real_y_ptr(i,j,k) =  Mx_real(i,j,k) * Kxy_real(i,j,k) + My_real(i,j,k) * Kyy_real(i,j,k) + Mz_real(i,j,k) * Kyz_real(i,j,k);
                 H_dft_real_y_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxy_imag(i,j,k) + My_imag(i,j,k) * Kyy_imag(i,j,k) + Mz_imag(i,j,k) * Kyz_imag(i,j,k);
 
 	        H_dft_imag_y_ptr(i,j,k) =  Mx_real(i,j,k) * Kxy_imag(i,j,k) + My_real(i,j,k) * Kyy_imag(i,j,k) + Mz_real(i,j,k) * Kyz_imag(i,j,k);
                 H_dft_imag_y_ptr(i,j,k) += Mx_imag(i,j,k) * Kxy_real(i,j,k) + My_imag(i,j,k) * Kyy_real(i,j,k) + Mz_imag(i,j,k) * Kyz_real(i,j,k);
-
-//		Print() << "HACK " << i << " " << j << " " << k << " " << H_dft_real_y_ptr(i,j,k) << " " << H_dft_imag_y_ptr(i,j,k) << std::endl;
 
 		H_dft_real_z_ptr(i,j,k) =  Mx_real(i,j,k) * Kxz_real(i,j,k) + My_real(i,j,k) * Kyz_real(i,j,k) + Mz_real(i,j,k) * Kzz_real(i,j,k);
                 H_dft_real_z_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxz_imag(i,j,k) + My_imag(i,j,k) * Kyz_imag(i,j,k) + Mz_imag(i,j,k) * Kzz_imag(i,j,k);
@@ -583,13 +523,9 @@ void ComputeForwardFFT(const MultiFab&    mf,
         Cell (4,1,0) is complex conjugate of (4,7,0)  (note that the FFT is computed for 0 <= i <= Nx/2)
       */
           if (i <= bx.length(0)/2) {
-          // copy value
+              // copy value
               realpart(i,j,k) = spectral(i,j,k).real();
               imagpart(i,j,k) = spectral(i,j,k).imag();
-
-	      // realpart(i,j,k) /= std::sqrt(npts);
-              // imagpart(i,j,k) /= std::sqrt(npts);
-
           }
           else{
 	      // copy complex conjugate
@@ -605,7 +541,6 @@ void ComputeForwardFFT(const MultiFab&    mf,
 
               realpart(i,j,k) =  spectral(iloc,jloc,kloc).real();
               imagpart(i,j,k) = -spectral(iloc,jloc,kloc).imag();
-
 	  }	  
       });
     }
