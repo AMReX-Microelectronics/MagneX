@@ -50,13 +50,15 @@ void InitializeMagneticProperties(MultiFab&  alpha,
             Real x = prob_lo[0] + (i+0.5) * dx[0];
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
-
-            if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
+            
+	    Ms_arr(i,j,k) = Ms_val;
+            
+	    if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
                 if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
                     if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
                         alpha_arr(i,j,k) = alpha_val;
                         gamma_arr(i,j,k) = gamma_val;
-                        Ms_arr(i,j,k) = Ms_val;
+                        // Ms_arr(i,j,k) = Ms_val;
                         exchange_arr(i,j,k) = exchange_val;
                         DMI_arr(i,j,k) = DMI_val;
                         anisotropy_arr(i,j,k) = anisotropy_val;

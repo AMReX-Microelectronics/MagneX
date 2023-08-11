@@ -44,3 +44,9 @@ LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
 LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
 endif
 
+ifeq ($(USE_CUDA),TRUE)
+  LIBRARIES += -lcufft
+else
+  LIBRARIES += -L$(FFTW_DIR) -lfftw3_mpi -lfftw3
+endif
+
