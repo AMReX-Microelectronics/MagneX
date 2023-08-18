@@ -1,5 +1,5 @@
-n_cell = 8 8 8
-max_grid_size = 8
+n_cell = 128 128 256
+max_grid_size = 64
 dt = 1.0e-14
 nsteps = 4
 plot_int = 1
@@ -31,7 +31,6 @@ anisotropy_val = -139.26
 anisotropy_axis = 0.0 1.0 0.0
 DMI_val = 0.0 # unit is J/m^2
 
-solve = 1
 demag_coupling = 1
 M_normalization = 1
 exchange_coupling = 1

@@ -59,8 +59,9 @@ void main_main ()
     // step to restart from
     int restart;
 
-    // which solver to use... either MLMG if solve=0 or FFT if solve=1
-    int solve;
+    // 0 = Open Poisson MLMG
+    // 1 = FFT-based
+    int demag_solver;
 
     // time step
     Real dt;
@@ -114,7 +115,7 @@ void main_main ()
         pp.get("DMI_val",DMI_val);
         pp.get("anisotropy_val",anisotropy_val);
 
-	pp.get("solve",solve);
+	pp.get("demag_solver",demag_solver);
         pp.get("demag_coupling",demag_coupling);
         pp.get("M_normalization", M_normalization);
         pp.get("exchange_coupling", exchange_coupling);
@@ -225,9 +226,9 @@ void main_main ()
         // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
         ba.maxSize(max_grid_size);
     }
-     
-     // This defines the physical box in each direction.
-     RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
+
+    // This defines the physical box in each direction.
+    RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
                      {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
 
     // periodic in x and y directions
@@ -375,7 +376,7 @@ void main_main ()
             //Compute RHS of Poisson equation
             ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
             
-	    if (solve == 0){ 
+	    if (demag_solver == 0){ 
                 // store the current time so we can later compute total run time.
                 Real start_time = ParallelDescriptor::second();
 
