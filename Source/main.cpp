@@ -306,10 +306,40 @@ void main_main ()
 
     MultiFab Plt(ba, dm, 21, 0);
 
-    //Solver for Poisson equation
+    // needed for FFT-based demag solver
+    BoxArray ba_large;
+    DistributionMapping dm_large;
+    Geometry geom_large;
+
+    // Create a zero-padded Magnetization field for the convolution method
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
+    MultiFab Kxx_dft_real;
+    MultiFab Kxx_dft_imag;
+    MultiFab Kxy_dft_real;
+    MultiFab Kxy_dft_imag;
+    MultiFab Kxz_dft_real;
+    MultiFab Kxz_dft_imag;
+    MultiFab Kyy_dft_real;
+    MultiFab Kyy_dft_imag;
+    MultiFab Kyz_dft_real;
+    MultiFab Kyz_dft_imag;
+    MultiFab Kzz_dft_real;
+    MultiFab Kzz_dft_imag;
+
+    // Create a double-sized n_cell array
+    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
+    n_cell_large[0] = 2*n_cell[0];
+    n_cell_large[1] = 2*n_cell[1];
+    n_cell_large[2] = 2*n_cell[2];
+
+    long npts_large;
+    
+    // Solver for Poisson equation
     LPInfo info;
 #ifdef NEUMANN
-    MLABecLaplacian mlabec({geom}, {ba}, {dm}, info);
+
+    MLABecLaplacian mlabec;
+    mlabec.define({geom}, {ba}, {dm}, info);
 
     mlabec.setEnforceSingularSolvable(false);
 
@@ -354,10 +384,68 @@ void main_main ()
     //Declare MLMG object
     MLMG mlmg(mlabec);
     mlmg.setVerbose(2);
-#else 
+#else
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
     openbc.setVerbose(2);
 #endif
+    if (demag_solver == 1) {
+
+        // **********************************
+        // SIMULATION SETUP
+        // make BoxArray and Geometry
+        // ba will contain a list of boxes that cover the domain
+        // geom contains information such as the physical domain size,
+        // number of points in the domain, and periodicity
+	    
+        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+            // Cell-centered fields
+            Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
+            Mfield_padded[dir].setVal(0.);
+            Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+        }
+
+        // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
+        IntVect dom_lo_large(AMREX_D_DECL(                0,                 0,                 0));
+        IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
+
+        // Make a single box that is the entire domain
+        Box domain_large(dom_lo_large, dom_hi_large);
+
+        npts_large = domain_large.numPts();
+
+        // Initialize the boxarray "ba" from the single box "domain"
+        ba_large.define(domain_large);
+
+        // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+        ba_large.maxSize(max_grid_size);
+
+        // How Boxes are distrubuted among MPI processes
+        dm_large.define(ba_large);
+	     
+        // This defines a Geometry object
+        geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
+
+        // Allocate the demag tensor fft multifabs
+        Kxx_dft_real.define(ba_large, dm_large, 1, 0);
+        Kxx_dft_imag.define(ba_large, dm_large, 1, 0);
+        Kxy_dft_real.define(ba_large, dm_large, 1, 0);
+        Kxy_dft_imag.define(ba_large, dm_large, 1, 0);
+        Kxz_dft_real.define(ba_large, dm_large, 1, 0);
+        Kxz_dft_imag.define(ba_large, dm_large, 1, 0);
+        Kyy_dft_real.define(ba_large, dm_large, 1, 0);
+        Kyy_dft_imag.define(ba_large, dm_large, 1, 0);
+        Kyz_dft_real.define(ba_large, dm_large, 1, 0);
+        Kyz_dft_imag.define(ba_large, dm_large, 1, 0);
+        Kzz_dft_real.define(ba_large, dm_large, 1, 0);
+        Kzz_dft_imag.define(ba_large, dm_large, 1, 0);
+
+        // Call function that computes the demag tensors and then takes the forward FFT of each of them, which are returns
+        ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
+                           Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
+                           n_cell_large, geom_large, npts_large);
+        
+
+    }
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
                                  alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
@@ -376,7 +464,7 @@ void main_main ()
             //Compute RHS of Poisson equation
             ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
             
-	    if (demag_solver == 0){ 
+	    if (demag_solver == 0) { 
                 // store the current time so we can later compute total run time.
                 Real start_time = ParallelDescriptor::second();
 
@@ -393,135 +481,35 @@ void main_main ()
 	        // Calculate H from Phi
 	        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
 	    
-	        VisMF::Write(H_demagfield[0],"H_demagfieldx_MLMG");
-	        VisMF::Write(H_demagfield[1],"H_demagfieldy_MLMG");
-	        VisMF::Write(H_demagfield[2],"H_demagfieldz_MLMG");
-	    
 		Real stop_time = ParallelDescriptor::second() - start_time;
                 ParallelDescriptor::ReduceRealMax(stop_time);
-                Print() << "Run time = " << stop_time << std::endl;
-	        
-		Abort("Finished MLMG solve");
-	    
-	   }
-           else {
+                Print() << "MLMG Run time = " << stop_time << std::endl;
+
+                Abort("Finished MLMG solve");	    
+	   } else {
    
-	       // store the current time so we can later compute total run time.
-               Real start_time = ParallelDescriptor::second();
+                // store the current time so we can later compute total run time.
+                Real start_time = ParallelDescriptor::second();
 
-	       // Julian's additions start
-	       // !!!!!!!!!!!!!!!!!!!!!!!
-	       // !!!!!!!!!!!!!!!!!!!!!!! 
-	    
-	       BoxArray ba_large;
-	       DistributionMapping dm_large;
+                // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
+                BoxArray ba_onegrid(geom.Domain());
+                DistributionMapping dm_onegrid(ba_onegrid);
 
-	       // **********************************
-	       // SIMULATION SETUP
-	       // make BoxArray and Geometry
-	       // ba will contain a list of boxes that cover the domain
-	       // geom contains information such as the physical domain size,
-	       // number of points in the domain, and periodicity
+                // Storage for the small 1 grid Hfield
+                MultiFab Hx_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+                MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+                MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
 
-	       // Create a double-sized n_cell array
-	       amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
-	       n_cell_large[0] = 2*n_cell[0];
-	       n_cell_large[1] = 2*n_cell[1];
-	       n_cell_large[2] = 2*n_cell[2];
-
-	       // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
-	       IntVect dom_lo_large(AMREX_D_DECL(       0,        0,        0));
-	       IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
-
-	       // Make a single box that is the entire domain
-	       Box domain_large(dom_lo_large, dom_hi_large);
-
-	       if (restart == -1) {
-	           // Initialize the boxarray "ba" from the single box "domain"
-	           ba_large.define(domain_large);
-
-	           // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-	           ba_large.maxSize(max_grid_size);
-	       }
-	     
-	       // This defines a Geometry object
-	       Geometry geom_large;
-	       geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
-
-	       long npts_large = domain_large.numPts();
-
-	       // Nghost = number of ghost cells for each array
-	       int Nghost = 1;
-	       int Ncomp = 1;
-
-	       // How Boxes are distrubuted among MPI processes
-	       if (restart == -1) {
-	         dm_large.define(ba_large);
-	       }
-
-	       // Create a zero-padded Magnetization field for the convolution method
-	       Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
-	    
-	       if (restart == -1) {
-	         for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-	         {
-	           //Cell-centered fields
-		   Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
-		   Mfield_padded[dir].setVal(0.);
-		   Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-	         }
-	      }
-
-	      // Allocate the demag tensor fft multifabs
-	      MultiFab Kxx_dft_real (ba_large, dm_large, 1, 0);
-	      MultiFab Kxx_dft_imag (ba_large, dm_large, 1, 0);
-	      MultiFab Kxy_dft_real (ba_large, dm_large, 1, 0);
-	      MultiFab Kxy_dft_imag (ba_large, dm_large, 1, 0);
-	      MultiFab Kxz_dft_real (ba_large, dm_large, 1, 0);
-	      MultiFab Kxz_dft_imag (ba_large, dm_large, 1, 0);
-	      MultiFab Kyy_dft_real (ba_large, dm_large, 1, 0);
-	      MultiFab Kyy_dft_imag (ba_large, dm_large, 1, 0);
-	      MultiFab Kyz_dft_real (ba_large, dm_large, 1, 0);
-	      MultiFab Kyz_dft_imag (ba_large, dm_large, 1, 0);
-	      MultiFab Kzz_dft_real (ba_large, dm_large, 1, 0);
-	      MultiFab Kzz_dft_imag (ba_large, dm_large, 1, 0);
-
-	     // Call function that computes the demag tensors and then takes the forward FFT of each of them, which are returns
-	     ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
-
-	     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-	     BoxArray ba_onegrid(geom.Domain());
-	     DistributionMapping dm_onegrid(ba_onegrid);
-
-	     // Storage for the small 1 grid Hfield
-	     MultiFab Hx_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-	     MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-	     MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-
-	    ComputeHFieldFFT(Mfield_padded, H_demagfield, Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag, Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, n_cell_large, geom_large, npts_large);
-    
-	    MultiFab Plt(ba, dm, 3, 0);
-
-	    MultiFab::Copy(Plt, H_demagfield[0], 0, 0, 1, 0);
-	    MultiFab::Copy(Plt, H_demagfield[1], 0, 1, 1, 0);
-	    MultiFab::Copy(Plt, H_demagfield[2], 0, 2, 1, 0);
-
-	    // time and step are dummy variables required to WriteSingleLevelPlotfile
-	    Real time = 0.;
-	    int step = 0;
-
-	    WriteSingleLevelPlotfile("plt", Plt, {"Hx",
-						  "Hy",
-						  "Hz",},
-				     geom, time, step);
+                ComputeHFieldFFT(Mfield_padded, H_demagfield,
+                                 Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
+                                 Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
+                                 n_cell_large, geom_large, npts_large);
      
-	    Real stop_time = ParallelDescriptor::second() - start_time;
-            ParallelDescriptor::ReduceRealMax(stop_time);
-            Print() << "Run time = " << stop_time << std::endl;
+                Real stop_time = ParallelDescriptor::second() - start_time;
+                ParallelDescriptor::ReduceRealMax(stop_time);
+                Print() << "Spectral Run time = " << stop_time << std::endl;
 
-
-
-	    Abort("Finished FFT solve");
+                Abort("Finished FFT solve");
 	    }
 	}
         
