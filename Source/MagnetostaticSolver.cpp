@@ -36,6 +36,7 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                 
             });
         }
+
 }
 
 void ComputeHfromPhi(MultiFab&                        PoissonPhi,
