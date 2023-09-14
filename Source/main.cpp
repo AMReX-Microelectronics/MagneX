@@ -396,13 +396,6 @@ void main_main ()
         // ba will contain a list of boxes that cover the domain
         // geom contains information such as the physical domain size,
         // number of points in the domain, and periodicity
-	    
-        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-            // Cell-centered fields
-            Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
-            Mfield_padded[dir].setVal(0.);
-            Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-        }
 
         // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
         IntVect dom_lo_large(AMREX_D_DECL(                0,                 0,                 0));
@@ -424,6 +417,11 @@ void main_main ()
 	     
         // This defines a Geometry object
         geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
+	    
+        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+            // Cell-centered fields
+            Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
+        }
 
         // Allocate the demag tensor fft multifabs
         Kxx_dft_real.define(ba_large, dm_large, 1, 0);
@@ -451,7 +449,7 @@ void main_main ()
                                  alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
-    // initialize to zero; for demag_coupling==0 these aren't used
+    // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile
     PoissonPhi.setVal(0.);
     PoissonRHS.setVal(0.);
 
@@ -460,13 +458,12 @@ void main_main ()
         InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
 
         if(demag_coupling == 1){ 
-            //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-            //Compute RHS of Poisson equation
-            ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
             
-	    if (demag_solver == 0) { 
-                // store the current time so we can later compute total run time.
-                Real start_time = ParallelDescriptor::second();
+	    if (demag_solver == 0) {
+
+                // Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                // Compute RHS of Poisson equation
+                ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
 
 		//Initial guess for phi
                 PoissonPhi.setVal(0.);
@@ -479,37 +476,20 @@ void main_main ()
                 openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 	        // Calculate H from Phi
-	        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-	    
-		Real stop_time = ParallelDescriptor::second() - start_time;
-                ParallelDescriptor::ReduceRealMax(stop_time);
-                Print() << "MLMG Run time = " << stop_time << std::endl;
+	        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);	    
 
-                Abort("Finished MLMG solve");	    
-	   } else {
-   
-                // store the current time so we can later compute total run time.
-                Real start_time = ParallelDescriptor::second();
+            } else {
 
-                // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-                BoxArray ba_onegrid(geom.Domain());
-                DistributionMapping dm_onegrid(ba_onegrid);
-
-                // Storage for the small 1 grid Hfield
-                MultiFab Hx_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-                MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-                MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+                // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
+                for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+                    Mfield_padded[dir].setVal(0.);
+                    Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+                }
 
                 ComputeHFieldFFT(Mfield_padded, H_demagfield,
                                  Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                                  Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
                                  n_cell_large, geom_large, npts_large);
-     
-                Real stop_time = ParallelDescriptor::second() - start_time;
-                ParallelDescriptor::ReduceRealMax(stop_time);
-                Print() << "Spectral Run time = " << stop_time << std::endl;
-
-                Abort("Finished FFT solve");
 	    }
 	}
         
@@ -615,7 +595,7 @@ void main_main ()
 #ifdef NEUMANN
                 mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
                 // Calculate H from Phi
@@ -670,17 +650,16 @@ void main_main ()
 
 	        // Evolve H_demag (H^{n})
 	        if(demag_coupling == 1){
-                //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                //Compute RHS of Poisson equation
-                ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                    //Compute RHS of Poisson equation
+                    ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
                 
-                //Initial guess for phi
-                PoissonPhi.setVal(0.);
-
+                    //Initial guess for phi
+                    PoissonPhi.setVal(0.);
 #ifdef NEUMANN
-                mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                    mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
 	            // Calculate H from Phi
@@ -710,16 +689,15 @@ void main_main ()
                     //Compute RHS of Poisson equation
                     ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
     
-		            //Initial guess for phi
-		            PoissonPhi.setVal(0.);
-
+                    //Initial guess for phi
+                    PoissonPhi.setVal(0.);
 #ifdef NEUMANN
                     mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
                     openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
-		            // Calculate H from Phi
+                    // Calculate H from Phi
                     ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
                 }
     
@@ -833,7 +811,7 @@ void main_main ()
 #ifdef NEUMANN
                     mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	                openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
                     // Calculate H from Phi
                     ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);

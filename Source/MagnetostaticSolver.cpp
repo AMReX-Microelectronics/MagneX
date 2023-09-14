@@ -331,7 +331,6 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
     MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
     MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
 
-
     // Copying the elements in the 'upper right'  of the double-sized demag back to multifab that is the problem size
     for ( MFIter mfi(Hx_small_onegrid); mfi.isValid(); ++mfi )
     {
