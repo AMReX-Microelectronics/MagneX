@@ -1,0 +1,30 @@
+-------------------------------------------
+
+inputs_exchange
+
+A block of magnetic material in the center of the domain initialized
+so that My = Ms.  Only exchange physics is enabled, so the system does
+not change due to the interface boundary conditions.
+
+-------------------------------------------
+
+inputs_PSSW
+
+A block of magnetic material in the center of the domain initialized
+so that My = Ms.  Exchange and demag are enabled.
+
+-------------------------------------------
+
+inputs_restart
+
+This is the same as inputs_PSSW but with lower resolution and restart
+hooks more easily enabled to test this capability with these physics.
+
+-------------------------------------------
+
+inputs_std4
+
+Standard problem 4. Similar to inputs_PSSW with slightly different geometry
+and material properties.
+
+-------------------------------------------
