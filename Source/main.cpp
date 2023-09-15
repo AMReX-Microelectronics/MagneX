@@ -254,9 +254,16 @@ void main_main ()
         Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
         Mfield_prev_iter[dir].define(ba, dm, Ncomp, Nghost);
         Mfield_error[dir].define(ba, dm, Ncomp, Nghost);
+
         H_exchangefield[dir].define(ba, dm, Ncomp, 0);
         H_DMIfield[dir].define(ba, dm, Ncomp, 0);
         H_anisotropyfield[dir].define(ba, dm, Ncomp, 0);
+
+        // set to zero in case we don't include
+        H_exchangefield[dir].setVal(0.);
+        H_DMIfield[dir].setVal(0.);
+        H_anisotropyfield[dir].setVal(0.);
+
         LLG_RHS[dir].define(ba, dm, 1, 0);
         LLG_RHS_pre[dir].define(ba, dm, 1, 0);
         LLG_RHS_avg[dir].define(ba, dm, 1, 0);

@@ -1,21 +1,50 @@
-n_cell = 128 128 256
-max_grid_size = 64
+n_cell = 64 64 128
+max_grid_size = 32
 dt = 1.0e-14
 nsteps = 4
 plot_int = 1
 chk_int = 1
 #restart = 3
 
-TimeIntegratorOption = 1
+# INTEGRATION
 
-# ######### this is my original setup ###########
-# prob_lo = -3450.e-9 -3450.0e-9 -345.0e-9
-# prob_hi =  3450.e-9  3450.0e-9  345.0e-9
+TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 2 #Predictor-corrector
+#TimeIntegratorOption = 3 #2nd order artemis way
+#TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-# mag_lo = -2587.e-9 -2587.0e-9 -172.5e-9
-# mag_hi =  2587.e-9  2587.0e-9  172.5e-9
+## *** Selecting the integrator backend ***
+## integration.type can take on the following string or int values:
+## (without the quotation marks)
+## "ForwardEuler" or "0" = Native Forward Euler Integrator
+## "RungeKutta" or "1"   = Native Explicit Runge Kutta
+## "SUNDIALS" or "2"     = SUNDIALS ARKODE Integrator
+## for example:
+integration.type = RungeKutta
 
-# ######### this is the modified case that worked ##########
+## *** Parameters Needed For Native Explicit Runge-Kutta ***
+#
+## integration.rk.type can take the following values:
+### 0 = User-specified Butcher Tableau
+### 1 = Forward Euler
+### 2 = Trapezoid Method
+### 3 = SSPRK3 Method
+### 4 = RK4 Method
+integration.rk.type = 2
+
+## If using a user-specified Butcher Tableau, then
+## set nodes, weights, and table entries here:
+#
+## The Butcher Tableau is read as a flattened,
+## lower triangular matrix (but including the diagonal)
+## in row major format.
+##integration.rk.weights = 1
+##integration.rk.nodes = 0
+##integration.rk.tableau = 0.0
+
+#integration.sundials.strategy = ERK
+#integration.sundials.erk.method = SSPRK3
+
 prob_lo = -3450.e-9 -3450.0e-9 -3450.0e-9
 prob_hi =  3450.e-9  3450.0e-9  3450.0e-9
 
