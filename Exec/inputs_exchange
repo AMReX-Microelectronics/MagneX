@@ -3,10 +3,14 @@ max_grid_size = 32
 dt = 4.0e-15
 nsteps = 100
 plot_int = 10
-chk_int = 50
+chk_int = -1
 
-TimeIntegratorOption = 2
 # INTEGRATION
+
+#TimeIntegratorOption = 1 #Forward Euler
+TimeIntegratorOption = 2 #Predictor-corrector
+#TimeIntegratorOption = 3 #2nd order artemis way
+#TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 ## *** Selecting the integrator backend ***
 ## integration.type can take on the following string or int values:
