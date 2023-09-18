@@ -1,5 +1,13 @@
 -------------------------------------------
 
+inputs_compare
+
+A domain of magnetic material initialized
+so that My = Ms.  Exchange and demag are enabled.
+To be compared to OpenBC_Conv.m.
+
+-------------------------------------------
+
 inputs_exchange
 
 A block of magnetic material in the center of the domain initialized
