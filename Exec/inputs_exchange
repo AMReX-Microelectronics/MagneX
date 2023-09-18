@@ -60,6 +60,7 @@ anisotropy_axis = 0.0 1.0 0.0
 DMI_val = 0.0 # unit is J/m^2
 
 demag_coupling = 0
+demag_solver = 0  # 0 = Open Poisson MLMG; 1 = FFT-based
 M_normalization = 1
 exchange_coupling = 1
 anisotropy_coupling = 0
