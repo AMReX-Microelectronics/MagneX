@@ -1,5 +1,5 @@
-nx = 128; % number of cells on x direction
-ny = 128;
+nx = 32; % number of cells on x direction
+ny = 32;
 nz = 8;
 
 dx = 1.171875e-9;
@@ -82,7 +82,7 @@ for K = -nz + 1 : nz - 1 % Calculation of Demag tensor, see NAKATANI JJAP 1989
     end
 end % calculation of demag tensor done
 
-fprintf('Done with Init K')
+fprintf('Done with Init K\n')
 
 outFile = fopen('Kdata.txt', 'w');
 
@@ -104,7 +104,7 @@ Kyy_fft = fftn(Kyy);
 Kyz_fft = fftn(Kyz);
 Kzz_fft = fftn(Kzz);
 
-fprintf('Done with FFT K')
+fprintf('Done with FFT K\n')
 
 outFile = fopen('Kyyfftdata.txt', 'w');
 
@@ -140,7 +140,7 @@ Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % c
 Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
 
-fprintf('Done with iFFT H')
+fprintf('Done with iFFT H\n')
 
 Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
 Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
