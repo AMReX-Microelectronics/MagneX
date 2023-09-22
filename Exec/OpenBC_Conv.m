@@ -6,13 +6,10 @@ dx = 1.e-9; % cell size on x direction, in nanometers
 dy = 1.e-9;
 dz = 1.e-9;
 
-alpha = 0.5; % damping constant
-
 Ms = 800; % saturation magnetization
 
-My = repmat(Ms, [nx ny nz]);
-
 Mx = zeros([nx ny nz]); % TODO: reduce truncation and zeropadding into one step
+My = repmat(Ms, [nx ny nz]);
 Mz = Mx;
 
 Kxx = zeros(nx * 2, ny * 2, nz * 2); % Initialization of demagnetization tensor
@@ -70,9 +67,6 @@ for K = -nz + 1 : nz - 1 % Calculation of Demag tensor, see NAKATANI JJAP 1989
             Kyy(L,M,N) = Kyy(L,M,N) * prefactor;
             Kyz(L,M,N) = Kyz(L,M,N) * - prefactor;
             Kzz(L,M,N) = Kzz(L,M,N) * prefactor;
-%             fprintf('%d %d %d %f %f %f %f %f %f \n', ...
-%                 L - nx, M - ny, N - nz, Kxx(L,M,N), Kxy(L,M,N), Kxz(L,M,N), ...
-%                 Kyy(L,M,N), Kyz(L,M,N), Kzz(L,M,N));
         end
     end
 end % calculation of demag tensor done
@@ -94,8 +88,10 @@ Kxx_fft = fftn(Kxx); % fast fourier transform of demag tensor
 Kxy_fft = fftn(Kxy); % need to be done only once
 Kxz_fft = fftn(Kxz);
 Kyy_fft = fftn(Kyy);
+Kyz_fft = fftn(Kyz);
+Kzz_fft = fftn(Kzz);
 
-outFile = fopen('KfftXdata.txt', 'w');
+outFile = fopen('Kyyfftdata.txt', 'w');
 
 for k = 1 : 2*nz
     for j = 1 : 2*ny
@@ -105,12 +101,9 @@ for k = 1 : 2*nz
         end
     end
 end
-
 fprintf(outFile,'\r\n');
 
-Kyz_fft = fftn(Kyz);
-
-outFile = fopen('KfftYdata.txt', 'w');
+outFile = fopen('Kyzfftdata.txt', 'w');
 
 for k = 1 : 2*nz
     for j = 1 : 2*ny
@@ -120,14 +113,9 @@ for k = 1 : 2*nz
         end
     end
 end
-
 fprintf(outFile,'\r\n');
 
-Kzz_fft = fftn(Kzz);
-
 outFile = fopen('Hdata.txt', 'w');
-
-outFile2 = fopen('fftHdata.txt', 'w');
 
 Mx(end + nx, end + ny, end + nz) = 0; % zero padding
 My(end + nx, end + ny, end + nz) = 0;
@@ -147,8 +135,6 @@ Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 for k = 1 : nz
     for j = 1 : ny
         for i = 1 : nx
-            %fprintf(outFile2, '%d\t%d\t%d\t%f\t%f\t\n', ...
-                    %i, j, k, real(fftHy(i,j,k)), imag(fftHy(i,j,k)));
             fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
                     i, j, k, Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
         end
@@ -158,4 +144,3 @@ end
 fprintf(outFile,'\r\n');
 
 fclose('all');
-
