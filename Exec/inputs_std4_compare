@@ -1,8 +1,8 @@
-n_cell = 512 128 8
-max_grid_size = 64
-dt = 1.0e-14
-nsteps = 8
-plot_int = 1
+n_cell = 166 42 1
+max_grid_size = 166
+dt = 5.e-6
+nsteps = 150000
+plot_int = 100
 chk_int = -1
 restart = -1
 
@@ -45,23 +45,27 @@ integration.rk.type = 2
 #integration.sundials.strategy = ERK
 #integration.sundials.erk.method = SSPRK3
 
-prob_lo = -300.e-9 -70.5e-9 -1.0e-9
-prob_hi =  300.e-9  70.0e-9  4.0e-9
+prob_lo = 0. 0. 0.
+prob_hi = 498.e-9 126.e-9 3.e-9
 
-mag_lo = -250.e-9 -62.5e-9 0.0e-9
-mag_hi =  250.e-9  62.5e-9 3.0e-9
+mag_lo = 0. 0. 0.
+mag_hi = 498.e-9 126.e-9 3.e-9
 
-mu0 = 1.25663706212e-6 
-alpha_val = 0.02
-Ms_val = 8.0e5
-gamma_val = -1.759e11
+mu0 = 1.25663e-6
+alpha_val = 0.5
+Ms_val = 800.
+
+# see ComputeLLG_RHS.H: -0.221 * dt = mu_0 * gamma
+gamma_val = -0.8793
 exchange_val = 1.3e-11
+
+# not used
 anisotropy_val = -139.26
 anisotropy_axis = 0.0 1.0 0.0
 DMI_val = 0.0 # unit is J/m^2
 
 demag_coupling = 1
-demag_solver = 0  # 0 = Open Poisson MLMG; 1 = FFT-based
+demag_solver = 1  # 0 = Open Poisson MLMG; 1 = FFT-based
 M_normalization = 1
 exchange_coupling = 1
 anisotropy_coupling = 0
