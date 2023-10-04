@@ -125,9 +125,6 @@ Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % c
 Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
 
-fftHx = fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft;
-fftHy = fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft;
-
 Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
 Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );

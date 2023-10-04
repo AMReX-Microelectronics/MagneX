@@ -90,6 +90,10 @@ Kzz_fft = fftn(Kzz);
 
 snapFile = fopen('Mvstime.txt', 'w');
 outFile = fopen('Mdata.txt', 'w');
+
+outFileH = fopen('Hdata.txt', 'w');
+
+
 for t = 1 : timesteps
     Mx(end + nx, end + ny, end + nz) = 0; % zero padding
     My(end + nx, end + ny, end + nz) = 0;
@@ -102,6 +106,21 @@ for t = 1 : timesteps
     Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
     Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
     Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
+
+    if (t == 1)
+        for k = 1 : nz
+        for j = 1 : ny
+        for i = 1 : nx
+            fprintf(outFileH, '%d\t%d\t%d\t%f\t%f\t%f\n', ...
+                    i, j, k, Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
+        end
+        end
+        end
+
+        fprintf(outFileH,'\r\n');
+        return;
+    endif
+
     Mx = Mx (1:nx, 1:ny, 1:nz); % truncation of Mx, remove zero padding
     My = My (1:nx, 1:ny, 1:nz);
     Mz = Mz (1:nx, 1:ny, 1:nz);
@@ -132,19 +151,7 @@ for t = 1 : timesteps
         end
     end
     
-    if t < 4000
-        Hx = Hx + 100;
-        Hy = Hy + 100;
-        Hz = Hz + 100;
-    elseif t < 6000
-        Hx = Hx + (6000 - t) / 20;
-        Hx = Hx + (6000 - t) / 20;
-        Hx = Hx + (6000 - t) / 20;
-    elseif t > 50000
-        Hx = Hx - 19.576;
-        Hy = Hy + 3.422;
-        alpha = 0.02;
-    end
+
 
     
     MxHx = My .* Hz - Mz .* Hy;

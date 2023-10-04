@@ -3,7 +3,7 @@ ny = 32;
 nz = 8;
 
 dx = 1.171875e-9;
-dy = 1.09375e-9
+dy = 1.09375e-9;
 dz = 6.25e-10;
 
 Ms = 8.e5; % saturation magnetization
@@ -20,8 +20,6 @@ for i = 4 : 29
 end
 end
 end
-
-fprintf('Done with Init M\n')
 
 Kxx = zeros(nx * 2, ny * 2, nz * 2); % Initialization of demagnetization tensor
 Kxy = Kxx;
@@ -82,8 +80,6 @@ for K = -nz + 1 : nz - 1 % Calculation of Demag tensor, see NAKATANI JJAP 1989
     end
 end % calculation of demag tensor done
 
-fprintf('Done with Init K\n')
-
 outFile = fopen('Kdata.txt', 'w');
 
 for k = 1 : 2*nz
@@ -103,8 +99,6 @@ Kxz_fft = fftn(Kxz);
 Kyy_fft = fftn(Kyy);
 Kyz_fft = fftn(Kyz);
 Kzz_fft = fftn(Kzz);
-
-fprintf('Done with FFT K\n')
 
 outFile = fopen('Kyyfftdata.txt', 'w');
 
@@ -139,8 +133,6 @@ Mz(end + nx, end + ny, end + nz) = 0;
 Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
 Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
-
-fprintf('Done with iFFT H\n')
 
 Hx = Hx (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) ); % truncation of demag field
 Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
