@@ -393,8 +393,11 @@ void main_main ()
     MLMG mlmg(mlabec);
     mlmg.setVerbose(2);
 #else
-    OpenBCSolver openbc({geom}, {ba}, {dm}, info);
-    openbc.setVerbose(2);
+    OpenBCSolver openbc;
+    if (demag_coupling ==1 && demag_solver == 0) {
+        openbc.define({geom}, {ba}, {dm}, info);
+        openbc.setVerbose(2);
+    }
 #endif
     if (demag_solver == 1) {
 
