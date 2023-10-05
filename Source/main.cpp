@@ -115,8 +115,7 @@ void main_main ()
         pp.get("DMI_val",DMI_val);
         pp.get("anisotropy_val",anisotropy_val);
 
-        demag_solver = 1;
-	pp.query("demag_solver",demag_solver);
+	pp.get("demag_solver",demag_solver);
         pp.get("demag_coupling",demag_coupling);
         pp.get("M_normalization", M_normalization);
         pp.get("exchange_coupling", exchange_coupling);
