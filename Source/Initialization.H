@@ -19,8 +19,6 @@ void InitializeMagneticProperties(
                    Real        anisotropy_val,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
-                   amrex::GpuArray<amrex::Real, 3> mag_lo,
-                   amrex::GpuArray<amrex::Real, 3> mag_hi,
                    const       Geometry& geom);
 
 

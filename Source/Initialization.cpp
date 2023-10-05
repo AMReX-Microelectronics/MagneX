@@ -17,8 +17,6 @@ void InitializeMagneticProperties(MultiFab&  alpha,
                    Real        anisotropy_val,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
-                   amrex::GpuArray<amrex::Real, 3> mag_lo,
-                   amrex::GpuArray<amrex::Real, 3> mag_hi,
                    const       Geometry& geom)
 {
 
@@ -37,13 +35,36 @@ void InitializeMagneticProperties(MultiFab&  alpha,
     anisotropy.setVal(0.);
 
     ParmParse pp;
+
+    std::string alpha_parser_string;
+    pp.get("alpha_parser(x,y,z)",alpha_parser_string);
+    Parser alpha_parser(alpha_parser_string);
+    auto alpha_p = alpha_parser.compile<3>();
+
     std::string Ms_parser_string;
-
     pp.get("Ms_parser(x,y,z)",Ms_parser_string);
-    Print() << "HACK " << Ms_parser_string << std::endl;
-
     Parser Ms_parser(Ms_parser_string);
     auto Ms_p = Ms_parser.compile<3>();
+
+    std::string gamma_parser_string;
+    pp.get("gamma_parser(x,y,z)",gamma_parser_string);
+    Parser gamma_parser(gamma_parser_string);
+    auto gamma_p = gamma_parser.compile<3>();
+    
+    std::string exchange_parser_string;
+    pp.get("exchange_parser(x,y,z)",exchange_parser_string);
+    Parser exchange_parser(exchange_parser_string);
+    auto exchange_p = exchange_parser.compile<3>();
+
+    std::string anisotropy_parser_string;
+    pp.get("anisotropy_parser(x,y,z)",anisotropy_parser_string);
+    Parser anisotropy_parser(anisotropy_parser_string);
+    auto anisotropy_p = anisotropy_parser.compile<3>();
+
+    std::string DMI_parser_string;
+    pp.get("DMI_parser(x,y,z)",DMI_parser_string);
+    Parser DMI_parser(DMI_parser_string);
+    auto DMI_p = DMI_parser.compile<3>();
     
     // loop over boxes
     for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
@@ -63,22 +84,13 @@ void InitializeMagneticProperties(MultiFab&  alpha,
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
 
-            if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
-                if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
-                    if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
-                        alpha_arr(i,j,k) = alpha_val;
-                        gamma_arr(i,j,k) = gamma_val;
-                        Ms_arr(i,j,k) = Ms_val;
-                        exchange_arr(i,j,k) = exchange_val;
-                        DMI_arr(i,j,k) = DMI_val;
-                        anisotropy_arr(i,j,k) = anisotropy_val;
-                        if (Ms_arr(i,j,k) < Ms_val) {
-                            printf("i= %d, j = %d, k = %d, Ms = %g \n", i, j, k, Ms_arr(i,j,k));
-                        }
-                        // amrex::Print() << "i=" << i << "j=" << j << "k=" << k << Ms_xface_arr(i,j,k) << "\n";
-                    }
-                }
-            }
+            alpha_arr(i,j,k) = alpha_p(x,y,z);
+            gamma_arr(i,j,k) = gamma_p(x,y,z);
+            Ms_arr(i,j,k) = Ms_p(x,y,z);
+            exchange_arr(i,j,k) = exchange_p(x,y,z);
+            DMI_arr(i,j,k) = DMI_p(x,y,z);
+            anisotropy_arr(i,j,k) = anisotropy_p(x,y,z);
+
         }); 
     }
     // fill periodic ghost cells for Ms. Used to calculate Ms_lo(hi)_x(y,z) for exchange field calculation

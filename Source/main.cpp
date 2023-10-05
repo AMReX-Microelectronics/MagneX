@@ -69,9 +69,6 @@ void main_main ()
     amrex::GpuArray<amrex::Real, 3> prob_lo; // physical lo coordinate
     amrex::GpuArray<amrex::Real, 3> prob_hi; // physical hi coordinate
 
-    amrex::GpuArray<amrex::Real, 3> mag_lo; // physical lo coordinate of magnetic region
-    amrex::GpuArray<amrex::Real, 3> mag_hi; // physical hi coordinate of magnetic region
-
     int TimeIntegratorOption;
 
     // Magnetic Properties
@@ -108,15 +105,8 @@ void main_main ()
         // Material Properties
 	
         pp.get("mu0",mu0);
-        pp.get("alpha_val",alpha_val);
-        pp.get("gamma_val",gamma_val);
-        pp.get("Ms_val",Ms_val);
-        pp.get("exchange_val",exchange_val);
-        pp.get("DMI_val",DMI_val);
-        pp.get("anisotropy_val",anisotropy_val);
 
-        demag_solver = 1;
-	pp.query("demag_solver",demag_solver);
+	pp.get("demag_solver",demag_solver);
         pp.get("demag_coupling",demag_coupling);
         pp.get("M_normalization", M_normalization);
         pp.get("exchange_coupling", exchange_coupling);
@@ -156,16 +146,6 @@ void main_main ()
             }
         }
 
-        if (pp.queryarr("mag_lo",temp)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                mag_lo[i] = temp[i];
-            }
-        }
-        if (pp.queryarr("mag_hi",temp)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                mag_hi[i] = temp[i];
-            }
-        }
         if (pp.queryarr("anisotropy_axis",temp)) {
             for (int i=0; i<AMREX_SPACEDIM; ++i) {
                 anisotropy_axis[i] = temp[i];
@@ -458,7 +438,7 @@ void main_main ()
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
                                  alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
-                                 prob_lo, prob_hi, mag_lo, mag_hi, geom);
+                                 prob_lo, prob_hi, geom);
 
     // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile
     PoissonPhi.setVal(0.);
