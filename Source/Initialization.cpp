@@ -1,5 +1,8 @@
 #include "Initialization.H"
 
+#include "AMReX_ParmParse.H"
+#include "AMReX_Parser.H"
+
 void InitializeMagneticProperties(MultiFab&  alpha,
                    MultiFab&   Ms,
                    MultiFab&   gamma,
@@ -33,6 +36,15 @@ void InitializeMagneticProperties(MultiFab&  alpha,
     DMI.setVal(0.);
     anisotropy.setVal(0.);
 
+    ParmParse pp;
+    std::string Ms_parser_string;
+
+    pp.get("Ms_parser(x,y,z)",Ms_parser_string);
+    Print() << "HACK " << Ms_parser_string << std::endl;
+
+    Parser Ms_parser(Ms_parser_string);
+    auto Ms_p = Ms_parser.compile<3>();
+    
     // loop over boxes
     for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
     {

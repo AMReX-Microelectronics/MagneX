@@ -6,6 +6,8 @@ plot_int = 100
 chk_int = -1
 restart = -1
 
+Ms_parser(x,y,z) = "666."
+
 # INTEGRATION
 
 TimeIntegratorOption = 1 #Forward Euler
