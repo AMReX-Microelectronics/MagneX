@@ -39,31 +39,37 @@ void InitializeMagneticProperties(MultiFab&  alpha,
     std::string alpha_parser_string;
     pp.get("alpha_parser(x,y,z)",alpha_parser_string);
     Parser alpha_parser(alpha_parser_string);
+    alpha_parser.registerVariables({"x","y","z"});
     auto alpha_p = alpha_parser.compile<3>();
 
     std::string Ms_parser_string;
     pp.get("Ms_parser(x,y,z)",Ms_parser_string);
     Parser Ms_parser(Ms_parser_string);
+    Ms_parser.registerVariables({"x","y","z"});
     auto Ms_p = Ms_parser.compile<3>();
 
     std::string gamma_parser_string;
     pp.get("gamma_parser(x,y,z)",gamma_parser_string);
     Parser gamma_parser(gamma_parser_string);
+    gamma_parser.registerVariables({"x","y","z"});
     auto gamma_p = gamma_parser.compile<3>();
     
     std::string exchange_parser_string;
     pp.get("exchange_parser(x,y,z)",exchange_parser_string);
     Parser exchange_parser(exchange_parser_string);
+    exchange_parser.registerVariables({"x","y","z"});
     auto exchange_p = exchange_parser.compile<3>();
 
     std::string anisotropy_parser_string;
     pp.get("anisotropy_parser(x,y,z)",anisotropy_parser_string);
     Parser anisotropy_parser(anisotropy_parser_string);
+    anisotropy_parser.registerVariables({"x","y","z"});
     auto anisotropy_p = anisotropy_parser.compile<3>();
 
     std::string DMI_parser_string;
     pp.get("DMI_parser(x,y,z)",DMI_parser_string);
     Parser DMI_parser(DMI_parser_string);
+    DMI_parser.registerVariables({"x","y","z"});
     auto DMI_p = DMI_parser.compile<3>();
     
     // loop over boxes

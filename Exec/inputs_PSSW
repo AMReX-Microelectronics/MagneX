@@ -6,6 +6,26 @@ plot_int = 500
 chk_int = -1
 restart = -1
 
+prob_lo = -3450.e-9 -3450.0e-9 -3450.0e-9
+prob_hi =  3450.e-9  3450.0e-9  3450.0e-9
+
+mu0 = 1.25663706212e-6 
+
+alpha_parser(x,y,z) = "0.005        * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
+Ms_parser(x,y,z) = "1.4e5           * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
+gamma_parser(x,y,z) = "-1.759e11    * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
+exchange_parser(x,y,z) = "3.1e-12   * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
+anisotropy_parser(x,y,z) = "-139.26 * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
+DMI_parser(x,y,z) = "0.0            * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)" # unit is J/m^2
+
+demag_coupling = 1
+demag_solver = 0  # 0 = Open Poisson MLMG; 1 = FFT-based
+M_normalization = 1
+exchange_coupling = 1
+anisotropy_coupling = 0
+anisotropy_axis = 0.0 1.0 0.0
+DMI_coupling = 0
+
 # INTEGRATION
 
 TimeIntegratorOption = 1 #Forward Euler
@@ -44,25 +64,3 @@ integration.rk.type = 2
 
 #integration.sundials.strategy = ERK
 #integration.sundials.erk.method = SSPRK3
-
-prob_lo = -3450.e-9 -3450.0e-9 -3450.0e-9
-prob_hi =  3450.e-9  3450.0e-9  3450.0e-9
-
-mag_lo = -2587.e-9 -2587.0e-9 -172.5e-9
-mag_hi =  2587.e-9  2587.0e-9  172.5e-9
-
-mu0 = 1.25663706212e-6 
-alpha_val = 0.005
-Ms_val = 1.4e5
-gamma_val = -1.759e11
-exchange_val = 3.1e-12
-anisotropy_val = -139.26
-anisotropy_axis = 0.0 1.0 0.0
-DMI_val = 0.0 # unit is J/m^2
-
-demag_coupling = 1
-demag_solver = 0  # 0 = Open Poisson MLMG; 1 = FFT-based
-M_normalization = 1
-exchange_coupling = 1
-anisotropy_coupling = 0
-DMI_coupling = 0
