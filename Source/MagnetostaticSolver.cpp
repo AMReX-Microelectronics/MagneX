@@ -698,15 +698,15 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       fftw_execute(backward_plan[i]);
 #endif
 
-      // Standard scaling after fft and inverse fft using FFTW
-#if (AMREX_SPACEDIM == 2)
-      mf_onegrid_2[mfi] /= n_cell[0]*n_cell[1];
-#elif (AMREX_SPACEDIM == 3)
-      mf_onegrid_2[mfi] /= n_cell[0]*n_cell[1]*n_cell[2];
-#endif
-
     }
 
+      // Standard scaling after fft and inverse fft using FFTW
+#if (AMREX_SPACEDIM == 2)
+    mf_onegrid_2.mult(1./(n_cell[0]*n_cell[1]));
+#elif (AMREX_SPACEDIM == 3)
+    mf_onegrid_2.mult(1./(n_cell[0]*n_cell[1]*n_cell[2]));
+#endif
+    
     // copy contents of mf_onegrid_2 into mf
     mf_2.ParallelCopy(mf_onegrid_2, 0, 0, 1);
 
@@ -721,3 +721,22 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
     }
 
 }
+
+#ifdef AMREX_USE_CUDA
+std::string cufftErrorToString (const cufftResult& err)
+{
+    switch (err) {
+    case CUFFT_SUCCESS:  return "CUFFT_SUCCESS";
+    case CUFFT_INVALID_PLAN: return "CUFFT_INVALID_PLAN";
+    case CUFFT_ALLOC_FAILED: return "CUFFT_ALLOC_FAILED";
+    case CUFFT_INVALID_TYPE: return "CUFFT_INVALID_TYPE";
+    case CUFFT_INVALID_VALUE: return "CUFFT_INVALID_VALUE";
+    case CUFFT_INTERNAL_ERROR: return "CUFFT_INTERNAL_ERROR";
+    case CUFFT_EXEC_FAILED: return "CUFFT_EXEC_FAILED";
+    case CUFFT_SETUP_FAILED: return "CUFFT_SETUP_FAILED";
+    case CUFFT_INVALID_SIZE: return "CUFFT_INVALID_SIZE";
+    case CUFFT_UNALIGNED_DATA: return "CUFFT_UNALIGNED_DATA";
+    default: return std::to_string(err) + " (unknown error code)";
+    }
+}
+#endif
