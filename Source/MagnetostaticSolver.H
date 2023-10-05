@@ -2,6 +2,10 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_MultiFabUtil.H>
 
+#ifdef AMREX_USE_CUDA
+#include <cufft.h>
+#endif
+
 using namespace amrex;
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
@@ -61,3 +65,6 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
                       const Geometry&                        geom_large,
 		      long                                   npts_large);
  
+#ifdef AMREX_USE_CUDA                                                                                      
+std::string cufftErrorToString (const cufftResult& err);
+#endif
