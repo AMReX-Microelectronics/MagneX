@@ -446,7 +446,8 @@ void main_main ()
 
     if (restart == -1) {      
         //Initialize fields
-        InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
+        InitializeFields(Mfield, prob_lo, prob_hi, geom);
+        ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
 
         if(demag_coupling == 1){ 
             
@@ -571,6 +572,8 @@ void main_main ()
         
         Real step_strt_time = ParallelDescriptor::second();
         
+        ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
+
         if (TimeIntegratorOption == 1){ // first order forward Euler
             
             amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";

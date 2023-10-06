@@ -24,8 +24,13 @@ void InitializeMagneticProperties(
 
 void InitializeFields( 
                    Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
-                   Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
-                   MultiFab&   Ms,
                    amrex::GpuArray<amrex::Real, 3> prob_lo,
                    amrex::GpuArray<amrex::Real, 3> prob_hi,
                    const       Geometry& geom);
+
+void ComputeHbias(
+                Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
+                amrex::GpuArray<amrex::Real, 3> prob_lo,
+                amrex::GpuArray<amrex::Real, 3> prob_hi,
+                const           Real& time,
+                const       Geometry& geom);
