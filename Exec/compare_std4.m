@@ -7,7 +7,7 @@ dy = 3;
 dz = 3;
 
 dt = 5E-6; % timestep
-timesteps = 150000;
+timesteps = 50; % hack 150000;
 alpha = 0.5; % damping constant
 exchConstant = 1.3E-11 * 1E18; % nanometer/nanosecond units
 % exchConstant = 1E-13 * 1E18; % nanometer/nanosecond units
@@ -200,19 +200,20 @@ for t = 1 : timesteps
         end
         fprintf(outFile,'\r\n');
     end
+    fprintf('Done with step %d\n',t)
 end
 fclose('all');
 
 %% plot
-load('Mvstime.txt')
-load('std4_magtense.txt')
-close all
+%load('Mvstime.txt')
+%load('std4_magtense.txt')
+%close all
 
-figure
+%figure
 % plot(Mvstime(25:end,1), Mvstime(25:end,2),'b');
-hold on
-plot(Mvstime(25:end,1)*dt-50000*dt, Mvstime(25:end,3),':r','LineWidth',2);
+%hold on
+%plot(Mvstime(25:end,1)*dt-50000*dt, Mvstime(25:end,3),':r','LineWidth',2);
 % plot(Mvstime(25:end,1), Mvstime(25:end,4),'--k');
-plot(std4_magtense(:,1)*1e9, std4_magtense(:,3),'--b','LineWidth',1);
-legend('My_{matlab}','My_{magtense}')
+%plot(std4_magtense(:,1)*1e9, std4_magtense(:,3),'--b','LineWidth',1);
+%legend('My_{matlab}','My_{magtense}')
 % legend('Mx','My','Mz')
