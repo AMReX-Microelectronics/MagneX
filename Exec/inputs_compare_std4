@@ -11,6 +11,14 @@ prob_hi = 498.e-9 126.e-9 3.e-9
 
 mu0 = 1.25663e-6
 
+Mx_parser(x,y,z) = "0."
+My_parser(x,y,z) = "800 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
+Mz_parser(x,y,z) = "0."
+
+Hx_bias_parser(x,y,z,t) = "0."
+Hy_bias_parser(x,y,z,t) = "2.387324146378430e4 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
+Hz_bias_parser(x,y,z,t) = "0."
+
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 Ms_parser(x,y,z) = "800.            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 gamma_parser(x,y,z) = "-0.8793      * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
