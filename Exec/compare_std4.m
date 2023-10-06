@@ -117,8 +117,8 @@ for t = 1 : timesteps
         end
         end
 
+        % to compare initial demag field
         fprintf(outFileH,'\r\n');
-        return;
     endif
 
     Mx = Mx (1:nx, 1:ny, 1:nz); % truncation of Mx, remove zero padding
@@ -151,8 +151,19 @@ for t = 1 : timesteps
         end
     end
     
-
-
+    if t < 4000
+        Hx = Hx + 100;
+        Hy = Hy + 100;
+        Hz = Hz + 100;
+    elseif t < 6000
+        Hx = Hx + (6000 - t) / 20;
+        Hy = Hy + (6000 - t) / 20;
+        Hz = Hz + (6000 - t) / 20;
+    elseif t > 50000
+        Hx = Hx - 19.576;
+        Hy = Hy + 3.422;
+        alpha = 0.02;
+    end
     
     MxHx = My .* Hz - Mz .* Hy;
     MxHy = Mz .* Hx - Mx .* Hz;
