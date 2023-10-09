@@ -72,7 +72,6 @@ void main_main ()
     int TimeIntegratorOption;
 
     // Magnetic Properties
-    Real alpha_val, gamma_val, Ms_val, exchange_val, DMI_val, anisotropy_val;
     Real mu0;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
@@ -271,12 +270,6 @@ void main_main ()
     amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
     amrex::Print() << " DMI_coupling        = " << DMI_coupling        << "\n";
     amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
-    amrex::Print() << " Ms                  = " << Ms_val              << "\n";
-    amrex::Print() << " alpha               = " << alpha_val           << "\n";
-    amrex::Print() << " gamma               = " << gamma_val           << "\n";
-    amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
-    amrex::Print() << " DMI_value           = " << DMI_val             << "\n";
-    amrex::Print() << " anisotropy_value    = " << anisotropy_val      << "\n";
     amrex::Print() << "=======================================================\n";
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
@@ -437,7 +430,6 @@ void main_main ()
     }
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
-                                 alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
                                  prob_lo, prob_hi, geom);
 
     // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile

@@ -15,9 +15,9 @@ Mx_parser(x,y,z) = "800 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
-Hx_bias_parser(x,y,z,t) = "0."
-Hy_bias_parser(x,y,z,t) = "2.387324146378430e4 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
-Hz_bias_parser(x,y,z,t) = "0."
+Hx_bias_parser(x,y,z,t) = "(t<=0.02)*1.e5 + (t>0.02)*(t<=0.03)*(0.03-t)*1.e7 - (t>0.03)*19576"
+Hy_bias_parser(x,y,z,t) = "(t<=0.02)*1.e5 + (t>0.02)*(t<=0.03)*(0.03-t)*1.e7 + (t>0.03)*3422"
+Hz_bias_parser(x,y,z,t) = "(t<=0.02)*1.e5 + (t>0.02)*(t<=0.03)*(0.03-t)*1.e7"
 
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 Ms_parser(x,y,z) = "800.            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
