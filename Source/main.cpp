@@ -81,6 +81,9 @@ void main_main ()
     int DMI_coupling;
     int anisotropy_coupling;
 
+    int alpha_scale_step = -1;
+    Real alpha_scale_factor = 1.;
+
     // inputs parameters
     {
         // ParmParse is way of reading inputs from the inputs file
@@ -112,6 +115,10 @@ void main_main ()
         pp.get("DMI_coupling", DMI_coupling);
         pp.get("anisotropy_coupling", anisotropy_coupling);
 
+        // change alpha during runtime
+        pp.query("alpha_scale_step",alpha_scale_step);
+        pp.query("alpha_scale_factor",alpha_scale_factor);
+        
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
         pp.query("nsteps",nsteps);
@@ -566,6 +573,11 @@ void main_main ()
         
         ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
 
+        // scale alpha
+        if (step == alpha_scale_step) {
+            alpha.mult(alpha_scale_factor);
+        }
+        
         if (TimeIntegratorOption == 1){ // first order forward Euler
             
             amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
