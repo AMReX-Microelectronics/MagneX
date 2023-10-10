@@ -150,16 +150,21 @@ for t = 1 : timesteps
             end
         end
     end
-    
-    if t < 4000
-        Hx = Hx + 100;
+
+    % hbias in
+    if t < 4000 % timestep 4000 = 0.02 s
+        Hx = Hx + 100; % multiply by 1,000 in MagneX
         Hy = Hy + 100;
         Hz = Hz + 100;
-    elseif t < 6000
-        Hx = Hx + (6000 - t) / 20;
+    elseif t < 6000 % timestep 6000 = 0.03 s
+        Hx = Hx + (6000 - t) / 20; % multiply by 1,000 in MagneX
         Hy = Hy + (6000 - t) / 20;
         Hz = Hz + (6000 - t) / 20;
-    elseif t > 50000
+    elseif t > 50000 % timestep 50000 = 0.25 s
+        % mu_0 Hx = -24.6 mT -> Hx = 19.576
+        % MagneX should use 19,576 [A/m]
+        % mu_0 Hy = 4.3 mT
+        % and by the same logic, Hy = 3,422 [A/m]
         Hx = Hx - 19.576;
         Hy = Hy + 3.422;
         alpha = 0.02;

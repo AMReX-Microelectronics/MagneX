@@ -1,6 +1,7 @@
 n_cell = 166 42 1
 max_grid_size = 166
 dt = 5.e-6
+#dt = 1.e-13
 nsteps = 150000
 plot_int = 100
 chk_int = -1
@@ -11,7 +12,7 @@ prob_hi = 498.e-9 126.e-9 3.e-9
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "800 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
+Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
@@ -20,11 +21,12 @@ Hy_bias_parser(x,y,z,t) = "(t<=0.02)*1.e5 + (t>0.02)*(t<=0.03)*(0.03-t)*1.e7 + (
 Hz_bias_parser(x,y,z,t) = "(t<=0.02)*1.e5 + (t>0.02)*(t<=0.03)*(0.03-t)*1.e7"
 
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
-Ms_parser(x,y,z) = "800.            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
+Ms_parser(x,y,z) = "8.e5            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 gamma_parser(x,y,z) = "-0.8793      * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
+gamma_parser(x,y,z) = "-1.759e11    * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 exchange_parser(x,y,z) = "1.3e-11   * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
-anisotropy_parser(x,y,z) = "-139.26 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
-DMI_parser(x,y,z) = "0.0            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)" # unit is J/m^2
+anisotropy_parser(x,y,z) = "0."
+DMI_parser(x,y,z) = "0."
 
 alpha_scale_step = 50000
 alpha_scale_factor = 0.04
