@@ -88,12 +88,6 @@ Kyy_fft = fftn(Kyy);
 Kyz_fft = fftn(Kyz);
 Kzz_fft = fftn(Kzz);
 
-snapFile = fopen('Mvstime.txt', 'w');
-outFile = fopen('Mdata.txt', 'w');
-
-outFileH = fopen('Hdata.txt', 'w');
-
-
 for t = 1 : timesteps
     Mx(end + nx, end + ny, end + nz) = 0; % zero padding
     My(end + nx, end + ny, end + nz) = 0;
@@ -107,7 +101,8 @@ for t = 1 : timesteps
     Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
     Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 
-    if (t == 1)
+    if mod(t, 100) == 0
+        outFileH = fopen(['Hdata',num2str(t),'.txt'], 'w');
         for k = 1 : nz
         for j = 1 : ny
         for i = 1 : nx
@@ -189,21 +184,23 @@ for t = 1 : timesteps
     My = My ./ mag * Ms;
     Mz = Mz ./ mag * Ms;
     
-    if mod(t, 2000) == 0
+    if mod(t, 100) == 0
         MxMean = mean(mean(Mx));
         MyMean = mean(mean(My));
         MzMean = mean(mean(Mz));
+        snapFile = fopen(['Mvstime',num2str(t),'.txt'], 'w');
         fprintf(snapFile, '%d\t%f\t%f\t%f\r\n', t, MxMean/Ms, MyMean/Ms, MzMean/Ms);
+
+        outFileM = fopen(['Mdata',num2str(t),'.txt'], 'w');
         for k = 1 : nz
             for j = 1 : ny
                 for i = 1 : nx
-                    fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\r\n', ... 
+                    fprintf(outFileM, '%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\r\n', ... 
                         i, j, k, Mx(i,j,k)/Ms, My(i,j,k)/Ms, Mz(i,j,k)/Ms, ...
                         Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
                 end
             end
         end
-        fprintf(outFile,'\r\n');
     end
     fprintf('Done with step %d\n',t)
 end
