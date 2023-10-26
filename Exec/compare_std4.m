@@ -6,7 +6,7 @@ dx = 3; % cell size on x direction, in nanometers
 dy = 3;
 dz = 3;
 
-dt = 5E-6; % timestep in microseconds
+dt = 5E-6; % nanoseconds
 timesteps = 50; % hack 150000;
 alpha = 0.5; % damping constant
 exchConstant = 1.3E-11 * 1E18; % nanometer/nanosecond units
