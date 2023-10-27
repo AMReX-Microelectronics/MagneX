@@ -1,8 +1,8 @@
 n_cell = 166 42 1
 max_grid_size = 166
-dt = 1.e-13  # MATLAB code uses 5.e-6 microseconds
-nsteps = 150000
-plot_int = 100
+dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
+nsteps = 50000
+plot_int = 1000
 chk_int = -1
 restart = -1
 
@@ -15,9 +15,9 @@ Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
-Hx_bias_parser(x,y,z,t) = "(t<=2.e-8)*1.e5 + (t>2.e-8)*(t<=3.e-8)*(3.e-8-t)*1.e13 - (t>2.5e-7)*19576"
-Hy_bias_parser(x,y,z,t) = "(t<=2.e-8)*1.e5 + (t>2.e-8)*(t<=3.e-8)*(3.e-8-t)*1.e13 + (t>2.5e-7)*3422"
-Hz_bias_parser(x,y,z,t) = "(t<=2.e-8)*1.e5 + (t>2.e-8)*(t<=3.e-8)*(3.e-8-t)*1.e13"
+Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*19576"
+Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>2.5e-10)*3422"
+Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 Ms_parser(x,y,z) = "8.e5            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
