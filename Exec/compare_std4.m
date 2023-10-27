@@ -7,7 +7,7 @@ dy = 3;
 dz = 3;
 
 dt = 5E-6; % nanoseconds
-timesteps = 50; % hack 150000;
+timesteps = 50000; % hack 150000;
 alpha = 0.5; % damping constant
 exchConstant = 1.3E-11 * 1E18; % nanometer/nanosecond units
 % exchConstant = 1E-13 * 1E18; % nanometer/nanosecond units
@@ -101,7 +101,7 @@ for t = 1 : timesteps
     Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
     Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 
-    if mod(t, 100) == 0
+    if mod(t, 1000) == 0
         outFileH = fopen(['Hdata',num2str(t),'.txt'], 'w');
         for k = 1 : nz
         for j = 1 : ny
@@ -111,9 +111,7 @@ for t = 1 : timesteps
         end
         end
         end
-
-        % to compare initial demag field
-        fprintf(outFileH,'\r\n');
+        fclose(outFileH)
     endif
 
     Mx = Mx (1:nx, 1:ny, 1:nz); % truncation of Mx, remove zero padding
@@ -184,12 +182,13 @@ for t = 1 : timesteps
     My = My ./ mag * Ms;
     Mz = Mz ./ mag * Ms;
     
-    if mod(t, 100) == 0
+    if mod(t, 1000) == 0
         MxMean = mean(mean(Mx));
         MyMean = mean(mean(My));
         MzMean = mean(mean(Mz));
         snapFile = fopen(['Mvstime',num2str(t),'.txt'], 'w');
         fprintf(snapFile, '%d\t%f\t%f\t%f\r\n', t, MxMean/Ms, MyMean/Ms, MzMean/Ms);
+        fclose(snapFile)
 
         outFileM = fopen(['Mdata',num2str(t),'.txt'], 'w');
         for k = 1 : nz
@@ -201,6 +200,7 @@ for t = 1 : timesteps
                 end
             end
         end
+        fclose(outFileM);
     end
     fprintf('Done with step %d\n',t)
 end
