@@ -1,5 +1,13 @@
 -------------------------------------------
 
+inputs_compare
+
+A domain of magnetic material initialized
+so that My = Ms.  Exchange and demag are enabled.
+To be compared to OpenBC_Conv.m.
+
+-------------------------------------------
+
 inputs_exchange
 
 A block of magnetic material in the center of the domain initialized
@@ -22,9 +30,23 @@ hooks more easily enabled to test this capability with these physics.
 
 -------------------------------------------
 
-inputs_std4
+inputs_compare
 
-Standard problem 4. Similar to inputs_PSSW with slightly different geometry
-and material properties.
+Test comparison problem of demag solver; to compare initial H_demag to compare.m
+The entire valid domain is magnetic.
+
+-------------------------------------------
+
+inputs_compare_subdomain
+
+Test comparison problem of demag solver; to compare initial H_demag to compare_subdomain.m
+A cubic block of material within the domain is magnetic.
+
+-------------------------------------------
+
+inputs_compare_std4
+
+Standard problem 4. Similar to inputs_PSSW with different geometry and material properties.
+Matches comapre_std.m
 
 -------------------------------------------
