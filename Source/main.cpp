@@ -69,13 +69,9 @@ void main_main ()
     amrex::GpuArray<amrex::Real, 3> prob_lo; // physical lo coordinate
     amrex::GpuArray<amrex::Real, 3> prob_hi; // physical hi coordinate
 
-    amrex::GpuArray<amrex::Real, 3> mag_lo; // physical lo coordinate of magnetic region
-    amrex::GpuArray<amrex::Real, 3> mag_hi; // physical hi coordinate of magnetic region
-
     int TimeIntegratorOption;
 
     // Magnetic Properties
-    Real alpha_val, gamma_val, Ms_val, exchange_val, DMI_val, anisotropy_val;
     Real mu0;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
@@ -84,6 +80,9 @@ void main_main ()
     int exchange_coupling;
     int DMI_coupling;
     int anisotropy_coupling;
+
+    int alpha_scale_step = -1;
+    Real alpha_scale_factor = 1.;
 
     // inputs parameters
     {
@@ -108,12 +107,6 @@ void main_main ()
         // Material Properties
 	
         pp.get("mu0",mu0);
-        pp.get("alpha_val",alpha_val);
-        pp.get("gamma_val",gamma_val);
-        pp.get("Ms_val",Ms_val);
-        pp.get("exchange_val",exchange_val);
-        pp.get("DMI_val",DMI_val);
-        pp.get("anisotropy_val",anisotropy_val);
 
 	pp.get("demag_solver",demag_solver);
         pp.get("demag_coupling",demag_coupling);
@@ -122,6 +115,10 @@ void main_main ()
         pp.get("DMI_coupling", DMI_coupling);
         pp.get("anisotropy_coupling", anisotropy_coupling);
 
+        // change alpha during runtime
+        pp.query("alpha_scale_step",alpha_scale_step);
+        pp.query("alpha_scale_factor",alpha_scale_factor);
+        
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
         pp.query("nsteps",nsteps);
@@ -155,16 +152,6 @@ void main_main ()
             }
         }
 
-        if (pp.queryarr("mag_lo",temp)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                mag_lo[i] = temp[i];
-            }
-        }
-        if (pp.queryarr("mag_hi",temp)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                mag_hi[i] = temp[i];
-            }
-        }
         if (pp.queryarr("anisotropy_axis",temp)) {
             for (int i=0; i<AMREX_SPACEDIM; ++i) {
                 anisotropy_axis[i] = temp[i];
@@ -290,12 +277,6 @@ void main_main ()
     amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
     amrex::Print() << " DMI_coupling        = " << DMI_coupling        << "\n";
     amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
-    amrex::Print() << " Ms                  = " << Ms_val              << "\n";
-    amrex::Print() << " alpha               = " << alpha_val           << "\n";
-    amrex::Print() << " gamma               = " << gamma_val           << "\n";
-    amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
-    amrex::Print() << " DMI_value           = " << DMI_val             << "\n";
-    amrex::Print() << " anisotropy_value    = " << anisotropy_val      << "\n";
     amrex::Print() << "=======================================================\n";
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
@@ -456,8 +437,7 @@ void main_main ()
     }
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
-                                 alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
-                                 prob_lo, prob_hi, mag_lo, mag_hi, geom);
+                                 prob_lo, prob_hi, geom);
 
     // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile
     PoissonPhi.setVal(0.);
@@ -465,7 +445,8 @@ void main_main ()
 
     if (restart == -1) {      
         //Initialize fields
-        InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
+        InitializeFields(Mfield, prob_lo, prob_hi, geom);
+        ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
 
         if(demag_coupling == 1){ 
             
@@ -589,6 +570,13 @@ void main_main ()
     for (int step = start_step; step <= nsteps; ++step) {
         
         Real step_strt_time = ParallelDescriptor::second();
+        
+        ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
+
+        // scale alpha
+        if (step == alpha_scale_step) {
+            alpha.mult(alpha_scale_factor);
+        }
         
         if (TimeIntegratorOption == 1){ // first order forward Euler
             

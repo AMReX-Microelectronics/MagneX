@@ -6,8 +6,8 @@ dx = 3; % cell size on x direction, in nanometers
 dy = 3;
 dz = 3;
 
-dt = 5E-6; % timestep
-timesteps = 150000;
+dt = 5E-6; % nanoseconds
+timesteps = 50000; % hack 150000;
 alpha = 0.5; % damping constant
 exchConstant = 1.3E-11 * 1E18; % nanometer/nanosecond units
 % exchConstant = 1E-13 * 1E18; % nanometer/nanosecond units
@@ -88,12 +88,6 @@ Kyy_fft = fftn(Kyy);
 Kyz_fft = fftn(Kyz);
 Kzz_fft = fftn(Kzz);
 
-snapFile = fopen('Mvstime.txt', 'w');
-outFile = fopen('Mdata.txt', 'w');
-
-outFileH = fopen('Hdata.txt', 'w');
-
-
 for t = 1 : timesteps
     Mx(end + nx, end + ny, end + nz) = 0; % zero padding
     My(end + nx, end + ny, end + nz) = 0;
@@ -107,7 +101,8 @@ for t = 1 : timesteps
     Hy = Hy (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
     Hz = Hz (nx:(2 * nx - 1), ny:(2 * ny - 1), nz:(2 * nz - 1) );
 
-    if (t == 1)
+    if mod(t, 1000) == 0
+        outFileH = fopen(['Hdata',num2str(t),'.txt'], 'w');
         for k = 1 : nz
         for j = 1 : ny
         for i = 1 : nx
@@ -116,9 +111,7 @@ for t = 1 : timesteps
         end
         end
         end
-
-        fprintf(outFileH,'\r\n');
-        return;
+        fclose(outFileH)
     endif
 
     Mx = Mx (1:nx, 1:ny, 1:nz); % truncation of Mx, remove zero padding
@@ -150,9 +143,25 @@ for t = 1 : timesteps
             end
         end
     end
-    
 
-
+    % hbias in
+    if t < 4000 % timestep 4000 = 0.02 s
+        Hx = Hx + 100; % multiply by 1,000 in MagneX
+        Hy = Hy + 100;
+        Hz = Hz + 100;
+    elseif t < 6000 % timestep 6000 = 0.03 s
+        Hx = Hx + (6000 - t) / 20; % multiply by 1,000 in MagneX
+        Hy = Hy + (6000 - t) / 20;
+        Hz = Hz + (6000 - t) / 20;
+    elseif t > 50000 % timestep 50000 = 0.25 s
+        % mu_0 Hx = -24.6 mT -> Hx = 19.576
+        % MagneX should use 19,576 [A/m]
+        % mu_0 Hy = 4.3 mT
+        % and by the same logic, Hy = 3,422 [A/m]
+        Hx = Hx - 19.576;
+        Hy = Hy + 3.422;
+        alpha = 0.02;
+    end
     
     MxHx = My .* Hz - Mz .* Hy;
     MxHy = Mz .* Hx - Mx .* Hz;
@@ -173,35 +182,40 @@ for t = 1 : timesteps
     My = My ./ mag * Ms;
     Mz = Mz ./ mag * Ms;
     
-    if mod(t, 2000) == 0
+    if mod(t, 1000) == 0
         MxMean = mean(mean(Mx));
         MyMean = mean(mean(My));
         MzMean = mean(mean(Mz));
+        snapFile = fopen(['Mvstime',num2str(t),'.txt'], 'w');
         fprintf(snapFile, '%d\t%f\t%f\t%f\r\n', t, MxMean/Ms, MyMean/Ms, MzMean/Ms);
+        fclose(snapFile)
+
+        outFileM = fopen(['Mdata',num2str(t),'.txt'], 'w');
         for k = 1 : nz
             for j = 1 : ny
                 for i = 1 : nx
-                    fprintf(outFile, '%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\r\n', ... 
+                    fprintf(outFileM, '%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\r\n', ... 
                         i, j, k, Mx(i,j,k)/Ms, My(i,j,k)/Ms, Mz(i,j,k)/Ms, ...
                         Hx(i,j,k), Hy(i,j,k), Hz(i,j,k));
                 end
             end
         end
-        fprintf(outFile,'\r\n');
+        fclose(outFileM);
     end
+    fprintf('Done with step %d\n',t)
 end
 fclose('all');
 
 %% plot
-load('Mvstime.txt')
-load('std4_magtense.txt')
-close all
+%load('Mvstime.txt')
+%load('std4_magtense.txt')
+%close all
 
-figure
+%figure
 % plot(Mvstime(25:end,1), Mvstime(25:end,2),'b');
-hold on
-plot(Mvstime(25:end,1)*dt-50000*dt, Mvstime(25:end,3),':r','LineWidth',2);
+%hold on
+%plot(Mvstime(25:end,1)*dt-50000*dt, Mvstime(25:end,3),':r','LineWidth',2);
 % plot(Mvstime(25:end,1), Mvstime(25:end,4),'--k');
-plot(std4_magtense(:,1)*1e9, std4_magtense(:,3),'--b','LineWidth',1);
-legend('My_{matlab}','My_{magtense}')
+%plot(std4_magtense(:,1)*1e9, std4_magtense(:,3),'--b','LineWidth',1);
+%legend('My_{matlab}','My_{magtense}')
 % legend('Mx','My','Mz')
