@@ -1,7 +1,7 @@
 #include "EvolveM_2nd.H"
 #include "CartesianAlgorithm.H"
 #include <AMReX_OpenBC.H>
-#include "MagnetostaticSolver.H"
+#include "Demagnetization.H"
 #include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
 #include "EffectiveAnisotropyField.H"

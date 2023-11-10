@@ -7,14 +7,13 @@
 #include <AMReX_MLPoisson.H>
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
-#include "myfunc.H"
+
 #include "Initialization.H"
-#include "MagnetostaticSolver.H"
+#include "Demagnetization.H"
 #include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
 #include "EffectiveAnisotropyField.H"
 #include "CartesianAlgorithm.H"
-#include "Diagnostics.H"
 #include "EvolveM.H"
 #include "EvolveM_2nd.H"
 #include "Checkpoint.H"
@@ -23,6 +22,8 @@
 #endif
 
 using namespace amrex;
+
+void main_main();
 
 int main (int argc, char* argv[])
 {
@@ -506,8 +507,6 @@ void main_main ()
         }
         const std::string& pltfile = amrex::Concatenate("plt",plt_step,8);
 
-        //Averaging face-centerd Multifabs to cell-centers for plotting 
-        //mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, Ms);
         MultiFab::Copy(Plt, Ms, 0, 0, 1, 0);
         MultiFab::Copy(Plt, Mfield[0], 0, 1, 1, 0);
         MultiFab::Copy(Plt, Mfield[1], 0, 2, 1, 0);

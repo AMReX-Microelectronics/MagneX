@@ -7,7 +7,7 @@
 
 #include <AMReX_PlotFileUtil.H>
 
-#include "MagnetostaticSolver.H"
+#include "Demagnetization.H"
 #include "CartesianAlgorithm.H"
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
