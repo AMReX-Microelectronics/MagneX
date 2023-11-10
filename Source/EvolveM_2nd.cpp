@@ -5,6 +5,7 @@
 #include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
 #include "EffectiveAnisotropyField.H"
+#include "EvolveM.H"
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
@@ -463,41 +464,7 @@ void EvolveM_2nd(
             stop_iter = 1;
 
             // normalize M
-            if (M_normalization == 2){
-
-                for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi){
-
-                    const Array4<Real>& Ms_arr = Ms.array(mfi);
-
-                    // extract field data
-                    const Array4<Real>& Mx = Mfield[0].array(mfi);      // note Mx is the x component at cell centers
-                    const Array4<Real>& My = Mfield[1].array(mfi);      // note My is the y component at cell centers
-                    const Array4<Real>& Mz = Mfield[2].array(mfi);      // note Mz is the z component at cell centers
-
-                    // extract tileboxes for which to loop
-                    Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
-
-                    // loop over cells and update fields
-                    amrex::ParallelFor(tbx,
-                        [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-
-                            if (Ms_arr(i,j,k) > 0.){
-                                // temporary normalized magnitude of M field at the fixed point
-                                // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
-                                amrex::Real M_magnitude_normalized = std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) / Ms_arr(i,j,k);
-                                amrex::Real normalized_error = 0.1;
-                                // check the normalized error
-                                if (amrex::Math::abs(1. - M_magnitude_normalized) > normalized_error){
-                                    amrex::Abort("Exceed the normalized error of the M field");
-                                }
-                                // normalize the M field
-                                Mx(i, j, k) /= M_magnitude_normalized;
-                                My(i, j, k) /= M_magnitude_normalized;
-                                Mz(i, j, k) /= M_magnitude_normalized;
-                            }
-                        });
-                }
-            }
+	    NormalizeM(Mfield,Ms,M_normalization);
         }
         else{
 

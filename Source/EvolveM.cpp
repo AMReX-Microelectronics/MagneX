@@ -109,7 +109,6 @@ void Compute_LLG_RHS(
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
 	       	MultiFab& Ms, int M_normalization)
 {
-    //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
     for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
@@ -132,9 +131,9 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
                     // check the normalized error
                     if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
                     {
-                        printf("y-face M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                        printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
                         printf("i = %d, j = %d, k = %d \n", i, j,k);
-                        amrex::Abort("Exceed the normalized error of the Mx field");
+                        amrex::Abort("Saturated case: M has drifted from Ms by more than the normalized error threshold");
                     }
                     // normalize the M field
                     Mx(i, j, k) /= M_magnitude_normalized;
@@ -142,12 +141,14 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
                     Mz(i, j, k) /= M_magnitude_normalized;
                 }
                 else if (M_normalization == 0)
-                {   
-                    if(i == 1 && j == 1 && k == 1) printf("Here ??? \n");
+                {
+                    // saturated case; if |M| has drifted from M_s too much, abort.  Otherwise, normalize
                     // check the normalized error
                     if (M_magnitude_normalized > (1._rt + normalized_error))
                     {
-                        amrex::Abort("Caution: Unsaturated material has M_xface exceeding the saturation magnetization");
+                        printf("M_magnitude_normalized = %g \n", M_magnitude_normalized);
+                        printf("i = %d, j = %d, k = %d \n", i, j,k);
+                        amrex::Abort("Unsaturated case: M has exceeded Ms by more than the normalized error threshold");
                     }
                     else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
                     {
