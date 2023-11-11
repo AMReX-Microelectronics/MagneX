@@ -42,7 +42,7 @@ void CalculateH_exchange(
                 if (Ms_arr(i,j,k) > 0.){
 
                     if (exchange_coupling == 1){
-                        if (exchange_arr(i,j,k) == 0.) amrex::Abort("The exchange_xface_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
+                        if (exchange_arr(i,j,k) == 0.) amrex::Abort("The exchange_arr(i,j,k) is 0.0 while including the exchange coupling term H_exchange for H_eff");
 
                         // H_exchange - use M^(old_time)
                         amrex::Real const H_exchange_coeff = 2.0 * exchange_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
@@ -80,20 +80,10 @@ void CalculateH_exchange(
                         amrex::Real dMzdz_BC_hi_z = 0.0; // dMz/dz = 0
 
                         if (DMI_coupling == 1) {
-                            if (DMI_arr(i,j,k) == 0.) amrex::Abort("The DMI_xface_arr(i,j,k) is 0.0 while including the DMI coupling");
+                            if (DMI_arr(i,j,k) == 0.) amrex::Abort("The DMI_arr(i,j,k) is 0.0 while including the DMI coupling");
                             
                             xi_DMI = 2.0*exchange_arr(i,j,k)/DMI_arr(i,j,k);
 
-                            // dMxdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower x BC: dMx/dx = 1/xi*Mz
-                            // dMxdx_BC_hi_x = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher x BC: dMx/dx = -1/xi*Mz
-
-                            // dMydy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower y BC: dMy/dy = 1/xi*Mz
-                            // dMydy_BC_hi_y = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher y BC: dMy/dy = -1/xi*Mz
-
-                            // dMzdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,0);  // lower x BC: dMz/dx = -1/xi*Mx
-                            // dMzdx_BC_hi_x =  1.0/xi_DMI*M_xface(i,j,k,0);  // higher x BC: dMz/dx = 1/xi*Mx
-                            // dMzdy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,1);  // lower y BC: dMz/dy = -1/xi*My
-                            // dMzdy_BC_hi_y =  1.0/xi_DMI*M_xface(i,j,k,1);  // higher y BC: dMz/dy = 1/xi*My
                             dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k) ; // lower x BC: dMx/dx = 1/xi*Mz
                             dMxdx_BC_hi_x = -1.0/xi_DMI*Mz(i,j,k) ; // higher x BC: dMx/dx = -1/xi*Mz
 
