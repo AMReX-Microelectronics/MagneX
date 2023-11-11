@@ -5,7 +5,7 @@
 #include "EffectiveExchangeField.H"
 #include "EffectiveDMIField.H"
 #include "EffectiveAnisotropyField.H"
-#include "EvolveM.H"
+#include "NormalizeM.H"
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>

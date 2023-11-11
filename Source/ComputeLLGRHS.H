@@ -21,7 +21,3 @@ void Compute_LLG_RHS(
                    int M_normalization,
                    Real mu0,
                    const Geometry& geom, const Real time);
-
-void NormalizeM( Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-		 MultiFab& Ms, int M_normalization);
-

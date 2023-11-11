@@ -14,8 +14,9 @@
 #include "EffectiveDMIField.H"
 #include "EffectiveAnisotropyField.H"
 #include "CartesianAlgorithm.H"
-#include "EvolveM.H"
+#include "ComputeLLGRHS.H"
 #include "EvolveM_2nd.H"
+#include "NormalizeM.H"
 #include "Checkpoint.H"
 #ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>

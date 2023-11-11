@@ -1,4 +1,4 @@
-#include "EvolveM.H"
+#include "ComputeLLGRHS.H"
 #include "CartesianAlgorithm.H"
 
 /**
