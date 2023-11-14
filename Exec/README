@@ -1,10 +1,31 @@
 -------------------------------------------
 
-inputs_compare
+inputs_compare_std4
 
-A domain of magnetic material initialized
-so that My = Ms.  Exchange and demag are enabled.
-To be compared to OpenBC_Conv.m.
+Standard problem 4.
+Entire domain is magnetic.
+Matches comapre_std.m
+==================== Initial Setup ====================
+ demag_coupling       = 1
+ M_normalization      = 1
+ exchange_coupling    = 1
+ DMI_coupling         = 0
+ anisotropy_coupling  = 0
+ TimeIntegratorOption = 1
+
+-------------------------------------------
+
+inputs_compare_subdomain
+
+Test comparison problem of demag solver; to compare initial H_demag to compare_subdomain.m
+A cubic block of material within the domain is magnetic.
+==================== Initial Setup ====================
+ demag_coupling       = 1
+ M_normalization      = 1
+ exchange_coupling    = 1
+ DMI_coupling         = 0
+ anisotropy_coupling  = 0
+ TimeIntegratorOption = 1
 
 -------------------------------------------
 
@@ -13,13 +34,26 @@ inputs_exchange
 A block of magnetic material in the center of the domain initialized
 so that My = Ms.  Only exchange physics is enabled, so the system does
 not change due to the interface boundary conditions.
-
+==================== Initial Setup ====================
+ demag_coupling       = 0
+ M_normalization      = 1
+ exchange_coupling    = 1
+ DMI_coupling         = 0
+ anisotropy_coupling  = 0
+ TimeIntegratorOption = 2
+ 
 -------------------------------------------
 
 inputs_PSSW
 
-A block of magnetic material in the center of the domain initialized
-so that My = Ms.  Exchange and demag are enabled.
+A block of magnetic material in the center of the domain initialized so that My = Ms.  
+==================== Initial Setup ====================
+ demag_coupling       = 1
+ M_normalization      = 1
+ exchange_coupling    = 1
+ DMI_coupling         = 0
+ anisotropy_coupling  = 0
+ TimeIntegratorOption = 1
 
 -------------------------------------------
 
@@ -27,26 +61,12 @@ inputs_restart
 
 This is the same as inputs_PSSW but with lower resolution and restart
 hooks more easily enabled to test this capability with these physics.
-
--------------------------------------------
-
-inputs_compare
-
-Test comparison problem of demag solver; to compare initial H_demag to compare.m
-The entire valid domain is magnetic.
-
--------------------------------------------
-
-inputs_compare_subdomain
-
-Test comparison problem of demag solver; to compare initial H_demag to compare_subdomain.m
-A cubic block of material within the domain is magnetic.
-
--------------------------------------------
-
-inputs_compare_std4
-
-Standard problem 4. Similar to inputs_PSSW with different geometry and material properties.
-Matches comapre_std.m
+==================== Initial Setup ====================
+ demag_coupling       = 1
+ M_normalization      = 1
+ exchange_coupling    = 1
+ DMI_coupling         = 0
+ anisotropy_coupling  = 0
+ TimeIntegratorOption = 1
 
 -------------------------------------------

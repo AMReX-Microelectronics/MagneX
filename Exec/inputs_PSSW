@@ -27,7 +27,7 @@ anisotropy_parser(x,y,z) = "-139.26 * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(
 DMI_parser(x,y,z) = "0.0            * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)" # unit is J/m^2
 
 demag_coupling = 1
-demag_solver = 0  # 0 = Open Poisson MLMG; 1 = FFT-based
+demag_solver = 1  # 0 = Open Poisson MLMG; 1 = FFT-based
 M_normalization = 1
 exchange_coupling = 1
 anisotropy_coupling = 0
