@@ -1,0 +1,73 @@
+n_cell = 64 64 64
+max_grid_size = 32
+dt = 4.0e-15
+nsteps = 3
+plot_int = 1
+chk_int = -1
+
+prob_lo = -16.e-9 -16.e-9 -16.e-9
+prob_hi =  16.e-9  16.e-9  16.e-9
+
+mu0 = 1.25663706212e-6 
+
+Mx_parser(x,y,z) = "0."
+My_parser(x,y,z) = "1.4e5 * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+Mz_parser(x,y,z) = "0."
+
+Hx_bias_parser(x,y,z,t) = "0."
+Hy_bias_parser(x,y,z,t) = "2.387324146378430e4 * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+Hz_bias_parser(x,y,z,t) = "0."
+
+alpha_parser(x,y,z) = "0.058        * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+Ms_parser(x,y,z) = "1.4e5           * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+gamma_parser(x,y,z) = "-1.759e11    * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+exchange_parser(x,y,z) = "3.76e-12  * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+anisotropy_parser(x,y,z) = "-139.26 * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
+DMI_parser(x,y,z) = "0.0            * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)" # unit is J/m^2
+
+demag_coupling = 0
+demag_solver = 1  # 0 = Open Poisson MLMG; 1 = FFT-based
+M_normalization = 1
+exchange_coupling = 1
+anisotropy_coupling = 0
+anisotropy_axis = 0.0 1.0 0.0
+DMI_coupling = 0
+
+# INTEGRATION
+
+#TimeIntegratorOption = 1 #Forward Euler
+TimeIntegratorOption = 2 #Predictor-corrector
+#TimeIntegratorOption = 3 #2nd order artemis way
+#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+
+## *** Selecting the integrator backend ***
+## integration.type can take on the following string or int values:
+## (without the quotation marks)
+## "ForwardEuler" or "0" = Native Forward Euler Integrator
+## "RungeKutta" or "1"   = Native Explicit Runge Kutta
+## "SUNDIALS" or "2"     = SUNDIALS ARKODE Integrator
+## for example:
+integration.type = RungeKutta
+
+## *** Parameters Needed For Native Explicit Runge-Kutta ***
+#
+## integration.rk.type can take the following values:
+### 0 = User-specified Butcher Tableau
+### 1 = Forward Euler
+### 2 = Trapezoid Method
+### 3 = SSPRK3 Method
+### 4 = RK4 Method
+integration.rk.type = 2
+
+## If using a user-specified Butcher Tableau, then
+## set nodes, weights, and table entries here:
+#
+## The Butcher Tableau is read as a flattened,
+## lower triangular matrix (but including the diagonal)
+## in row major format.
+##integration.rk.weights = 1
+##integration.rk.nodes = 0
+##integration.rk.tableau = 0.0
+
+#integration.sundials.strategy = ERK
+#integration.sundials.erk.method = SSPRK3
