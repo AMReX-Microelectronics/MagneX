@@ -640,7 +640,8 @@ void main_main ()
 
             //Evolve M
             // Compute f^n = f(M^n, H^n)
-            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
+                            Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
             // M^{n+1} = M^n + dt * f^n
 	        for(int i = 0; i < 3; i++){
@@ -718,7 +719,8 @@ void main_main ()
             }
     
 	        // Compute f^{n} = f(M^{n}, H^{n})
-            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
+                            gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
             while(!stop_iter){
                 
@@ -769,11 +771,12 @@ void main_main ()
                     CalculateH_anisotropy(Mfield_prev_iter, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
                 }
     
-	            // LLG RHS with new H_demag and M_field_pre
-	            // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-                Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+		// LLG RHS with new H_demag and M_field_pre
+		// Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
+                Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
+                                gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
     
-	            // Corrector step update M
+		// Corrector step update M
 	            // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
 	            for(int i = 0; i < 3; i++){
                     MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 1, 0);
@@ -839,14 +842,15 @@ void main_main ()
     
         } else if (TimeIntegratorOption == 3) { // iterative direct solver (ARTEMIS way)
         
-
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms,
+                        gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
+                        M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
 #ifdef USE_TIME_INTEGRATOR
 
-	        // Create a RHS source function we will integrate
+            // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ){
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
@@ -902,14 +906,15 @@ void main_main ()
                 }
 
                 // Compute f^n = f(M^n, H^n) 
-                Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+                Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling,
+                                exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
             };
 
-	        // Create a function to call after updating a state
+            // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
                 // Call user function to update state MultiFab, e.g. fill BCs
                 NormalizeM(state, Ms, M_normalization);
-
+                
                 for(int comp = 0; comp < 3; comp++){
                     // fill periodic ghost cells
                     state[comp].FillBoundary(geom.periodicity());
@@ -918,11 +923,11 @@ void main_main ()
                 //post_update(Mfield_old, time, geom);
             };
 
-	        // Attach the right hand side and post-update functions
+            // Attach the right hand side and post-update functions
             // to the integrator
             integrator.set_rhs(source_fun);
             integrator.set_post_update(post_update_fun);
- 
+                
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.advance(Mfield_old, Mfield, time, dt);
 #endif
