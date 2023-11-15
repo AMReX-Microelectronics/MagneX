@@ -22,8 +22,7 @@ void ComputeHfromPhi(MultiFab&                         PoissonPhi,
 void ComputeForwardFFT(const MultiFab&    mf,
                        MultiFab&          mf_dft_real,
                        MultiFab&          mf_dft_imag,
-                       const Geometry&    geom,
-                       long               npts);
+                       const Geometry&    geom);
 
 void ComputeInverseFFT(MultiFab&        mf_2,
                        const MultiFab&  mf_dft_real,
@@ -44,8 +43,7 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         MultiFab&                        Kzz_fft_real,
                         MultiFab&                        Kzz_fft_imag,
                         GpuArray<int, 3>                 n_cell_large,
-			const Geometry&                  geom_large,
-                        long                             npts_large);
+			const Geometry&                  geom_large);
 
 void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
                       Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
@@ -62,8 +60,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
                       const MultiFab&                        Kzz_fft_real,
                       const MultiFab&                        Kzz_fft_imag,
                       GpuArray<int, 3>                       n_cell_large,
-                      const Geometry&                        geom_large,
-		      long                                   npts_large);
+                      const Geometry&                        geom_large);
  
 #ifdef AMREX_USE_CUDA                                                                                      
 std::string cufftErrorToString (const cufftResult& err);

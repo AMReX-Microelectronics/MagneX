@@ -61,6 +61,7 @@ void main_main ()
     // step to restart from
     int restart;
 
+    // -1 = periodic/Neumann MLMG
     // 0 = Open Poisson MLMG
     // 1 = FFT-based
     int demag_solver;
@@ -285,6 +286,7 @@ void main_main ()
     MultiFab PoissonRHS(ba, dm, 1, 0);
     MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
 
+    // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile
     PoissonPhi.setVal(0.);
     PoissonRHS.setVal(0.);
 
@@ -323,38 +325,40 @@ void main_main ()
     n_cell_large[1] = 2*n_cell[1];
     n_cell_large[2] = 2*n_cell[2];
 
-    long npts_large;
-    
     // Solver for Poisson equation
     LPInfo info;
-#ifdef NEUMANN
 
+    ///////////////////////////////
+    // periodic / neumann multigrid solver
+    ///////////////////////////////
+
+    std::unique_ptr<MLMG> mlmg;
     MLABecLaplacian mlabec;
-    mlabec.define({geom}, {ba}, {dm}, info);
 
-    mlabec.setEnforceSingularSolvable(false);
+    if (demag_coupling == 1 && demag_solver == -1) {
+    
+        mlabec.define({geom}, {ba}, {dm}, info);
+        mlabec.setEnforceSingularSolvable(false);
 
-    // order of stencil
-    int linop_maxorder = 2;
-    mlabec.setMaxOrder(linop_maxorder);
+        // order of stencil
+        int linop_maxorder = 2;
+        mlabec.setMaxOrder(linop_maxorder);
 
-    // build array of boundary conditions needed by MLABecLaplacian
-    std::array<LinOpBCType, AMREX_SPACEDIM> lo_mlmg_bc;
-    std::array<LinOpBCType, AMREX_SPACEDIM> hi_mlmg_bc;
+        // build array of boundary conditions needed by MLABecLaplacian
+        std::array<LinOpBCType, AMREX_SPACEDIM> lo_mlmg_bc;
+        std::array<LinOpBCType, AMREX_SPACEDIM> hi_mlmg_bc;
 
-    //Periodic
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        if(is_periodic[idim]){
-            lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
-        } else {
-            lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
+        // boundary conditions - FIXME allow for user to control periodicity
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+            if(is_periodic[idim]){
+                lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
+            } else {
+                lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
+            }
         }
-    }
 
-    mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
+        mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
 
-    { // add this brace so alpha_cc and beta_face go out of scope afterwards (save memory)
-        // coefficients for solver
         MultiFab alpha_cc(ba, dm, 1, 0);
         std::array< MultiFab, AMREX_SPACEDIM > beta_face;
         AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
@@ -370,19 +374,28 @@ void main_main ()
         mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
         mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
         mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));
-    }
 
-    //Declare MLMG object
-    MLMG mlmg(mlabec);
-    mlmg.setVerbose(2);
-#else
+        // set boundary conditions to homogeneous Neumann
+        mlabec.setLevelBC(0, &PoissonPhi);
+
+        // declare MLMG object
+        mlmg = std::make_unique<MLMG>(mlabec);
+        mlmg->setVerbose(2);
+    }
+        
+
+    ///////////////////////////////
+    // openBC multigrid solver
+    ///////////////////////////////
+
     OpenBCSolver openbc;
-    if (demag_coupling ==1 && demag_solver == 0) {
+    
+    if (demag_coupling == 1 && demag_solver == 0) {
         openbc.define({geom}, {ba}, {dm}, info);
         openbc.setVerbose(2);
     }
-#endif
-    if (demag_solver == 1) {
+
+    if (demag_coupling == 1 && demag_solver == 1) {
 
         // **********************************
         // SIMULATION SETUP
@@ -397,8 +410,6 @@ void main_main ()
 
         // Make a single box that is the entire domain
         Box domain_large(dom_lo_large, dom_hi_large);
-
-        npts_large = domain_large.numPts();
 
         // Initialize the boxarray "ba" from the single box "domain"
         ba_large.define(domain_large);
@@ -434,7 +445,7 @@ void main_main ()
         // Call function that computes the demag tensors and then takes the forward FFT of each of them, which are returns
         ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                            Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                           n_cell_large, geom_large, npts_large);
+                           n_cell_large, geom_large);
         
 
     }
@@ -442,18 +453,15 @@ void main_main ()
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
                                  prob_lo, prob_hi, geom);
 
-    // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile
-    PoissonPhi.setVal(0.);
-    PoissonRHS.setVal(0.);
 
     if (restart == -1) {      
         //Initialize fields
         InitializeFields(Mfield, prob_lo, prob_hi, geom);
         ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
 
-        if(demag_coupling == 1){ 
+        if (demag_coupling == 1) {
             
-	    if (demag_solver == 0) {
+	    if (demag_solver == -1 || demag_solver == 0) {
 
                 // Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                 // Compute RHS of Poisson equation
@@ -461,14 +469,14 @@ void main_main ()
 
 		//Initial guess for phi
                 PoissonPhi.setVal(0.);
-#ifdef NEUMANN
-                // set boundary conditions to homogeneous Neumann
-                mlabec.setLevelBC(0, &PoissonPhi);
 
-                mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#else
-                openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#endif
+                if (demag_solver == -1) {                    
+                    mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                } else if (demag_solver == 0) {
+                    
+                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                }
+
 	        // Calculate H from Phi
 	        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);	    
 
@@ -483,7 +491,7 @@ void main_main ()
                 ComputeHFieldFFT(Mfield_padded, H_demagfield,
                                  Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                                  Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                 n_cell_large, geom_large, npts_large);
+                                 n_cell_large, geom_large);
 	    }
 	}
         
@@ -582,9 +590,9 @@ void main_main ()
         if (TimeIntegratorOption == 1){ // first order forward Euler
             
     	    // Evolve H_demag
-            if(demag_coupling == 1) {
+            if (demag_coupling == 1) {
             
-                if (demag_solver == 0) {
+                if (demag_solver == -1 || demag_solver == 0) {
 
                     //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                     //Compute RHS of Poisson equation
@@ -592,11 +600,12 @@ void main_main ()
                 
                     //Initial guess for phi
                     PoissonPhi.setVal(0.);
-#ifdef NEUMANN
-                    mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#else
-                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#endif
+
+                    if (demag_solver == -1) {
+                        mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                    } else if (demag_solver == 0) {
+                        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                    }
 
                     // Calculate H from Phi
                     ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
@@ -611,7 +620,7 @@ void main_main ()
                     ComputeHFieldFFT(Mfield_padded, H_demagfield,
                                      Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                                      Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                     n_cell_large, geom_large, npts_large);
+                                     n_cell_large, geom_large);
                 }
             }
 
@@ -660,20 +669,21 @@ void main_main ()
             int stop_iter = 0;
 
 	        // Evolve H_demag (H^{n})
-	        if(demag_coupling == 1){
+	        if (demag_coupling == 1){
             
-                    if (demag_solver == 0) {
+                    if (demag_solver == -1 || demag_solver == 0) {
                         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                         //Compute RHS of Poisson equation
                         ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
                 
                         //Initial guess for phi
                         PoissonPhi.setVal(0.);
-#ifdef NEUMANN
-                        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#else
-                        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#endif
+
+                        if (demag_solver == -1) {
+                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        } else if (demag_solver == 0) {
+                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        }
 
                         // Calculate H from Phi
                         ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
@@ -688,7 +698,7 @@ void main_main ()
                         ComputeHFieldFFT(Mfield_padded, H_demagfield,
                                          Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                                          Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                         n_cell_large, geom_large, npts_large);
+                                         n_cell_large, geom_large);
 
                     }
 	        }
@@ -711,20 +721,21 @@ void main_main ()
             while(!stop_iter){
                 
                 // Poisson solve and H_demag computation with M_field_pre
-                if(demag_coupling == 1) { 
+                if (demag_coupling == 1) { 
             
-                    if (demag_solver == 0) {
+                    if (demag_solver == -1 || demag_solver == 0) {
                         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                         //Compute RHS of Poisson equation
                         ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
     
                         //Initial guess for phi
                         PoissonPhi.setVal(0.);
-#ifdef NEUMANN
-                        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#else
-                        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#endif
+
+                        if (demag_solver == -1) {
+                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        } else if (demag_solver == 0) {
+                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        }
 
                         // Calculate H from Phi
                         ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
@@ -740,7 +751,7 @@ void main_main ()
                         ComputeHFieldFFT(Mfield_padded, H_demagfield,
                                          Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                                          Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                         n_cell_large, geom_large, npts_large);
+                                         n_cell_large, geom_large);
                     }
                 }
     
@@ -842,9 +853,9 @@ void main_main ()
                 } 
  
     	        // Evolve H_demag
-                if(demag_coupling == 1) {
+                if (demag_coupling == 1) {
             
-                    if (demag_solver == 0) {
+                    if (demag_solver == -1 || demag_solver == 0) {
 
                         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                         //Compute RHS of Poisson equation
@@ -852,11 +863,13 @@ void main_main ()
                      
                         //Initial guess for phi
                         PoissonPhi.setVal(0.);
-#ifdef NEUMANN
-                        mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#else
-                        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#endif
+
+                        if (demag_solver == -1) {
+                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        } else if (demag_solver == 0) {
+                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        }
+
                         // Calculate H from Phi
                         ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
                     } else {
@@ -870,7 +883,7 @@ void main_main ()
                         ComputeHFieldFFT(Mfield_padded, H_demagfield,
                                          Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                                          Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                         n_cell_large, geom_large, npts_large);
+                                         n_cell_large, geom_large);
                     }
                 }
 

@@ -84,8 +84,7 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         MultiFab&                        Kzz_fft_real,
                         MultiFab&                        Kzz_fft_imag,
                         GpuArray<int, 3>                 n_cell_large,
-                        const Geometry&                  geom_large,
-			long                             npts_large)
+                        const Geometry&                  geom_large)
 {
     // Extract the domain data 
     BoxArray ba_large = Kxx_fft_real.boxArray();
@@ -183,12 +182,12 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
         });
     }
 
-    ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large, npts_large);
-    ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large, npts_large);
-    ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag, geom_large, npts_large);
-    ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag, geom_large, npts_large);
-    ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag, geom_large, npts_large);
-    ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag, geom_large, npts_large);
+    ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large);
+    ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large);
+    ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag, geom_large);
+    ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag, geom_large);
+    ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag, geom_large);
+    ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag, geom_large);
 }
 
 // THIS COMES LAST!!!!!!!!! COULD BE THE TRICKY PART...
@@ -215,8 +214,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 		      const MultiFab&                        Kzz_fft_real,
 		      const MultiFab&                        Kzz_fft_imag,
                       GpuArray<int, 3>                       n_cell_large,
-                      const Geometry&                        geom_large,
-		      long                                   npts_large)
+                      const Geometry&                        geom_large)
 {
     BoxArray ba_large = Kxx_fft_real.boxArray();
     DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
@@ -231,9 +229,9 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 
     // Calculate the Mx, My, and Mz fft's at the current time step
     // Each fft will be stored in seperate real and imaginary multifabs
-    ComputeForwardFFT(M_field_padded[0], M_dft_real_x, M_dft_imag_x, geom_large, npts_large);
-    ComputeForwardFFT(M_field_padded[1], M_dft_real_y, M_dft_imag_y, geom_large, npts_large);
-    ComputeForwardFFT(M_field_padded[2], M_dft_real_z, M_dft_imag_z, geom_large, npts_large);
+    ComputeForwardFFT(M_field_padded[0], M_dft_real_x, M_dft_imag_x, geom_large);
+    ComputeForwardFFT(M_field_padded[1], M_dft_real_y, M_dft_imag_y, geom_large);
+    ComputeForwardFFT(M_field_padded[2], M_dft_real_z, M_dft_imag_z, geom_large);
 
     // Allocate 6 Multifabs to store the convolutions in Fourier space for H_field
     // This could be done in main but then we have an insane amount of arguments in this function
@@ -376,8 +374,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 void ComputeForwardFFT(const MultiFab&    mf,
 		       MultiFab&          mf_dft_real,
 		       MultiFab&          mf_dft_imag,
-		       const Geometry&    geom,
-		       long               npts)
+		       const Geometry&    geom)
 { 
     // **********************************
     // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
@@ -406,9 +403,6 @@ void ComputeForwardFFT(const MultiFab&    mf,
     using FFTplan = fftw_plan;
     using FFTcomplex = fftw_complex;
 #endif
-
-    // For scaling on forward FFTW
-    Real sqrtnpts = std::sqrt(npts);
 
     // contain to store FFT - note it is shrunk by "half" in x
     Vector<std::unique_ptr<BaseFab<GpuComplex<Real> > > > spectral_field;
