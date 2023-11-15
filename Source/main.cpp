@@ -931,15 +931,14 @@ void main_main ()
             amrex::Abort("Time integrator order not recognized");
         }
 
-	    // copy new solution into old solution
+        // copy new solution into old solution
         for(int comp = 0; comp < 3; comp++) {
             MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
-
             // fill periodic ghost cells
             Mfield_old[comp].FillBoundary(geom.periodicity());
         }
 
-	    Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
+        Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
 
         amrex::Print() << "Advanced step " << step << " in " << step_stop_time << " seconds\n";
@@ -995,10 +994,10 @@ void main_main ()
 
         }
 
-	    // Write a checkpoint file if chk_int > 0
-	    if (chk_int > 0 && step%chk_int == 0) {
+        // Write a checkpoint file if chk_int > 0
+        if (chk_int > 0 && step%chk_int == 0) {
             WriteCheckPoint(step,time,Mfield,H_biasfield,H_demagfield);
-	    }
+        }
 
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
