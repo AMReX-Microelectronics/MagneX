@@ -43,123 +43,129 @@ void main_main ()
 
     // **********************************
     // SIMULATION PARAMETERS
+    // **********************************
 
-    amrex::GpuArray<int, 3> n_cell; // Number of cells in each dimension
+    // Number of cells in each dimension
+    amrex::GpuArray<int, 3> n_cell; 
 
-    // size of each box (or grid)
+    // maximum size of each box
     int max_grid_size;
 
+    // physical lo/hi coordiates
+    amrex::GpuArray<amrex::Real, 3> prob_lo;
+    amrex::GpuArray<amrex::Real, 3> prob_hi;
+    
     // total steps in simulation
     int nsteps;
 
+    // 1 = first order forward Euler
+    // 2 = iterative predictor-corrector
+    // 3 = iterative direct solver
+    // 4 = AMReX and SUNDIALS integrators
+    int TimeIntegratorOption;
+
+    // time step
+    Real dt;
+
     // how often to write a plotfile
-    int plot_int;
+    int plot_int = -1;
 
     // ho often to write a checkpoint
-    int chk_int;
+    int chk_int = -1;
 
     // step to restart from
-    int restart;
+    int restart = -1;
 
+    // permeability
+    Real mu0;
+
+    // turn on demagnetization
+    int demag_coupling;
+
+    // demagnetization solver type
     // -1 = periodic/Neumann MLMG
     // 0 = Open Poisson MLMG
     // 1 = FFT-based
     int demag_solver;
 
-    // time step
-    Real dt;
-    
-    amrex::GpuArray<amrex::Real, 3> prob_lo; // physical lo coordinate
-    amrex::GpuArray<amrex::Real, 3> prob_hi; // physical hi coordinate
+    // 0 = unsaturated; 1 = saturated
+    int M_normalization;
 
-    int TimeIntegratorOption;
+    // turn on exchange
+    int exchange_coupling;
 
-    // Magnetic Properties
-    Real mu0;
+    // turn on DMI
+    int DMI_coupling;
+
+    // turn on anisotropy
+    int anisotropy_coupling;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
-    int demag_coupling;
-    int M_normalization;
-    int exchange_coupling;
-    int DMI_coupling;
-    int anisotropy_coupling;
-
+    // change alpha during runtime
     int alpha_scale_step = -1;
     Real alpha_scale_factor = 1.;
 
-    // inputs parameters
+    // **********************************
+    // READ SIMULATION PARAMETERS
+    // **********************************
     {
         // ParmParse is way of reading inputs from the inputs file
         // pp.get means we require the inputs file to have it
         // pp.query means we optionally need the inputs file to have it - but we must supply a default here
         ParmParse pp;
 
-        // We need to get n_cell from the inputs file - this is the number of cells on each side of
         amrex::Vector<int> temp_int(AMREX_SPACEDIM);
-        if (pp.queryarr("n_cell",temp_int)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                n_cell[i] = temp_int[i];
-            }
+        pp.getarr("n_cell",temp_int);
+        for (int i=0; i<AMREX_SPACEDIM; ++i) {
+            n_cell[i] = temp_int[i];
         }
 
-        // The domain is broken into boxes of size max_grid_size
         pp.get("max_grid_size",max_grid_size);
 
-        pp.get("TimeIntegratorOption",TimeIntegratorOption);
+        amrex::Vector<amrex::Real> temp(AMREX_SPACEDIM);
+        pp.getarr("prob_lo",temp);
+        for (int i=0; i<AMREX_SPACEDIM; ++i) {
+            prob_lo[i] = temp[i];
+        }
+        pp.getarr("prob_hi",temp);
+        for (int i=0; i<AMREX_SPACEDIM; ++i) {
+            prob_hi[i] = temp[i];
+        }
 
-        // Material Properties
-	
-        pp.get("mu0",mu0);
-
-	pp.get("demag_solver",demag_solver);
-        pp.get("demag_coupling",demag_coupling);
-        pp.get("M_normalization", M_normalization);
-        pp.get("exchange_coupling", exchange_coupling);
-        pp.get("DMI_coupling", DMI_coupling);
-        pp.get("anisotropy_coupling", anisotropy_coupling);
-
-        // change alpha during runtime
-        pp.query("alpha_scale_step",alpha_scale_step);
-        pp.query("alpha_scale_factor",alpha_scale_factor);
-        
-        // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
         pp.query("nsteps",nsteps);
 
-        // Default plot_int to -1, allow us to set it to something else in the inputs file
-        //  If plot_int < 0 then no plot files will be written
-        plot_int = -1;
-        pp.query("plot_int",plot_int);
-
-	    // Default chk_int to -1, allow us to set it to something else in the inputs file
-        //  If chk_int < 0 then no chk files will be written
-        chk_int = -1;
-        pp.query("chk_int",chk_int);
-
-	    // query restart
-	    restart = -1;
-	    pp.query("restart",restart);
+        pp.get("TimeIntegratorOption",TimeIntegratorOption);
 	
-        // time step
         pp.get("dt",dt);
 
-        amrex::Vector<amrex::Real> temp(AMREX_SPACEDIM);
-        if (pp.queryarr("prob_lo",temp)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                prob_lo[i] = temp[i];
-            }
-        }
-        if (pp.queryarr("prob_hi",temp)) {
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                prob_hi[i] = temp[i];
-            }
-        }
+        pp.query("plot_int",plot_int);
 
-        if (pp.queryarr("anisotropy_axis",temp)) {
+        pp.query("chk_int",chk_int);
+
+        pp.query("restart",restart);
+	
+        pp.get("mu0",mu0);
+
+        pp.get("demag_coupling",demag_coupling);
+        if (demag_coupling) {
+            pp.get("demag_solver",demag_solver);
+        }
+        
+        pp.get("M_normalization", M_normalization);
+        pp.get("exchange_coupling", exchange_coupling);
+        pp.get("DMI_coupling", DMI_coupling);
+
+        pp.get("anisotropy_coupling", anisotropy_coupling);
+        if (anisotropy_coupling) {
+            pp.getarr("anisotropy_axis",temp);
             for (int i=0; i<AMREX_SPACEDIM; ++i) {
                 anisotropy_axis[i] = temp[i];
             }
         }
+
+        pp.query("alpha_scale_step",alpha_scale_step);
+        pp.query("alpha_scale_factor",alpha_scale_factor);
     }
 
     int start_step = 1;
@@ -228,10 +234,6 @@ void main_main ()
     Geometry geom;
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
-    // Nghost = number of ghost cells for each array
-    int Nghost = 1;
-    int Ncomp = 1;
-
     // How Boxes are distrubuted among MPI processes
     if (restart == -1) {
         dm.define(ba);
@@ -240,13 +242,13 @@ void main_main ()
     // Allocate multifabs
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
         //Cell-centered fields
-        Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
-        Mfield_prev_iter[dir].define(ba, dm, Ncomp, Nghost);
-        Mfield_error[dir].define(ba, dm, Ncomp, Nghost);
+        Mfield_old[dir].define(ba, dm, 1, 1);
+        Mfield_prev_iter[dir].define(ba, dm, 1, 1);
+        Mfield_error[dir].define(ba, dm, 1, 1);
 
-        H_exchangefield[dir].define(ba, dm, Ncomp, 0);
-        H_DMIfield[dir].define(ba, dm, Ncomp, 0);
-        H_anisotropyfield[dir].define(ba, dm, Ncomp, 0);
+        H_exchangefield[dir].define(ba, dm, 1, 0);
+        H_DMIfield[dir].define(ba, dm, 1, 0);
+        H_anisotropyfield[dir].define(ba, dm, 1, 0);
 
         // set to zero in case we don't include
         H_exchangefield[dir].setVal(0.);
@@ -261,18 +263,18 @@ void main_main ()
     if (restart == -1) {
         for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
             //Cell-centered fields
-            Mfield[dir].define(ba, dm, Ncomp, Nghost);
-            H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
-            H_demagfield[dir].define(ba, dm, 1, Nghost);
+            Mfield[dir].define(ba, dm, 1, 1);
+            H_biasfield[dir].define(ba, dm, 1, 1);
+            H_demagfield[dir].define(ba, dm, 1, 1);
         }
     }
 
-    MultiFab alpha(ba, dm, Ncomp, 0);
-    MultiFab gamma(ba, dm, Ncomp, 0);
-    MultiFab Ms(ba, dm, Ncomp, Nghost);
-    MultiFab exchange(ba, dm, Ncomp, 0);
-    MultiFab DMI(ba, dm, Ncomp, 0);
-    MultiFab anisotropy(ba, dm, Ncomp, 0);
+    MultiFab alpha(ba, dm, 1, 0);
+    MultiFab gamma(ba, dm, 1, 0);
+    MultiFab Ms(ba, dm, 1, 1);
+    MultiFab exchange(ba, dm, 1, 0);
+    MultiFab DMI(ba, dm, 1, 0);
+    MultiFab anisotropy(ba, dm, 1, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
@@ -425,7 +427,7 @@ void main_main ()
 	    
         for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
             // Cell-centered fields
-            Mfield_padded[dir].define(ba_large, dm_large, Ncomp, Nghost);
+            Mfield_padded[dir].define(ba_large, dm_large, 1, 1);
         }
 
         // Allocate the demag tensor fft multifabs
@@ -562,9 +564,9 @@ void main_main ()
 
     // copy new solution into old solution
     for(int comp = 0; comp < 3; comp++) {
-        MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
-        MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, Nghost);
-        MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 1, Nghost);
+        MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
+        MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
+        MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 1, 1);
 
         // fill periodic ghost cells
         Mfield_old[comp].FillBoundary(geom.periodicity());
@@ -656,13 +658,13 @@ void main_main ()
             // copy new solution into old solution
             for(int comp = 0; comp < 3; comp++)
             {
-                MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+                MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
     
                 // fill periodic ghost cells
                 Mfield_old[comp].FillBoundary(geom.periodicity());
  
             }
-        } else if (TimeIntegratorOption == 2){ //2nd Order predictor-corrector
+        } else if (TimeIntegratorOption == 2){ // iterative predictor-corrector
         
             Real M_tolerance = 1.e-6;
             int iter = 0;
@@ -816,7 +818,7 @@ void main_main ()
 
 	            // copy new solution into Mfield_pre_iter
 	            for(int comp = 0; comp < 3; comp++) {
-                    MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, Nghost);
+                    MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
                     // fill periodic ghost cells 
                     Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
 	            }
@@ -830,17 +832,17 @@ void main_main ()
 
             // copy new solution into old solution
             for (int comp = 0; comp < 3; comp++){
-                MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+                MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
                 // fill periodic ghost cells
                 Mfield_old[comp].FillBoundary(geom.periodicity());
             }
     
-        } else if (TimeIntegratorOption == 3) { // artemis way
+        } else if (TimeIntegratorOption == 3) { // iterative direct solver (ARTEMIS way)
         
 
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
-        }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
+        }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
 #ifdef USE_TIME_INTEGRATOR
 
@@ -931,7 +933,7 @@ void main_main ()
 
 	    // copy new solution into old solution
         for(int comp = 0; comp < 3; comp++) {
-            MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+            MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
 
             // fill periodic ghost cells
             Mfield_old[comp].FillBoundary(geom.periodicity());
