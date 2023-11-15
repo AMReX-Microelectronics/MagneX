@@ -274,11 +274,12 @@ void main_main ()
     MultiFab anisotropy(ba, dm, Ncomp, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
-    amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
-    amrex::Print() << " M_normalization     = " << M_normalization     << "\n";
-    amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
-    amrex::Print() << " DMI_coupling        = " << DMI_coupling        << "\n";
-    amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
+    amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
+    amrex::Print() << " M_normalization      = " << M_normalization     << "\n";
+    amrex::Print() << " exchange_coupling    = " << exchange_coupling   << "\n";
+    amrex::Print() << " DMI_coupling         = " << DMI_coupling        << "\n";
+    amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
+    amrex::Print() << " TimeIntegratorOption = " << TimeIntegratorOption << "\n";
     amrex::Print() << "=======================================================\n";
 
     MultiFab PoissonRHS(ba, dm, 1, 0);
@@ -580,8 +581,6 @@ void main_main ()
         
         if (TimeIntegratorOption == 1){ // first order forward Euler
             
-            amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
-
     	    // Evolve H_demag
             if(demag_coupling == 1) {
             
@@ -656,8 +655,6 @@ void main_main ()
             }
         } else if (TimeIntegratorOption == 2){ //2nd Order predictor-corrector
         
-            amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
-
             Real M_tolerance = 1.e-6;
             int iter = 0;
             int stop_iter = 0;
@@ -829,14 +826,12 @@ void main_main ()
     
         } else if (TimeIntegratorOption == 3) { // artemis way
         
-            amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
 
 #ifdef USE_TIME_INTEGRATOR
-            amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
 
 	        // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ){
