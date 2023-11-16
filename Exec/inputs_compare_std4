@@ -15,9 +15,17 @@ Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
+# Field 1:  mu_0 Hx=-24.6 mT, mu_0 Hy= 4.3 mT, mu_0 Hz= 0.0 mT
+# which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
 Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*19576"
 Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>2.5e-10)*3422"
 Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+
+# Field 2:  mu_0 Hx=-35.5 mT, mu_0 Hy=-6.3 mT, mu_0 Hz= 0.0 mT
+# which is a field approximately 36 mT, directed 190 degrees counterclockwise from the positive x axis
+#Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*28259"
+#Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*5013"
+#Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-8)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 Ms_parser(x,y,z) = "8.e5            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
