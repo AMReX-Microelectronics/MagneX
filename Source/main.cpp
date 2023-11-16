@@ -18,6 +18,7 @@
 #include "EvolveM_2nd.H"
 #include "NormalizeM.H"
 #include "Checkpoint.H"
+#include "Diagnostics.H"
 #ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>
 #endif
@@ -456,6 +457,9 @@ void main_main ()
                                  prob_lo, prob_hi, geom);
 
 
+    // count how many magnetic cells are in the domain
+    long num_mag = CountMagneticCells(Ms);
+    
     if (restart == -1) {      
         //Initialize fields
         InitializeFields(Mfield, prob_lo, prob_hi, geom);
@@ -950,6 +954,12 @@ void main_main ()
 
         // update time
         time = time + dt;
+
+        Print() << "time = " << time << " "
+                << "Sum_normalized_M: "
+                << SumNormalizedM(Ms,Mfield_old[0])/num_mag << " "
+                << SumNormalizedM(Ms,Mfield_old[1])/num_mag << " "
+                << SumNormalizedM(Ms,Mfield_old[2])/num_mag << std::endl;
 
         // Write a plotfile of the data if plot_int > 0
         if (plot_int > 0 && step%plot_int == 0) {
