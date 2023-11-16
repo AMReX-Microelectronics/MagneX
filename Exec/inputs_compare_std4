@@ -1,8 +1,8 @@
 n_cell = 166 42 1
 max_grid_size = 166
 dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 50000
-plot_int = 1000
+nsteps = 250000
+plot_int = 10000
 chk_int = -1
 restart = -1
 
