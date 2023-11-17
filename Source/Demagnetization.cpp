@@ -107,13 +107,6 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
     Kyz.setVal(0.);
     Kzz.setVal(0.);
 
-    GpuArray<Real,AMREX_SPACEDIM> dx = geom_large.CellSizeArray();
-
-    // Account for double-sized domain
-    dx[0] *= 2.;
-    dx[1] *= 2.;
-    dx[2] *= 2.;
-
     Real prefactor = 1. / 4. / 3.14159265;
 
     // Loop through demag tensor and fill with values
@@ -154,7 +147,7 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
             // **********************************
             for (int i = 0; i <= 1; i++) { // helper indices
                 for (int j = 0; j <= 1; j++) { 
-                    for (int k = 0; k <= 1; k++) { 
+                    for (int k = 0; k <= 1; k++) {
                         Real r = std::sqrt ((I+i-0.5)*(I+i-0.5)*dx[0]*dx[0] + (J+j-0.5)*(J+j-0.5)*dx[1]*dx[1] + (K+k-0.5)*(K+k-0.5)*dx[2]*dx[2]);
                         
                         Kxx_ptr(L,M,N) = Kxx_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::atan ((K+k-0.5) * (J+j-0.5) * dx[2] * dx[1] / r / (I+i-0.5) / dx[0])));
