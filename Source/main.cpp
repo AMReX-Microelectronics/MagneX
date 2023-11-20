@@ -353,7 +353,7 @@ void main_main ()
 
         // boundary conditions - FIXME allow for user to control periodicity
         for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-            if(is_periodic[idim]) {
+            if (is_periodic[idim]) {
                 lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
             } else {
                 lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
@@ -504,11 +504,11 @@ void main_main ()
             CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
         }
 
-        if(DMI_coupling == 1) {
+        if (DMI_coupling == 1) {
             CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
         }
 
-        if(anisotropy_coupling == 1) {
+        if (anisotropy_coupling == 1) {
             CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
         }
     }
@@ -568,13 +568,6 @@ void main_main ()
     // copy new solution into old solution
     for (int comp = 0; comp < 3; comp++) {
         MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
-        MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
-        MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 1, 1);
-
-        // fill periodic ghost cells
-        Mfield_old[comp].FillBoundary(geom.periodicity());
-        Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
-        Mfield_error[comp].FillBoundary(geom.periodicity());
     }
 
 #ifdef USE_TIME_INTEGRATOR
@@ -593,8 +586,11 @@ void main_main ()
         if (step == alpha_scale_step) {
             alpha.mult(alpha_scale_factor);
         }
-        
-        if (TimeIntegratorOption == 1) { // first order forward Euler
+
+        // compute old-time LLG_RHS
+        if (TimeIntegratorOption == 1 ||
+            TimeIntegratorOption == 2 ||
+            TimeIntegratorOption == 3) {
             
     	    // Evolve H_demag
             if (demag_coupling == 1) {
@@ -635,15 +631,18 @@ void main_main ()
                 CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
             }
 
-            if(DMI_coupling == 1) {
+            if (DMI_coupling == 1) {
                 CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
             }
 
-            if(anisotropy_coupling == 1) {
+            if (anisotropy_coupling == 1) {
                 CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
             }
+        }
+        
+        if (TimeIntegratorOption == 1) { // first order forward Euler
 
-            //Evolve M
+            // Evolve M
             // Compute f^n = f(M^n, H^n)
             Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
                             Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
@@ -674,112 +673,18 @@ void main_main ()
         
             Real M_tolerance = 1.e-6;
             int iter = 0;
-            int stop_iter = 0;
-
-            // Evolve H_demag (H^{n})
-            if (demag_coupling == 1) {
-            
-                if (demag_solver == -1 || demag_solver == 0) {
-                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                    //Compute RHS of Poisson equation
-                    ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, geom);
-                
-                    //Initial guess for phi
-                    PoissonPhi.setVal(0.);
-
-                    if (demag_solver == -1) {
-                        mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                    } else if (demag_solver == 0) {
-                        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                    }
-
-                    // Calculate H from Phi
-                    ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-                } else {
-
-                    // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                        Mfield_padded[dir].setVal(0.);
-                        Mfield_padded[dir].ParallelCopy(Mfield_prev_iter[dir], 0, 0, 1);
-                    }
-
-                    ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                     Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                     Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                     n_cell_large, geom_large);
-
-                }
-            }
-
-            if (exchange_coupling == 1) {
-                CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
-            }
     
-            if(DMI_coupling == 1) {
-                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
-            }
-    
-            if(anisotropy_coupling == 1) {
-                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
-            }
-    
-	        // Compute f^{n} = f(M^{n}, H^{n})
+            // Compute f^{n} = f(M^{n}, H^{n})
             Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
                             gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
 
-            while(!stop_iter) {
-                
-                // Poisson solve and H_demag computation with M_field_pre
-                if (demag_coupling == 1) { 
-            
-                    if (demag_solver == -1 || demag_solver == 0) {
-                        //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                        //Compute RHS of Poisson equation
-                        ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, geom);
-    
-                        //Initial guess for phi
-                        PoissonPhi.setVal(0.);
+            // copy old RHS into predicted RHS so first pass through is forward Euler
+            for (int comp = 0; comp < 3; comp++) {
+                MultiFab::Copy(LLG_RHS_pre[comp], LLG_RHS[comp], 0, 0, 1, 0);
+                MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
+            }
 
-                        if (demag_solver == -1) {
-                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                        } else if (demag_solver == 0) {
-                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                        }
-
-                        // Calculate H from Phi
-                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-
-                    } else {
-
-                        // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                            Mfield_padded[dir].setVal(0.);
-                            Mfield_padded[dir].ParallelCopy(Mfield_prev_iter[dir], 0, 0, 1);
-                        }
-
-                        ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                         Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                         n_cell_large, geom_large);
-                    }
-                }
-    
-                if (exchange_coupling == 1) {
-                    CalculateH_exchange(Mfield_prev_iter, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
-                }
-        
-                if(DMI_coupling == 1) {
-                    CalculateH_DMI(Mfield_prev_iter, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
-                }
-    
-                if(anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield_prev_iter, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
-                }
-    
-		// LLG RHS with new H_demag and M_field_pre
-		// Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-                Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                                gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
+            while(1) { 
     
 		// Corrector step update M
                 // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
@@ -824,19 +729,72 @@ void main_main ()
                 M_mag_error_max = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
                 M_mag_error_max = std::max(M_mag_error_max, Mfield_error[2].norm0());
 
-	            // copy new solution into Mfield_pre_iter
-	            for (int comp = 0; comp < 3; comp++) {
+                // copy new solution into Mfield_pre_iter
+                for (int comp = 0; comp < 3; comp++) {
                     MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
                     // fill periodic ghost cells 
                     Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
-	            }
+                }
     
-	            iter = iter + 1;
-    
-	            amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
-	            if (M_mag_error_max <= M_tolerance) stop_iter = 1;
+                iter = iter + 1;
 
-	        } // while stop_iter
+                // terminate while loop of error threshold is small enough
+                amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
+                if (M_mag_error_max <= M_tolerance) break;
+
+                // Poisson solve and H_demag computation with M_field_pre
+                if (demag_coupling == 1) { 
+            
+                    if (demag_solver == -1 || demag_solver == 0) {
+                        //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                        //Compute RHS of Poisson equation
+                        ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, geom);
+    
+                        //Initial guess for phi
+                        PoissonPhi.setVal(0.);
+
+                        if (demag_solver == -1) {
+                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        } else if (demag_solver == 0) {
+                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                        }
+
+                        // Calculate H from Phi
+                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
+
+                    } else {
+
+                        // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
+                        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+                            Mfield_padded[dir].setVal(0.);
+                            Mfield_padded[dir].ParallelCopy(Mfield_prev_iter[dir], 0, 0, 1);
+                        }
+
+                        ComputeHFieldFFT(Mfield_padded, H_demagfield,
+                                         Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
+                                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
+                                         n_cell_large, geom_large);
+                    }
+                }
+    
+                if (exchange_coupling == 1) {
+                    CalculateH_exchange(Mfield_prev_iter, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
+        
+                if (DMI_coupling == 1) {
+                    CalculateH_DMI(Mfield_prev_iter, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
+                }
+    
+                if (anisotropy_coupling == 1) {
+                    CalculateH_anisotropy(Mfield_prev_iter, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+                }
+    
+                // LLG RHS with new H_demag and M_field_pre
+                // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
+                Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
+                                gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
+
+            }
 
             // copy new solution into old solution
             for (int comp = 0; comp < 3; comp++) {
@@ -902,11 +860,11 @@ void main_main ()
                     CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
                 }
 
-                if(DMI_coupling == 1) {
+                if (DMI_coupling == 1) {
                     CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
                 }
 
-                if(anisotropy_coupling == 1) {
+                if (anisotropy_coupling == 1) {
                     CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
                 }
 
