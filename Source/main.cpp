@@ -806,7 +806,11 @@ void main_main ()
         } else if (TimeIntegratorOption == 3) { // iterative direct solver (ARTEMIS way)
         
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms,
-                        gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
+                        gamma, exchange, DMI, anisotropy,
+                        Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
+                        Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, Mfield_padded,
+                        n_cell_large, geom_large,
+                        demag_coupling, demag_solver, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
                         M_normalization, mu0, geom, dt);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
