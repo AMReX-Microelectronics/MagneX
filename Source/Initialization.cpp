@@ -182,7 +182,7 @@ void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&  H_biasfield,
 
     for (MFIter mfi(H_biasfield[0]); mfi.isValid(); ++mfi)
     {
-        const Box& bx = mfi.growntilebox(1);
+        const Box& bx = mfi.tilebox();
 
         // extract dx from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();

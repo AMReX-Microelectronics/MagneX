@@ -245,7 +245,7 @@ void main_main ()
         //Cell-centered fields
         Mfield_old[dir].define(ba, dm, 1, 1);
         Mfield_prev_iter[dir].define(ba, dm, 1, 1);
-        Mfield_error[dir].define(ba, dm, 1, 1);
+        Mfield_error[dir].define(ba, dm, 1, 0);
 
         H_exchangefield[dir].define(ba, dm, 1, 0);
         H_DMIfield[dir].define(ba, dm, 1, 0);
@@ -265,8 +265,8 @@ void main_main ()
         for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
             //Cell-centered fields
             Mfield[dir].define(ba, dm, 1, 1);
-            H_biasfield[dir].define(ba, dm, 1, 1);
-            H_demagfield[dir].define(ba, dm, 1, 1);
+            H_biasfield[dir].define(ba, dm, 1, 0);
+            H_demagfield[dir].define(ba, dm, 1, 0);
         }
     }
 

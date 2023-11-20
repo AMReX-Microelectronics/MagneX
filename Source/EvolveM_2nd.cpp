@@ -52,13 +52,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 {
 
     // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
-    std::array<MultiFab, 3> H_demagfield_old;    // H^(old_time) before the current time step
     std::array<MultiFab, 3> H_demagfield_prev;    // H^(new_time) of the (r-1)th iteration
-    std::array<MultiFab, 3> H_exchangefield_old;    // H^(old_time) before the current time step
     std::array<MultiFab, 3> H_exchangefield_prev;    // H^(new_time) of the (r-1)th iteration
-    std::array<MultiFab, 3> H_DMIfield_old;    // H^(old_time) before the current time step
     std::array<MultiFab, 3> H_DMIfield_prev;    // H^(new_time) of the (r-1)th iteration
-    std::array<MultiFab, 3> H_anisotropyfield_old;    // H^(old_time) before the current time step
     std::array<MultiFab, 3> H_anisotropyfield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_old;    // M^(old_time) before the current time step
     std::array<MultiFab, 3> Mfield_prev;   // M^(new_time) of the (r-1)th iteration
@@ -69,51 +65,33 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
     BoxArray ba = Mfield[0].boxArray();
     DistributionMapping dm = Mfield[0].DistributionMap();
-    
 
     for (int i = 0; i < 3; i++){
-        H_demagfield_old[i].define(ba, dm, 1, H_demagfield[i].nGrow()); // only demag fields are cell centered
-        H_demagfield_prev[i].define(ba, dm, 1, H_demagfield[i].nGrow());
-        H_exchangefield_old[i].define(ba, dm, 1, H_exchangefield[i].nGrow()); // match ghost cell number with main function
-        H_exchangefield_prev[i].define(ba, dm, 1, H_exchangefield[i].nGrow());
-        H_DMIfield_old[i].define(ba, dm, 1, H_DMIfield[i].nGrow()); // match ghost cell number with main function
-        H_DMIfield_prev[i].define(ba, dm, 1, H_DMIfield[i].nGrow());
-        H_anisotropyfield_old[i].define(ba, dm, 1, H_anisotropyfield[i].nGrow()); // match ghost cell number with main function
-        H_anisotropyfield_prev[i].define(ba, dm, 1, H_anisotropyfield[i].nGrow());
-        Mfield_old[i].define(ba, dm, 1, Mfield[i].nGrow()); // match ghost cell number with main function
-        Mfield_prev[i].define(ba, dm, 1, Mfield[i].nGrow());
+        H_demagfield_prev[i].define(ba, dm, 1, 0);
+        H_exchangefield_prev[i].define(ba, dm, 1, 0);
+        H_DMIfield_prev[i].define(ba, dm, 1, 0);
+        H_anisotropyfield_prev[i].define(ba, dm, 1, 0);
+        Mfield_old[i].define(ba, dm, 1, 1);
+        Mfield_prev[i].define(ba, dm, 1, 1);
         
-        MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
-        MultiFab::Copy(H_demagfield_old[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
-        MultiFab::Copy(H_exchangefield_old[i], H_exchangefield[i], 0, 0, 1, H_exchangefield[i].nGrow());
-        MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, H_exchangefield[i].nGrow());
-        MultiFab::Copy(H_DMIfield_old[i], H_DMIfield[i], 0, 0, 1, H_DMIfield[i].nGrow());
-        MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, H_DMIfield[i].nGrow());
-        MultiFab::Copy(H_anisotropyfield_old[i], H_anisotropyfield[i], 0, 0, 1, H_anisotropyfield[i].nGrow());
-        MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, H_anisotropyfield[i].nGrow());
-        MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 1, Mfield[i].nGrow());
-        MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, Mfield[i].nGrow());
+        MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, 0);
+        MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
+        MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
+        MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
+        MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 1, 1);
+        MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
         
         // fill periodic ghost cells
-        H_demagfield_old[i].FillBoundary(geom.periodicity());
-        H_demagfield_prev[i].FillBoundary(geom.periodicity());
-        H_exchangefield_old[i].FillBoundary(geom.periodicity());
-        H_exchangefield_prev[i].FillBoundary(geom.periodicity());
-        H_DMIfield_old[i].FillBoundary(geom.periodicity());
-        H_DMIfield_prev[i].FillBoundary(geom.periodicity());
-        H_anisotropyfield_old[i].FillBoundary(geom.periodicity());
-        H_anisotropyfield_prev[i].FillBoundary(geom.periodicity());
         Mfield_old[i].FillBoundary(geom.periodicity());
         Mfield_prev[i].FillBoundary(geom.periodicity());
 
-        Mfield_error[i].define(ba, dm, 1, Mfield[i].nGrow());
+        Mfield_error[i].define(ba, dm, 1, 0);
         Mfield_error[i].setVal(0.); // reset Mfield_error to zero
-        Mfield_error[i].FillBoundary(geom.periodicity());
 
         // initialize a_temp, a_temp_static, b_temp_static
-        a_temp[i].define(ba, dm, 1, Mfield[i].nGrow());
-        a_temp_static[i].define(ba, dm, 1, Mfield[i].nGrow());
-        b_temp_static[i].define(ba, dm, 1, Mfield[i].nGrow());
+        a_temp[i].define(ba, dm, 1, 0);
+        a_temp_static[i].define(ba, dm, 1, 0);
+        b_temp_static[i].define(ba, dm, 1, 0);
 
     }    
     
@@ -125,27 +103,24 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         const Array4<Real>& Ms_arr = Ms.array(mfi);
 
         // extract field data   
-        const Array4<Real>& Hx_bias = H_biasfield[0].array(mfi); // Hx_bias is the x component at cell centers
-        const Array4<Real>& Hy_bias = H_biasfield[1].array(mfi); // Hy_bias is the y component at cell centers
-        const Array4<Real>& Hz_bias = H_biasfield[2].array(mfi); // Hz_bias is the z component at cell centers
-        const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);   // Hx_old is the x component at cell centers
-        const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);   // Hy_old is the y component at cell centers
-        const Array4<Real>& Hz_demag = H_demagfield[2].array(mfi);   // Hz_old is the z component at cell centers
-        const Array4<Real>& Hx_demag_old = H_demagfield_old[0].array(mfi);   // Hx_old is the x component at cell centers
-        const Array4<Real>& Hy_demag_old = H_demagfield_old[1].array(mfi);   // Hy_old is the y component at cell centers
-        const Array4<Real>& Hz_demag_old = H_demagfield_old[2].array(mfi);   // Hz_old is the z component at cell centers
-        const Array4<Real>& Hx_exchange_old = H_exchangefield_old[0].array(mfi); // note Hx_exchange_old is the x component at cell centers
-        const Array4<Real>& Hy_exchange_old = H_exchangefield_old[1].array(mfi); // note Hy_exchange_old is the y component at cell centers
-        const Array4<Real>& Hz_exchange_old = H_exchangefield_old[2].array(mfi); // note Hz_exchange_old is the z component at cell centers
-        const Array4<Real>& Hx_DMI_old = H_DMIfield_old[0].array(mfi); // note Hx_DMI_old is the x component at cell centers
-        const Array4<Real>& Hy_DMI_old = H_DMIfield_old[1].array(mfi); // note Hy_DMI_old is the y component at cell centers
-        const Array4<Real>& Hz_DMI_old = H_DMIfield_old[2].array(mfi); // note Hz_DMI_old is the z component at cell centers
-        const Array4<Real>& Hx_anisotropy_old = H_anisotropyfield_old[0].array(mfi); // note Hx_anisotropy_old is the x component at cell centers
-        const Array4<Real>& Hy_anisotropy_old = H_anisotropyfield_old[1].array(mfi); // note Hy_anisotropy_old is the y component at cell centers
-        const Array4<Real>& Hz_anisotropy_old = H_anisotropyfield_old[2].array(mfi); // note Hz_anisotropy_old is the z component at cell centers
-        const Array4<Real>& Mx_old = Mfield_old[0].array(mfi); // note Mx is the x component at cell centers
-        const Array4<Real>& My_old = Mfield_old[1].array(mfi); // note My is the y component at cell centers
-        const Array4<Real>& Mz_old = Mfield_old[2].array(mfi); // note Mz is the z component at cell centers
+        const Array4<Real>& Hx_bias = H_biasfield[0].array(mfi);
+        const Array4<Real>& Hy_bias = H_biasfield[1].array(mfi);
+        const Array4<Real>& Hz_bias = H_biasfield[2].array(mfi);
+        const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);
+        const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);
+        const Array4<Real>& Hz_demag = H_demagfield[2].array(mfi);
+        const Array4<Real>& Hx_exchange = H_exchangefield[0].array(mfi);
+        const Array4<Real>& Hy_exchange = H_exchangefield[1].array(mfi);
+        const Array4<Real>& Hz_exchange = H_exchangefield[2].array(mfi);
+        const Array4<Real>& Hx_DMI = H_DMIfield[0].array(mfi);
+        const Array4<Real>& Hy_DMI = H_DMIfield[1].array(mfi);
+        const Array4<Real>& Hz_DMI = H_DMIfield[2].array(mfi);
+        const Array4<Real>& Hx_anisotropy = H_anisotropyfield[0].array(mfi);
+        const Array4<Real>& Hy_anisotropy = H_anisotropyfield[1].array(mfi);
+        const Array4<Real>& Hz_anisotropy = H_anisotropyfield[2].array(mfi);
+        const Array4<Real>& Mx_old = Mfield_old[0].array(mfi);
+        const Array4<Real>& My_old = Mfield_old[1].array(mfi);
+        const Array4<Real>& Mz_old = Mfield_old[2].array(mfi);
 
         // extract field data of a_temp_static and b_temp_static
         const Array4<Real>& ax_temp_static = a_temp_static[0].array(mfi);
@@ -186,9 +161,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
                         // H_exchange - use M^(old_time)
 
-                        Hx_eff_old += Hx_exchange_old(i, j, k);
-                        Hy_eff_old += Hy_exchange_old(i, j, k);
-                        Hz_eff_old += Hz_exchange_old(i, j, k);
+                        Hx_eff_old += Hx_exchange(i, j, k);
+                        Hy_eff_old += Hy_exchange(i, j, k);
+                        Hz_eff_old += Hz_exchange(i, j, k);
 
                     }
 
@@ -196,18 +171,18 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
                         // H_DMI - use M^(old_time)
 
-                        Hx_eff_old += Hx_DMI_old(i, j, k);
-                        Hy_eff_old += Hy_DMI_old(i, j, k);
-                        Hz_eff_old += Hz_DMI_old(i, j, k);
+                        Hx_eff_old += Hx_DMI(i, j, k);
+                        Hy_eff_old += Hy_DMI(i, j, k);
+                        Hz_eff_old += Hz_DMI(i, j, k);
 
                     }
 
                     if (anisotropy_coupling == 1){
 
                         // H_anisotropy - use M^(old_time)
-                        Hx_eff_old += Hx_anisotropy_old(i, j, k);
-                        Hy_eff_old += Hy_anisotropy_old(i, j, k);
-                        Hz_eff_old += Hz_anisotropy_old(i, j, k);
+                        Hx_eff_old += Hx_anisotropy(i, j, k);
+                        Hy_eff_old += Hy_anisotropy(i, j, k);
+                        Hz_eff_old += Hz_anisotropy(i, j, k);
                     }
 
                     // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
@@ -242,10 +217,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     int M_iter = 0;
     // relative tolerance stopping criteria for 2nd-order iterative algorithm
     amrex::Real M_tol = 1.e-6;
-    int stop_iter = 0;
 
     // begin the iteration
-    while (!stop_iter){
+    while (1) {
 
         for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi){
 
@@ -254,32 +228,32 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             const Array4<Real>& Ms_arr = Ms.array(mfi);
 
             // extract field data
-            const Array4<Real>& Mx = Mfield[0].array(mfi);      // note Mx is the x component at cell centers
-            const Array4<Real>& My = Mfield[1].array(mfi);      // note My is the y component at cell centers
-            const Array4<Real>& Mz = Mfield[2].array(mfi);      // note Mz is the z component at cell centers
-            const Array4<Real>& Hx_bias = H_biasfield[0].array(mfi); // Hx_bias is the x component at cell centers
-            const Array4<Real>& Hy_bias = H_biasfield[1].array(mfi); // Hy_bias is the y component at cell centers
-            const Array4<Real>& Hz_bias = H_biasfield[2].array(mfi); // Hz_bias is the z component at cell centers
-            const Array4<Real>& Hx_demag_prev = H_demagfield_prev[0].array(mfi);           // Hx is the x component at cell centers
-            const Array4<Real>& Hy_demag_prev = H_demagfield_prev[1].array(mfi);           // Hy is the y component at cell centers
-            const Array4<Real>& Hz_demag_prev = H_demagfield_prev[2].array(mfi);           // Hz is the z component at cell centers
-            const Array4<Real>& Hx_exchange_prev = H_exchangefield_prev[0].array(mfi);           // Hx_exchange include x component at cell centers
-            const Array4<Real>& Hy_exchange_prev = H_exchangefield_prev[1].array(mfi);           // Hy_exchange include y component at cell centers
-            const Array4<Real>& Hz_exchange_prev = H_exchangefield_prev[2].array(mfi);           // Hz_exchange include z component at cell centers
-            const Array4<Real>& Hx_DMI_prev = H_DMIfield_prev[0].array(mfi);           // Hx_DMI include x component at cell centers
-            const Array4<Real>& Hy_DMI_prev = H_DMIfield_prev[1].array(mfi);           // Hy_DMI include y component at cell centers
-            const Array4<Real>& Hz_DMI_prev = H_DMIfield_prev[2].array(mfi);           // Hz_DMI include z component at cell centers
-            const Array4<Real>& Hx_anisotropy_prev = H_anisotropyfield_prev[0].array(mfi);           // Hx_anisotropy include x component at cell centers
-            const Array4<Real>& Hy_anisotropy_prev = H_anisotropyfield_prev[1].array(mfi);           // Hy_anisotropy include y component at cell centers
-            const Array4<Real>& Hz_anisotropy_prev = H_anisotropyfield_prev[2].array(mfi);           // Hz_anisotropy include z component at cell centers
+            const Array4<Real>& Mx = Mfield[0].array(mfi);
+            const Array4<Real>& My = Mfield[1].array(mfi);
+            const Array4<Real>& Mz = Mfield[2].array(mfi);
+            const Array4<Real>& Hx_bias = H_biasfield[0].array(mfi);
+            const Array4<Real>& Hy_bias = H_biasfield[1].array(mfi);
+            const Array4<Real>& Hz_bias = H_biasfield[2].array(mfi);
+            const Array4<Real>& Hx_demag_prev = H_demagfield_prev[0].array(mfi);
+            const Array4<Real>& Hy_demag_prev = H_demagfield_prev[1].array(mfi);
+            const Array4<Real>& Hz_demag_prev = H_demagfield_prev[2].array(mfi);
+            const Array4<Real>& Hx_exchange_prev = H_exchangefield_prev[0].array(mfi);
+            const Array4<Real>& Hy_exchange_prev = H_exchangefield_prev[1].array(mfi);
+            const Array4<Real>& Hz_exchange_prev = H_exchangefield_prev[2].array(mfi);
+            const Array4<Real>& Hx_DMI_prev = H_DMIfield_prev[0].array(mfi);
+            const Array4<Real>& Hy_DMI_prev = H_DMIfield_prev[1].array(mfi);
+            const Array4<Real>& Hz_DMI_prev = H_DMIfield_prev[2].array(mfi);
+            const Array4<Real>& Hx_anisotropy_prev = H_anisotropyfield_prev[0].array(mfi);
+            const Array4<Real>& Hy_anisotropy_prev = H_anisotropyfield_prev[1].array(mfi);
+            const Array4<Real>& Hz_anisotropy_prev = H_anisotropyfield_prev[2].array(mfi);
 
             // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp_static
             const Array4<Real>& Mx_prev = Mfield_prev[0].array(mfi);
             const Array4<Real>& My_prev = Mfield_prev[1].array(mfi);
             const Array4<Real>& Mz_prev = Mfield_prev[2].array(mfi);
-            const Array4<Real>& Mx_old = Mfield_old[0].array(mfi); // note Mx is the x component at cell centers
-            const Array4<Real>& My_old = Mfield_old[1].array(mfi); // note My is the y component at cell centers
-            const Array4<Real>& Mz_old = Mfield_old[2].array(mfi); // note Mz is the z component at cell centers
+            const Array4<Real>& Mx_old = Mfield_old[0].array(mfi);
+            const Array4<Real>& My_old = Mfield_old[1].array(mfi);
+            const Array4<Real>& Mz_old = Mfield_old[2].array(mfi);
             const Array4<Real>& Mx_error = Mfield_error[0].array(mfi);
             const Array4<Real>& My_error = Mfield_error[1].array(mfi);
             const Array4<Real>& Mz_error = Mfield_error[2].array(mfi);
@@ -471,10 +445,10 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
         if (M_iter_maxerror <= M_tol){
 
-            stop_iter = 1;
-
             // normalize M
 	    NormalizeM(Mfield,Ms,M_normalization);
+
+            break;
         }
         else{
 
