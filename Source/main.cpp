@@ -453,8 +453,7 @@ void main_main ()
 
     }
 
-    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
-                                 prob_lo, prob_hi, geom);
+    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, prob_lo, prob_hi, geom);
 
 
     // count how many magnetic cells are in the domain
@@ -471,7 +470,7 @@ void main_main ()
 
                 // Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                 // Compute RHS of Poisson equation
-                ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
+                ComputePoissonRHS(PoissonRHS, Mfield, geom);
 
 		//Initial guess for phi
                 PoissonPhi.setVal(0.);
@@ -484,7 +483,7 @@ void main_main ()
                 }
 
 	        // Calculate H from Phi
-	        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);	    
+	        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);	    
 
             } else {
 
@@ -506,7 +505,7 @@ void main_main ()
         }
 
         if(DMI_coupling == 1){
-            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
         }
 
         if(anisotropy_coupling == 1){
@@ -602,7 +601,7 @@ void main_main ()
 
                     //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                     //Compute RHS of Poisson equation
-                    ComputePoissonRHS(PoissonRHS, Mfield_old, Ms, geom);
+                    ComputePoissonRHS(PoissonRHS, Mfield_old, geom);
                 
                     //Initial guess for phi
                     PoissonPhi.setVal(0.);
@@ -614,7 +613,7 @@ void main_main ()
                     }
 
                     // Calculate H from Phi
-                    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                    ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
                 } else {
 
                     // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
@@ -635,7 +634,7 @@ void main_main ()
             }
 
             if(DMI_coupling == 1){
-                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
             }
 
             if(anisotropy_coupling == 1){
@@ -645,7 +644,7 @@ void main_main ()
             //Evolve M
             // Compute f^n = f(M^n, H^n)
             Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
-                            Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+                            Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
 
             // M^{n+1} = M^n + dt * f^n
 	        for(int i = 0; i < 3; i++){
@@ -681,7 +680,7 @@ void main_main ()
                     if (demag_solver == -1 || demag_solver == 0) {
                         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                         //Compute RHS of Poisson equation
-                        ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+                        ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, geom);
                 
                         //Initial guess for phi
                         PoissonPhi.setVal(0.);
@@ -693,7 +692,7 @@ void main_main ()
                         }
 
                         // Calculate H from Phi
-                        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
                     } else {
 
                         // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
@@ -715,7 +714,7 @@ void main_main ()
             }
     
             if(DMI_coupling == 1){
-                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
             }
     
             if(anisotropy_coupling == 1){
@@ -724,7 +723,7 @@ void main_main ()
     
 	        // Compute f^{n} = f(M^{n}, H^{n})
             Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                            gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+                            gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
 
             while(!stop_iter){
                 
@@ -734,7 +733,7 @@ void main_main ()
                     if (demag_solver == -1 || demag_solver == 0) {
                         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                         //Compute RHS of Poisson equation
-                        ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+                        ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, geom);
     
                         //Initial guess for phi
                         PoissonPhi.setVal(0.);
@@ -746,7 +745,7 @@ void main_main ()
                         }
 
                         // Calculate H from Phi
-                        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
 
                     } else {
 
@@ -768,7 +767,7 @@ void main_main ()
                 }
         
                 if(DMI_coupling == 1){
-                    CalculateH_DMI(Mfield_prev_iter, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                    CalculateH_DMI(Mfield_prev_iter, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
                 }
     
                 if(anisotropy_coupling == 1){
@@ -778,7 +777,7 @@ void main_main ()
 		// LLG RHS with new H_demag and M_field_pre
 		// Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
                 Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                                gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+                                gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
     
 		// Corrector step update M
 	            // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
@@ -848,7 +847,7 @@ void main_main ()
         
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms,
                         gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
-                        M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
+                        M_normalization, mu0, geom, dt);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
@@ -869,7 +868,7 @@ void main_main ()
 
                         //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
                         //Compute RHS of Poisson equation
-                        ComputePoissonRHS(PoissonRHS, old_state, Ms, geom);
+                        ComputePoissonRHS(PoissonRHS, old_state, geom);
                      
                         //Initial guess for phi
                         PoissonPhi.setVal(0.);
@@ -881,7 +880,7 @@ void main_main ()
                         }
 
                         // Calculate H from Phi
-                        ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
                     } else {
 
                         // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
@@ -902,7 +901,7 @@ void main_main ()
                 }
 
                 if(DMI_coupling == 1){
-                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
                 }
 
                 if(anisotropy_coupling == 1){
@@ -911,7 +910,7 @@ void main_main ()
 
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling,
-                                exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+                                exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0);
             };
 
             // Create a function to call after updating a state

@@ -10,34 +10,30 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
-void EvolveM_2nd(
-    std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
-    std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
-    std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
-    std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
-    std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
-    std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
-    MultiFab                              &PoissonRHS, 
-    MultiFab                              &PoissonPhi, 
-    MultiFab                              &alpha,
-    MultiFab                              &Ms,
-    MultiFab                              &gamma,
-    MultiFab                              &exchange,
-    MultiFab                              &DMI,
-    MultiFab                              &anisotropy,
-    int demag_coupling,
-    int exchange_coupling,
-    int DMI_coupling,
-    int anisotropy_coupling,
-    amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
-    int M_normalization, 
-    Real mu0,
-    const Geometry& geom,
-    amrex::GpuArray<amrex::Real, 3>  prob_lo,
-    amrex::GpuArray<amrex::Real, 3>  prob_hi,
-    amrex::Real const dt,
-    const Real time
-){
+void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_biasfield, // H bias
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
+                 MultiFab                              &PoissonRHS, 
+                 MultiFab                              &PoissonPhi, 
+                 MultiFab                              &alpha,
+                 MultiFab                              &Ms,
+                 MultiFab                              &gamma,
+                 MultiFab                              &exchange,
+                 MultiFab                              &DMI,
+                 MultiFab                              &anisotropy,
+                 int demag_coupling,
+                 int exchange_coupling,
+                 int DMI_coupling,
+                 int anisotropy_coupling,
+                 amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
+                 int M_normalization, 
+                 Real mu0,
+                 const Geometry& geom,
+                 amrex::Real const dt)
+{
 
     // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
     std::array<MultiFab, 3> H_demagfield_old;    // H^(old_time) before the current time step
@@ -110,17 +106,9 @@ void EvolveM_2nd(
     // calculate the b_temp_static, a_temp_static
     for (MFIter mfi(a_temp_static[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
-        const Box& bx = mfi.growntilebox(1); 
-
-        // extract dx from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
-
         const Array4<Real>& alpha_arr = alpha.array(mfi);
         const Array4<Real>& gamma_arr = gamma.array(mfi);
         const Array4<Real>& Ms_arr = Ms.array(mfi);
-        const Array4<Real>& exchange_arr = exchange.array(mfi);
-        const Array4<Real>& DMI_arr = DMI.array(mfi);
-        const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
 
         // extract field data   
         const Array4<Real>& Hx_bias = H_biasfield[0].array(mfi); // Hx_bias is the x component at cell centers
@@ -154,11 +142,7 @@ void EvolveM_2nd(
         const Array4<Real>& bz_temp_static = b_temp_static[2].array(mfi);
 
         // extract tileboxes for which to loop
-        amrex::IntVect M_stag = Mfield[0].ixType().toIntVect();
-        // extract tileboxes for which to loop
-        amrex::IntVect H_demag_stag = H_demagfield[0].ixType().toIntVect();
-        // extract tileboxes for which to loop
-        Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
+        const Box& tbx = mfi.tilebox();
 
         // loop over cells and update fields
         amrex::ParallelFor(tbx,
@@ -251,17 +235,9 @@ void EvolveM_2nd(
 
         for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi){
 
-            const Box& bx = mfi.growntilebox(1); 
-
-            // extract dx from the geometry object
-            GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
-
             const Array4<Real>& alpha_arr = alpha.array(mfi);
             const Array4<Real>& gamma_arr = gamma.array(mfi);
             const Array4<Real>& Ms_arr = Ms.array(mfi);
-            const Array4<Real>& exchange_arr = exchange.array(mfi);
-            const Array4<Real>& DMI_arr = DMI.array(mfi);
-            const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
 
             // extract field data
             const Array4<Real>& Mx = Mfield[0].array(mfi);      // note Mx is the x component at cell centers
@@ -304,11 +280,7 @@ void EvolveM_2nd(
             const Array4<Real>& bz_temp_static = b_temp_static[2].array(mfi);
 
             // extract tileboxes for which to loop
-            amrex::IntVect H_demag_stag = H_demagfield_prev[0].ixType().toIntVect();
-            // extract tileboxes for which to loop
-            amrex::IntVect M_stag = Mfield[0].ixType().toIntVect();
-            // extract tileboxes for which to loop
-            Box const &tbx = mfi.tilebox(Mfield[0].ixType().toIntVect());
+            const Box& tbx = mfi.tilebox();
 
             // loop over cells and update fields
             amrex::ParallelFor(tbx,
@@ -432,14 +404,14 @@ void EvolveM_2nd(
 	   {
 	      //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
 	      //Compute RHS of Poisson equation
-	      ComputePoissonRHS(PoissonRHS, Mfield, Ms, geom);
+	      ComputePoissonRHS(PoissonRHS, Mfield, geom);
                     
 	      //Initial guess for phi
 	      PoissonPhi.setVal(0.);
 	      openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
     
 	      // Calculate H from Phi
-	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+	      ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
 	   }
 
        if (exchange_coupling == 1){
@@ -447,7 +419,7 @@ void EvolveM_2nd(
        }
 
        if (DMI_coupling == 1){
-          CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+          CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
        }
 
        if(anisotropy_coupling == 1){

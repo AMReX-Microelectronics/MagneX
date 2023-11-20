@@ -15,7 +15,7 @@ long CountMagneticCells(MultiFab& Ms)
         auto const& fab = Ms.array(mfi);
 
         reduce_op.eval(bx, reduce_data,
-                       [=] AMREX_GPU_DEVICE (long i, long j, long k) -> ReduceTuple
+                       [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
             if (fab(i,j,k) > 0.) {
                 return {1};
@@ -49,7 +49,7 @@ Real SumNormalizedM(MultiFab& Ms,
         auto const& M = Mfield.array(mfi);
 
         reduce_op.eval(bx, reduce_data,
-                       [=] AMREX_GPU_DEVICE (Real i, Real j, Real k) -> ReduceTuple
+                       [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
             if (fab(i,j,k) > 0.) {
                 return {M(i,j,k)/fab(i,j,k)};

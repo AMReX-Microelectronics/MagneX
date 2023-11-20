@@ -7,16 +7,14 @@
 
 using namespace amrex;
 
-void CalculateH_DMI(
-    std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
-    std::array< MultiFab, AMREX_SPACEDIM> &   H_DMIfield,
-    MultiFab&   Ms,
-    MultiFab&   exchange,
-    MultiFab&   DMI,
-    int exchange_coupling,
-    int DMI_coupling,
-    Real mu0,
-    const Geometry& geom)
+void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
+                    std::array< MultiFab, AMREX_SPACEDIM> &   H_DMIfield,
+                    MultiFab&   Ms,
+                    MultiFab&   exchange,
+                    MultiFab&   DMI,
+                    int DMI_coupling,
+                    Real mu0,
+                    const Geometry& geom)
 {
     // calculate the b_temp_static, a_temp_static
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {

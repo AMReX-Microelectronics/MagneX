@@ -74,15 +74,12 @@ void Compute_LLG_RHS(
                    int DMI_coupling,
                    int anisotropy_coupling,
                    int M_normalization, 
-                   Real mu0,
-                   const Geometry& geom, const Real time)
+                   Real mu0)
 {
     //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
     for (MFIter mfi(LLG_RHS[0]); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
-        // extract dx from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
         // extract field data
         const Array4<Real>& Hx_demag= H_demagfield[0].array(mfi);
         const Array4<Real>& Hy_demag= H_demagfield[1].array(mfi);
