@@ -26,6 +26,7 @@ Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*
 #Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*28259"
 #Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*5013"
 #Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+#plot_int = 227266  # when <Mx> crosses zero
 
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
 Ms_parser(x,y,z) = "8.e5            * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
