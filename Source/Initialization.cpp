@@ -3,18 +3,21 @@
 #include "AMReX_ParmParse.H"
 #include "AMReX_Parser.H"
 
-void InitializeMagneticProperties(MultiFab&  alpha,
-                                  MultiFab&   Ms,
-                                  MultiFab&   gamma,
-                                  MultiFab&   exchange,
-                                  MultiFab&   DMI,
-                                  MultiFab&   anisotropy,
+void InitializeMagneticProperties(MultiFab& alpha,
+                                  MultiFab& Ms,
+                                  MultiFab& gamma,
+                                  MultiFab& exchange,
+                                  MultiFab& DMI,
+                                  MultiFab& anisotropy,
                                   amrex::GpuArray<amrex::Real, 3> prob_lo,
                                   amrex::GpuArray<amrex::Real, 3> prob_hi,
                                   const Geometry& geom,
                                   const Real& time)
 {
 
+    // Ms is the only material property with ghost cells
+    Ms.setVal(0.);
+    
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
