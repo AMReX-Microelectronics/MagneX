@@ -80,6 +80,10 @@ void main_main ()
     // permeability
     Real mu0;
 
+    // whether to call the parser each time step, or only at initialization
+    int timedependent_Hbias;
+    int timedependent_alpha;
+    
     // turn on demagnetization
     int demag_coupling;
 
@@ -101,10 +105,6 @@ void main_main ()
     // turn on anisotropy
     int anisotropy_coupling;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
-
-    // change alpha during runtime
-    int alpha_scale_step = -1;
-    Real alpha_scale_factor = 1.;
 
     // **********************************
     // READ SIMULATION PARAMETERS
@@ -148,6 +148,9 @@ void main_main ()
 	
         pp.get("mu0",mu0);
 
+        pp.get("timedependent_Hbias",timedependent_Hbias);
+        pp.get("timedependent_alpha",timedependent_alpha);
+
         pp.get("demag_coupling",demag_coupling);
         if (demag_coupling) {
             pp.get("demag_solver",demag_solver);
@@ -164,9 +167,6 @@ void main_main ()
                 anisotropy_axis[i] = temp[i];
             }
         }
-
-        pp.query("alpha_scale_step",alpha_scale_step);
-        pp.query("alpha_scale_factor",alpha_scale_factor);
     }
 
     int start_step = 1;
@@ -222,6 +222,9 @@ void main_main ()
 
         // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
         ba.maxSize(max_grid_size);
+
+        // How Boxes are distrubuted among MPI processes
+        dm.define(ba);
     }
 
     // This defines the physical box in each direction.
@@ -235,11 +238,6 @@ void main_main ()
     Geometry geom;
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
-    // How Boxes are distrubuted among MPI processes
-    if (restart == -1) {
-        dm.define(ba);
-    }
-   
     // Allocate multifabs
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
         //Cell-centered fields
@@ -453,8 +451,8 @@ void main_main ()
 
     }
 
-    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, prob_lo, prob_hi, geom);
-
+    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, prob_lo, prob_hi, geom, time);
+    ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
 
     // count how many magnetic cells are in the domain
     long num_mag = CountMagneticCells(Ms);
@@ -462,7 +460,6 @@ void main_main ()
     if (restart == -1) {      
         //Initialize fields
         InitializeFields(Mfield, prob_lo, prob_hi, geom);
-        ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
 
         if (demag_coupling == 1) {
             
@@ -578,13 +575,16 @@ void main_main ()
         
         Real step_strt_time = ParallelDescriptor::second();
 
-        // Fow now always assume H_bias is constant over the time step
-        // This need to be fixed for second-order options
-        ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
+        if (timedependent_Hbias) {
+            // Fow now always assume H_bias is constant over the time step
+            // This need to be fixed for second-order options
+            ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
+        }
 
-        // scale alpha
-        if (step == alpha_scale_step) {
-            alpha.mult(alpha_scale_factor);
+        if (timedependent_alpha) {
+            // Fow now always assume alpha is constant over the time step
+            // This need to be fixed for second-order options
+            ComputeAlpha(alpha,prob_lo,prob_hi,geom,time);
         }
 
         // compute old-time LLG_RHS

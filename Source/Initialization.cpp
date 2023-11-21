@@ -4,37 +4,27 @@
 #include "AMReX_Parser.H"
 
 void InitializeMagneticProperties(MultiFab&  alpha,
-                   MultiFab&   Ms,
-                   MultiFab&   gamma,
-                   MultiFab&   exchange,
-                   MultiFab&   DMI,
-                   MultiFab&   anisotropy,
-                   amrex::GpuArray<amrex::Real, 3> prob_lo,
-                   amrex::GpuArray<amrex::Real, 3> prob_hi,
-                   const       Geometry& geom)
+                                  MultiFab&   Ms,
+                                  MultiFab&   gamma,
+                                  MultiFab&   exchange,
+                                  MultiFab&   DMI,
+                                  MultiFab&   anisotropy,
+                                  amrex::GpuArray<amrex::Real, 3> prob_lo,
+                                  amrex::GpuArray<amrex::Real, 3> prob_hi,
+                                  const Geometry& geom,
+                                  const Real& time)
 {
 
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
-    GpuArray<Real,AMREX_SPACEDIM> ddx;
-    for (int i = 0; i < 3; ++i) {
-        ddx[i] = dx[i] / 1.e6;
-    }
-
-    alpha.setVal(0.);
-    Ms.setVal(0.);
-    gamma.setVal(0.);
-    exchange.setVal(0.);
-    DMI.setVal(0.);
-    anisotropy.setVal(0.);
 
     ParmParse pp;
 
     std::string alpha_parser_string;
-    pp.get("alpha_parser(x,y,z)",alpha_parser_string);
+    pp.get("alpha_parser(x,y,z,t)",alpha_parser_string);
     Parser alpha_parser(alpha_parser_string);
-    alpha_parser.registerVariables({"x","y","z"});
-    auto alpha_p = alpha_parser.compile<3>();
+    alpha_parser.registerVariables({"x","y","z","t"});
+    auto alpha_p = alpha_parser.compile<4>();
 
     std::string Ms_parser_string;
     pp.get("Ms_parser(x,y,z)",Ms_parser_string);
@@ -84,7 +74,7 @@ void InitializeMagneticProperties(MultiFab&  alpha,
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
 
-            alpha_arr(i,j,k) = alpha_p(x,y,z);
+            alpha_arr(i,j,k) = alpha_p(x,y,z,time);
             gamma_arr(i,j,k) = gamma_p(x,y,z);
             Ms_arr(i,j,k) = Ms_p(x,y,z);
             exchange_arr(i,j,k) = exchange_p(x,y,z);
@@ -99,7 +89,6 @@ void InitializeMagneticProperties(MultiFab&  alpha,
 }
 
 //Initialize fields
-
 void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                       amrex::GpuArray<amrex::Real, 3> prob_lo,
                       amrex::GpuArray<amrex::Real, 3> prob_hi,
@@ -202,5 +191,42 @@ void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&  H_biasfield,
             Hy_bias(i,j,k) = Hy_bias_p(x,y,z,time);
             Hz_bias(i,j,k) = Hz_bias_p(x,y,z,time);
         });
+    }
+}
+
+void ComputeAlpha(MultiFab&  alpha,
+                  amrex::GpuArray<amrex::Real, 3> prob_lo,
+                  amrex::GpuArray<amrex::Real, 3> prob_hi,
+                  const Geometry& geom,
+                  const Real& time)
+{
+
+    // extract dx from the geometry object
+    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+
+    ParmParse pp;
+
+    std::string alpha_parser_string;
+    pp.get("alpha_parser(x,y,z,t)",alpha_parser_string);
+    Parser alpha_parser(alpha_parser_string);
+    alpha_parser.registerVariables({"x","y","z","t"});
+    auto alpha_p = alpha_parser.compile<4>();
+    
+    // loop over boxes
+    for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.validbox();
+
+        const Array4<Real>& alpha_arr = alpha.array(mfi);
+
+        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
+            Real x = prob_lo[0] + (i+0.5) * dx[0];
+            Real y = prob_lo[1] + (j+0.5) * dx[1];
+            Real z = prob_lo[2] + (k+0.5) * dx[2];
+
+            alpha_arr(i,j,k) = alpha_p(x,y,z,time);
+
+        }); 
     }
 }

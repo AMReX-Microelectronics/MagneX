@@ -14,16 +14,18 @@ Mx_parser(x,y,z) = "0."
 My_parser(x,y,z) = "1.4e5 * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
 Mz_parser(x,y,z) = "0."
 
+timedependent_Hbias = 0
 Hx_bias_parser(x,y,z,t) = "0."
 Hy_bias_parser(x,y,z,t) = "2.387324146378430e4 * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
 Hz_bias_parser(x,y,z,t) = "0."
 
-alpha_parser(x,y,z) = "0.058        * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
-Ms_parser(x,y,z) = "1.4e5           * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
-gamma_parser(x,y,z) = "-1.759e11    * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
-exchange_parser(x,y,z) = "3.76e-12  * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
-anisotropy_parser(x,y,z) = "-139.26 * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)"
-DMI_parser(x,y,z) = "0.0            * (x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9)" # unit is J/m^2
+timedependent_alpha = 0
+alpha_parser(x,y,z,t) =    "(x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9) * 0.058"
+Ms_parser(x,y,z) =         "(x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9) * 1.4e5"
+gamma_parser(x,y,z) =      "(x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9) * -1.759e11"
+exchange_parser(x,y,z) =   "(x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9) * 3.76e-12"
+anisotropy_parser(x,y,z) = "(x>-8.e-9)*(x<8.e-9)*(y>-8.e-9)*(y<8.e-9)*(z>-8.e-9)*(z<8.e-9) * -139.26"
+DMI_parser(x,y,z) = "0.0"
 
 demag_coupling = 0
 demag_solver = 1  # -1 = periodic/Neumann MLMG; 0 = Open Poisson MLMG; 1 = FFT-based
