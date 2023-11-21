@@ -171,6 +171,9 @@ void main_main ()
 
     int start_step = 1;
 
+    // for std4 diagnostic
+    Real normalized_Mx_prev = 0.;
+    
     // time = starting time in the simulation
     Real time = 0.0;	
 
@@ -903,6 +906,27 @@ void main_main ()
             amrex::Abort("Time integrator order not recognized");
         }
 
+        // standard problem 4 diagnostics
+        bool diag_std4_plot = false;
+        {
+            Real normalized_Mx = SumNormalizedM(Ms,Mfield[0]);
+            Real normalized_My = SumNormalizedM(Ms,Mfield[1]);
+            Real normalized_Mz = SumNormalizedM(Ms,Mfield[2]);
+        
+            Print() << "time = " << time << " "
+                    << "Sum_normalized_M: "
+                    << normalized_Mx/num_mag << " "
+                    << normalized_My/num_mag << " "
+                    << normalized_Mz/num_mag << std::endl;
+
+            if (normalized_Mx_prev > 0 && normalized_Mx <= 0.) {
+                diag_std4_plot = true;
+            }
+            
+            normalized_Mx_prev = normalized_Mx;
+        }
+        
+        
         // copy new solution into old solution
         for (int comp = 0; comp < 3; comp++) {
             MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
@@ -910,22 +934,16 @@ void main_main ()
             Mfield_old[comp].FillBoundary(geom.periodicity());
         }
 
+        // update time
+        time = time + dt;
+
         Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
 
         amrex::Print() << "Advanced step " << step << " in " << step_stop_time << " seconds\n";
 
-        // update time
-        time = time + dt;
-
-        Print() << "time = " << time << " "
-                << "Sum_normalized_M: "
-                << SumNormalizedM(Ms,Mfield_old[0])/num_mag << " "
-                << SumNormalizedM(Ms,Mfield_old[1])/num_mag << " "
-                << SumNormalizedM(Ms,Mfield_old[2])/num_mag << std::endl;
-
         // Write a plotfile of the data if plot_int > 0
-        if (plot_int > 0 && step%plot_int == 0) {
+        if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
 
             MultiFab::Copy(Plt, Ms, 0, 0, 1, 0);

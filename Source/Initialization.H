@@ -4,12 +4,12 @@
 
 using namespace amrex;
 
-void InitializeMagneticProperties(MultiFab&  alpha,
-                                  MultiFab&   Ms, 
-                                  MultiFab&   gamma,
-                                  MultiFab&   exchange,
-                                  MultiFab&   DMI,
-                                  MultiFab&   anisotropy,
+void InitializeMagneticProperties(MultiFab& alpha,
+                                  MultiFab& Ms, 
+                                  MultiFab& gamma,
+                                  MultiFab& exchange,
+                                  MultiFab& DMI,
+                                  MultiFab& anisotropy,
                                   amrex::GpuArray<amrex::Real, 3> prob_lo,
                                   amrex::GpuArray<amrex::Real, 3> prob_hi,
                                   const Geometry& geom,
