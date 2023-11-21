@@ -15,20 +15,22 @@ Mx_parser(x,y,z) = "0."
 My_parser(x,y,z) = "1.4e5 * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
 Mz_parser(x,y,z) = "0."
 
+timedependent_Hbias = 0
 Hx_bias_parser(x,y,z,t) = "0."
 Hy_bias_parser(x,y,z,t) = "2.387324146378430e4 * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
 Hz_bias_parser(x,y,z,t) = "0."
 
-alpha_parser(x,y,z) = "0.005        * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
-Ms_parser(x,y,z) = "1.4e5           * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
-gamma_parser(x,y,z) = "-1.759e11    * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
-exchange_parser(x,y,z) = "3.1e-12   * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
-anisotropy_parser(x,y,z) = "-139.26 * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)"
-DMI_parser(x,y,z) = "0.0            * (x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9)" # unit is J/m^2
+timedependent_alpha = 0
+alpha_parser(x,y,z,t) =    "(x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9) * 0.005"
+Ms_parser(x,y,z) =         "(x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9) * 1.4e5"
+gamma_parser(x,y,z) =      "(x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9) * -1.759e11"
+exchange_parser(x,y,z) =   "(x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9) * 3.1e-12"
+anisotropy_parser(x,y,z) = "(x>-2587.e-9)*(x<2587.e-9)*(y>-2587.e-9)*(y<2587.e-9)*(z>-172.5e-9)*(z<172.5e-9) * -139.26"
+DMI_parser(x,y,z) = "0.0"
 
 demag_coupling = 1
 demag_solver = 1  # -1 = periodic/Neumann MLMG; 0 = Open Poisson MLMG; 1 = FFT-based
-M_normalization = 1
+M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
 exchange_coupling = 1
 anisotropy_coupling = 0
 anisotropy_axis = 0.0 1.0 0.0
