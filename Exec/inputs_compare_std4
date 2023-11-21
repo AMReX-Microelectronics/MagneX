@@ -1,7 +1,7 @@
 n_cell = 166 42 1
 max_grid_size = 166
 dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 250000
+nsteps = 400000
 plot_int = 10000
 chk_int = -1
 restart = -1
@@ -17,14 +17,14 @@ Mz_parser(x,y,z) = "0."
 
 # Field 1:  mu_0 Hx=-24.6 mT, mu_0 Hy= 4.3 mT, mu_0 Hz= 0.0 mT
 # which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
-Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*19576"
-Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>2.5e-10)*3422"
+Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*19576"
+Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>1.e-9)*3422"
 Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
 # Field 2:  mu_0 Hx=-35.5 mT, mu_0 Hy=-6.3 mT, mu_0 Hz= 0.0 mT
 # which is a field approximately 36 mT, directed 190 degrees counterclockwise from the positive x axis
-#Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*28259"
-#Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>2.5e-10)*5013"
+#Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*28259"
+#Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*5013"
 #Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
 alpha_parser(x,y,z) = "0.5          * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
@@ -34,7 +34,7 @@ exchange_parser(x,y,z) = "1.3e-11   * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0
 anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
-alpha_scale_step = 50000
+alpha_scale_step = 200000
 alpha_scale_factor = 0.04
 
 demag_coupling = 1
