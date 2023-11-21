@@ -65,6 +65,9 @@ void main_main ()
     // 4 = AMReX and SUNDIALS integrators
     int TimeIntegratorOption;
 
+    // tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+    Real iterative_tolerance = 1.e-6;
+
     // time step
     Real dt;
 
@@ -137,7 +140,9 @@ void main_main ()
         pp.query("nsteps",nsteps);
 
         pp.get("TimeIntegratorOption",TimeIntegratorOption);
-	
+
+        pp.query("iterative_tolerance",iterative_tolerance);
+
         pp.get("dt",dt);
 
         pp.query("plot_int",plot_int);
@@ -674,7 +679,6 @@ void main_main ()
             }
         } else if (TimeIntegratorOption == 2) { // iterative predictor-corrector
         
-            Real M_tolerance = 1.e-6;
             int iter = 0;
     
             // Compute f^{n} = f(M^{n}, H^{n})
@@ -743,7 +747,7 @@ void main_main ()
 
                 // terminate while loop of error threshold is small enough
                 amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
-                if (M_mag_error_max <= M_tolerance) break;
+                if (M_mag_error_max <= iterative_tolerance) break;
 
                 // Poisson solve and H_demag computation with M_field_pre
                 if (demag_coupling == 1) { 
@@ -814,7 +818,7 @@ void main_main ()
                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, Mfield_padded,
                         n_cell_large, geom_large,
                         demag_coupling, demag_solver, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
-                        M_normalization, mu0, geom, dt);
+                        M_normalization, mu0, geom, dt, iterative_tolerance);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 

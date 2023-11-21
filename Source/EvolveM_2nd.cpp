@@ -48,7 +48,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  int M_normalization, 
                  Real mu0,
                  const Geometry& geom,
-                 amrex::Real const dt)
+                 const Real& dt,
+                 const Real& iterative_tolerance)
 {
 
     // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
