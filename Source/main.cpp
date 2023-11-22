@@ -586,14 +586,10 @@ void main_main ()
         Real step_strt_time = ParallelDescriptor::second();
 
         if (timedependent_Hbias) {
-            // Fow now always assume H_bias is constant over the time step
-            // This need to be fixed for second-order options
             ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
         }
 
         if (timedependent_alpha) {
-            // Fow now always assume alpha is constant over the time step
-            // This need to be fixed for second-order options
             ComputeAlpha(alpha,prob_lo,prob_hi,geom,time);
         }
 
@@ -676,7 +672,17 @@ void main_main ()
                 // copy Mfield old into Mfield_prev_iter so we can track the change in the predictor
                 MultiFab::Copy(Mfield_prev_iter[comp], Mfield_old[comp], 0, 0, 1, 1);
             }
-        
+
+            // compute new-time Hbias
+            if (timedependent_Hbias) {
+                ComputeHbias(H_biasfield, prob_lo, prob_hi, time+dt, geom);
+            }
+
+            // compute new-time alpha
+            if (timedependent_alpha) {
+                ComputeAlpha(alpha,prob_lo,prob_hi,geom,time+dt);
+            }
+
             int iter = 1;
 
             while(1) { 
@@ -737,8 +743,8 @@ void main_main ()
                     MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
                 }
     
-                iter = iter + 1;
-
+                iter++;
+        
                 // Poisson solve and H_demag computation with M_field
                 if (demag_coupling == 1) { 
             
@@ -801,7 +807,8 @@ void main_main ()
                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, Mfield_padded,
                         n_cell_large, geom_large,
                         demag_coupling, demag_solver, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
-                        M_normalization, mu0, geom, dt, iterative_tolerance);
+                        M_normalization, mu0, geom, time, dt, prob_lo, prob_hi,
+                        timedependent_Hbias, timedependent_alpha, iterative_tolerance);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
