@@ -210,7 +210,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     // initialize max_iter, M_iter, M_tol, M_iter_error
     // maximum number of iterations allowed
     int max_iter = 100;
-    int iter = 0;
+    int iter = 1;
 
     // begin the iteration
     while (1) {
