@@ -1,6 +1,62 @@
-#include "EvolveM.H"
+#include "ComputeLLGRHS.H"
 #include "CartesianAlgorithm.H"
-#include "ComputeLLG_RHS.H"
+
+/**
+ * Compute the x component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real LLG_RHS_x(
+    amrex::Array4<amrex::Real const> const& Mx,
+    amrex::Array4<amrex::Real const> const& My,
+    amrex::Array4<amrex::Real const> const& Mz,
+    amrex::Array4<amrex::Real> const& alpha,
+    amrex::Array4<amrex::Real> const& gamma,
+    Real const M_magnitude, Real const mu0,
+    Real const Hx_eff, Real const Hy_eff, Real const Hz_eff,
+    int const i, int const j, int const k) {
+
+    amrex::Real mag_gammaL = gamma(i,j,k) / (1._rt + std::pow(alpha(i,j,k), 2._rt));
+    return (mu0 * mag_gammaL) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff
+                              + alpha(i,j,k) / M_magnitude * (My(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff) - Mz(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff)));
+}
+
+
+/**
+ * Compute the y component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real LLG_RHS_y(
+    amrex::Array4<amrex::Real const> const& Mx,
+    amrex::Array4<amrex::Real const> const& My,
+    amrex::Array4<amrex::Real const> const& Mz,
+    amrex::Array4<amrex::Real> const& alpha,
+    amrex::Array4<amrex::Real> const& gamma,
+    Real const M_magnitude, Real const mu0,
+    Real const Hx_eff, Real const Hy_eff, Real const Hz_eff,
+    int const i, int const j, int const k) {
+
+    amrex::Real mag_gammaL = gamma(i,j,k) / (1._rt + std::pow(alpha(i,j,k), 2._rt));
+    return (mu0 * mag_gammaL) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff
+                              + alpha(i,j,k) / M_magnitude * (Mz(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff) - Mx(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff)));
+}
+
+
+/**
+ * Compute the z component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+static amrex::Real LLG_RHS_z(
+    amrex::Array4<amrex::Real const> const& Mx,
+    amrex::Array4<amrex::Real const> const& My,
+    amrex::Array4<amrex::Real const> const& Mz,
+    amrex::Array4<amrex::Real> const& alpha,
+    amrex::Array4<amrex::Real> const& gamma,
+    Real const M_magnitude, Real const mu0,
+    Real const Hx_eff, Real const Hy_eff, Real const Hz_eff,
+    int const i, int const j, int const k) {
+
+    amrex::Real mag_gammaL = gamma(i,j,k) / (1._rt + std::pow(alpha(i,j,k), 2._rt));
+    return (mu0 * mag_gammaL) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff
+                              + alpha(i,j,k) / M_magnitude * (Mx(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff) - My(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff)));
+}
+
 
 void Compute_LLG_RHS(
                    Array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
@@ -18,15 +74,12 @@ void Compute_LLG_RHS(
                    int DMI_coupling,
                    int anisotropy_coupling,
                    int M_normalization, 
-                   Real mu0,
-                   const Geometry& geom, const Real time)
+                   Real mu0)
 {
     //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
     for (MFIter mfi(LLG_RHS[0]); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
-        // extract dx from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
         // extract field data
         const Array4<Real>& Hx_demag= H_demagfield[0].array(mfi);
         const Array4<Real>& Hy_demag= H_demagfield[1].array(mfi);
@@ -103,61 +156,5 @@ void Compute_LLG_RHS(
             }   
 
         });     
-    }
-}
-
-void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-	       	MultiFab& Ms, int M_normalization)
-{
-    //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
-    for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
-    {
-        const Box& bx = mfi.validbox();
-        // extract field data
-        const Array4<Real>& Mx = Mfield[0].array(mfi);         
-        const Array4<Real>& My = Mfield[1].array(mfi);         
-        const Array4<Real>& Mz = Mfield[2].array(mfi);         
-        const Array4<Real>& Ms_arr = Ms.array(mfi);
-
-        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-        {
-            if (Ms_arr(i,j,k) > 0._rt)
-            {
-                // temporary normalized magnitude of M_xface field at the fixed point
-                amrex::Real M_magnitude_normalized = std::sqrt(std::pow(Mx(i, j, k), 2._rt) + std::pow(My(i, j, k), 2._rt) + std::pow(Mz(i, j, k), 2._rt)) / Ms_arr(i,j,k);
-                amrex::Real normalized_error = 0.1;
-                if (M_normalization > 0)
-                {
-                    // saturated case; if |M| has drifted from M_s too much, abort.  Otherwise, normalize
-                    // check the normalized error
-                    if (amrex::Math::abs(1._rt - M_magnitude_normalized) > normalized_error)
-                    {
-                        printf("y-face M_magnitude_normalized = %g \n", M_magnitude_normalized);
-                        printf("i = %d, j = %d, k = %d \n", i, j,k);
-                        amrex::Abort("Exceed the normalized error of the Mx field");
-                    }
-                    // normalize the M field
-                    Mx(i, j, k) /= M_magnitude_normalized;
-                    My(i, j, k) /= M_magnitude_normalized;
-                    Mz(i, j, k) /= M_magnitude_normalized;
-                }
-                else if (M_normalization == 0)
-                {   
-                    if(i == 1 && j == 1 && k == 1) printf("Here ??? \n");
-                    // check the normalized error
-                    if (M_magnitude_normalized > (1._rt + normalized_error))
-                    {
-                        amrex::Abort("Caution: Unsaturated material has M_xface exceeding the saturation magnetization");
-                    }
-                    else if (M_magnitude_normalized > 1._rt && M_magnitude_normalized <= (1._rt + normalized_error) )
-                    {
-                        // normalize the M field
-                        Mx(i, j, k) /= M_magnitude_normalized;
-                        My(i, j, k) /= M_magnitude_normalized;
-                        Mz(i, j, k) /= M_magnitude_normalized;
-                    }
-                }  
-            }
-        });             
     }
 }
