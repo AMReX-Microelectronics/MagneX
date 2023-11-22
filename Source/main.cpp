@@ -66,7 +66,7 @@ void main_main ()
     int TimeIntegratorOption;
 
     // tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
-    Real iterative_tolerance = 1.e-6;
+    Real iterative_tolerance = 1.e-9;
 
     // time step
     Real dt;
