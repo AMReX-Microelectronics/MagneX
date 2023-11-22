@@ -1,7 +1,8 @@
 #include "NormalizeM.H"
 
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-	       	MultiFab& Ms, int M_normalization)
+	       	MultiFab& Ms, int M_normalization,
+                const Geometry& geom)
 {
     for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
     {
@@ -55,4 +56,10 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
             }
         });             
     }
+
+    // fill interior and periodic ghost cells
+    for (int comp = 0; comp < 3; comp++) {
+        Mfield[comp].FillBoundary(geom.periodicity());
+    }
+    
 }
