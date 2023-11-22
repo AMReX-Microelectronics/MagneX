@@ -89,7 +89,6 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         a_temp[i].define(ba, dm, 1, 0);
         a_temp_static[i].define(ba, dm, 1, 0);
         b_temp_static[i].define(ba, dm, 1, 0);
-
     }    
     
     // calculate the b_temp_static, a_temp_static
@@ -208,12 +207,10 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             });
     }
 
-    // initialize M_max_iter, M_iter, M_tol, M_iter_error
+    // initialize max_iter, M_iter, M_tol, M_iter_error
     // maximum number of iterations allowed
-    int M_max_iter = 100;
-    int M_iter = 0;
-    // relative tolerance stopping criteria for 2nd-order iterative algorithm
-    amrex::Real M_tol = 1.e-6;
+    int max_iter = 100;
+    int iter = 0;
 
     // begin the iteration
     while (1) {
@@ -245,15 +242,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             const Array4<Real>& Hz_anisotropy_prev = H_anisotropyfield_prev[2].array(mfi);
 
             // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp_static
-            const Array4<Real>& Mx_prev = Mfield_prev[0].array(mfi);
-            const Array4<Real>& My_prev = Mfield_prev[1].array(mfi);
-            const Array4<Real>& Mz_prev = Mfield_prev[2].array(mfi);
             const Array4<Real>& Mx_old = Mfield_old[0].array(mfi);
             const Array4<Real>& My_old = Mfield_old[1].array(mfi);
             const Array4<Real>& Mz_old = Mfield_old[2].array(mfi);
-            const Array4<Real>& Mx_error = Mfield_error[0].array(mfi);
-            const Array4<Real>& My_error = Mfield_error[1].array(mfi);
-            const Array4<Real>& Mz_error = Mfield_error[2].array(mfi);
             const Array4<Real>& ax_temp = a_temp[0].array(mfi);
             const Array4<Real>& ay_temp = a_temp[1].array(mfi);
             const Array4<Real>& az_temp = a_temp[2].array(mfi);
@@ -268,122 +259,122 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             const Box& tbx = mfi.tilebox();
 
             // loop over cells and update fields
-            amrex::ParallelFor(tbx,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+            amrex::ParallelFor(tbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
 
-                    // determine if the material is nonmagnetic or not
-                    if (Ms_arr(i,j,k) > 0.){
+                // determine if the material is nonmagnetic or not
+                if (Ms_arr(i,j,k) > 0.){
 
-                        // H_bias
-                        amrex::Real Hx_eff_prev = Hx_bias(i,j,k);
-                        amrex::Real Hy_eff_prev = Hy_bias(i,j,k);
-                        amrex::Real Hz_eff_prev = Hz_bias(i,j,k);
+                    // H_bias
+                    amrex::Real Hx_eff_prev = Hx_bias(i,j,k);
+                    amrex::Real Hy_eff_prev = Hy_bias(i,j,k);
+                    amrex::Real Hz_eff_prev = Hz_bias(i,j,k);
 
-                        if (demag_coupling == 1){
-                            // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
+                    if (demag_coupling == 1){
+                        // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
-                            // H_maxwell - use H^[(new_time),r-1]
-                            Hx_eff_prev += Hx_demag_prev(i,j,k);
-                            Hy_eff_prev += Hy_demag_prev(i,j,k);
-                            Hz_eff_prev += Hz_demag_prev(i,j,k);
-                        }
-
-                        if (exchange_coupling == 1){
-
-                            // H_exchange - use M^[(new_time),r-1]
-                            
-                            Hx_eff_prev += Hx_exchange_prev(i, j, k);
-                            Hy_eff_prev += Hy_exchange_prev(i, j, k);
-                            Hz_eff_prev += Hz_exchange_prev(i, j, k);
-                        }
-
-                        if (DMI_coupling == 1){
-
-                            // H_DMI - use M^[(new_time),r-1]
-
-                            Hx_eff_prev += Hx_DMI_prev(i,j,k);
-                            Hy_eff_prev += Hy_DMI_prev(i,j,k);
-                            Hz_eff_prev += Hz_DMI_prev(i,j,k);
-                        }
-
-                        if (anisotropy_coupling == 1){
-
-                            // H_anisotropy - use M^[(new_time),r-1]
-                            Hx_eff_prev += Hx_anisotropy_prev(i,j,k);
-                            Hy_eff_prev += Hy_anisotropy_prev(i,j,k);
-                            Hz_eff_prev += Hz_anisotropy_prev(i,j,k);
-                        }
-
-                        // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
-                        // while in real simulations, the input dt is actually dt/2.0)
-                        amrex::Real a_temp_dynamic_coeff = mu0 * amrex::Math::abs(gamma_arr(i,j,k)) / 2.;
-
-                        amrex::GpuArray<amrex::Real,3> H_eff_prev;
-                        H_eff_prev[0] = Hx_eff_prev;
-                        H_eff_prev[1] = Hy_eff_prev;
-                        H_eff_prev[2] = Hz_eff_prev;
-
-                        ax_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hx_eff_prev + ax_temp_static(i, j, k))
-                                                                       : -(dt * a_temp_dynamic_coeff * Hx_eff_prev + 0.5 * ax_temp_static(i, j, k)
-                                                                         + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * Mx_old(i, j, k));
-
-                        ay_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hy_eff_prev + ay_temp_static(i, j, k))
-                                                                       : -(dt * a_temp_dynamic_coeff * Hy_eff_prev + 0.5 * ay_temp_static(i, j, k)
-                                                                         + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * My_old(i, j, k));
-
-                        az_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hz_eff_prev + az_temp_static(i, j, k))
-                                                                       : -(dt * a_temp_dynamic_coeff * Hz_eff_prev + 0.5 * az_temp_static(i, j, k)
-                                                                         + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * Mz_old(i, j, k));
-                        
-                        amrex::Real a_square = pow(ax_temp(i, j, k), 2.0) + pow(ay_temp(i, j, k), 2.0) + pow(az_temp(i, j, k), 2.0);
-                        amrex::Real a_dot_b =  ax_temp(i, j, k) * bx_temp_static(i, j, k) + ay_temp(i, j, k) * by_temp_static(i, j, k) + az_temp(i, j, k) * bz_temp_static(i, j, k);
-                        
-                        amrex::Real a_cross_b_x = ay_temp(i, j, k) * bz_temp_static(i, j, k) - az_temp(i, j, k) * by_temp_static(i, j, k);
-                        Mx(i,j,k) = ( bx_temp_static(i, j, k) + a_dot_b * ax_temp(i, j, k) - a_cross_b_x ) / ( 1.0 + a_square);
-
-                        amrex::Real a_cross_b_y = az_temp(i, j, k) * bx_temp_static(i, j, k) - ax_temp(i, j, k) * bz_temp_static(i, j, k);
-                        My(i,j,k) = ( by_temp_static(i, j, k) + a_dot_b * ay_temp(i, j, k) - a_cross_b_y ) / ( 1.0 + a_square);
-
-                        amrex::Real a_cross_b_z = ax_temp(i, j, k) * by_temp_static(i, j, k) - ay_temp(i, j, k) * bx_temp_static(i, j, k);
-                        Mz(i,j,k) = ( bz_temp_static(i, j, k) + a_dot_b * az_temp(i, j, k) - a_cross_b_z ) / ( 1.0 + a_square);
-
-                        // temporary normalized magnitude of M field at the fixed point
-                        // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
-                        amrex::Real M_magnitude_normalized = std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) / Ms_arr(i,j,k);
-                        amrex::Real normalized_error = 0.1;
-
-                        if (M_normalization == 1){
-                            // saturated case; if |M| has drifted from M_s too much, abort.  Otherwise, normalize
-                            // check the normalized error
-                            if (amrex::Math::abs(1. - M_magnitude_normalized) > normalized_error){
-                                amrex::Abort("Exceed the normalized error of the M field");
-                            }
-                            // normalize the M field
-                            Mx(i, j, k) /= M_magnitude_normalized;
-                            My(i, j, k) /= M_magnitude_normalized;
-                            Mz(i, j, k) /= M_magnitude_normalized;
-                        }
-                        else if (M_normalization == 0){
-                            // check the normalized error
-                            if (M_magnitude_normalized > (1. + normalized_error)){
-                                amrex::Abort("Caution: Unsaturated material has M exceeding the saturation magnetization");
-                            }
-                            else if (M_magnitude_normalized > 1. && M_magnitude_normalized <= 1. + normalized_error){
-                                // normalize the M field
-                                Mx(i, j, k) /= M_magnitude_normalized;
-                                My(i, j, k) /= M_magnitude_normalized;
-                                Mz(i, j, k) /= M_magnitude_normalized;
-                            }
-                        }
-
-                        // calculate M_error
-                        Mx_error(i,j,k) = amrex::Math::abs(Mx(i,j,k) - Mx_prev(i,j,k)) / Ms_arr(i,j,k);
-                        My_error(i,j,k) = amrex::Math::abs(My(i,j,k) - My_prev(i,j,k)) / Ms_arr(i,j,k);
-                        Mz_error(i,j,k) = amrex::Math::abs(Mz(i,j,k) - Mz_prev(i,j,k)) / Ms_arr(i,j,k);
+                        // H_maxwell - use H^[(new_time),r-1]
+                        Hx_eff_prev += Hx_demag_prev(i,j,k);
+                        Hy_eff_prev += Hy_demag_prev(i,j,k);
+                        Hz_eff_prev += Hz_demag_prev(i,j,k);
                     }
-                });
+
+                    if (exchange_coupling == 1){
+
+                        // H_exchange - use M^[(new_time),r-1]
+                            
+                        Hx_eff_prev += Hx_exchange_prev(i, j, k);
+                        Hy_eff_prev += Hy_exchange_prev(i, j, k);
+                        Hz_eff_prev += Hz_exchange_prev(i, j, k);
+                    }
+
+                    if (DMI_coupling == 1){
+
+                        // H_DMI - use M^[(new_time),r-1]
+
+                        Hx_eff_prev += Hx_DMI_prev(i,j,k);
+                        Hy_eff_prev += Hy_DMI_prev(i,j,k);
+                        Hz_eff_prev += Hz_DMI_prev(i,j,k);
+                    }
+
+                    if (anisotropy_coupling == 1){
+
+                        // H_anisotropy - use M^[(new_time),r-1]
+                        Hx_eff_prev += Hx_anisotropy_prev(i,j,k);
+                        Hy_eff_prev += Hy_anisotropy_prev(i,j,k);
+                        Hz_eff_prev += Hz_anisotropy_prev(i,j,k);
+                    }
+
+                    // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
+                    // while in real simulations, the input dt is actually dt/2.0)
+                    amrex::Real a_temp_dynamic_coeff = mu0 * amrex::Math::abs(gamma_arr(i,j,k)) / 2.;
+
+                    amrex::GpuArray<amrex::Real,3> H_eff_prev;
+                    H_eff_prev[0] = Hx_eff_prev;
+                    H_eff_prev[1] = Hy_eff_prev;
+                    H_eff_prev[2] = Hz_eff_prev;
+
+                    ax_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hx_eff_prev + ax_temp_static(i, j, k))
+                        : -(dt * a_temp_dynamic_coeff * Hx_eff_prev + 0.5 * ax_temp_static(i, j, k)
+                            + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * Mx_old(i, j, k));
+
+                    ay_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hy_eff_prev + ay_temp_static(i, j, k))
+                        : -(dt * a_temp_dynamic_coeff * Hy_eff_prev + 0.5 * ay_temp_static(i, j, k)
+                            + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * My_old(i, j, k));
+
+                    az_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hz_eff_prev + az_temp_static(i, j, k))
+                        : -(dt * a_temp_dynamic_coeff * Hz_eff_prev + 0.5 * az_temp_static(i, j, k)
+                            + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * Mz_old(i, j, k));
+                        
+                    amrex::Real a_square = pow(ax_temp(i, j, k), 2.0) + pow(ay_temp(i, j, k), 2.0) + pow(az_temp(i, j, k), 2.0);
+                    amrex::Real a_dot_b =  ax_temp(i, j, k) * bx_temp_static(i, j, k) + ay_temp(i, j, k) * by_temp_static(i, j, k) + az_temp(i, j, k) * bz_temp_static(i, j, k);
+                        
+                    amrex::Real a_cross_b_x = ay_temp(i, j, k) * bz_temp_static(i, j, k) - az_temp(i, j, k) * by_temp_static(i, j, k);
+                    Mx(i,j,k) = ( bx_temp_static(i, j, k) + a_dot_b * ax_temp(i, j, k) - a_cross_b_x ) / ( 1.0 + a_square);
+
+                    amrex::Real a_cross_b_y = az_temp(i, j, k) * bx_temp_static(i, j, k) - ax_temp(i, j, k) * bz_temp_static(i, j, k);
+                    My(i,j,k) = ( by_temp_static(i, j, k) + a_dot_b * ay_temp(i, j, k) - a_cross_b_y ) / ( 1.0 + a_square);
+
+                    amrex::Real a_cross_b_z = ax_temp(i, j, k) * by_temp_static(i, j, k) - ay_temp(i, j, k) * bx_temp_static(i, j, k);
+                    Mz(i,j,k) = ( bz_temp_static(i, j, k) + a_dot_b * az_temp(i, j, k) - a_cross_b_z ) / ( 1.0 + a_square);
+                }
+            });
         }
 
+        // normalize M
+        NormalizeM(Mfield,Ms,M_normalization,geom);
+                
+        for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+     
+            const Box& bx = mfi.validbox();
+    
+            Array4<Real> const& Ms_arr = Ms.array(mfi);
+    
+            Array4<Real> const& Mx_error = Mfield_error[0].array(mfi);
+            Array4<Real> const& My_error = Mfield_error[1].array(mfi);
+            Array4<Real> const& Mz_error = Mfield_error[2].array(mfi);
+            Array4<Real> const& Mx = Mfield[0].array(mfi);
+            Array4<Real> const& My = Mfield[1].array(mfi);
+            Array4<Real> const& Mz = Mfield[2].array(mfi);
+            Array4<Real> const& Mx_prev = Mfield_prev[0].array(mfi);
+            Array4<Real> const& My_prev = Mfield_prev[1].array(mfi);
+            Array4<Real> const& Mz_prev = Mfield_prev[2].array(mfi);
+    
+            amrex::ParallelFor (bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                if (Ms_arr(i,j,k) > 0) {
+                    Mx_error(i,j,k) = amrex::Math::abs(Mx(i,j,k) - Mx_prev(i,j,k)) / Ms_arr(i,j,k);
+                    My_error(i,j,k) = amrex::Math::abs(My(i,j,k) - My_prev(i,j,k)) / Ms_arr(i,j,k);
+                    Mz_error(i,j,k) = amrex::Math::abs(Mz(i,j,k) - Mz_prev(i,j,k)) / Ms_arr(i,j,k);
+                } else {
+                    Mx_error(i,j,k) = 0.;
+                    My_error(i,j,k) = 0.;
+                    Mz_error(i,j,k) = 0.;
+                }
+            });
+        }
+
+        // re-compute the RHS terms no matter what, even if the iterations will end
+        // that way at the beginning of the next time step we will have them
+        
         // update H_demag
         if(demag_coupling == 1) {
             
@@ -436,38 +427,29 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
        }
 
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed
-        amrex::Real M_iter_maxerror = -1.;
-        M_iter_maxerror = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
-        M_iter_maxerror = std::max(M_iter_maxerror, Mfield_error[2].norm0());
+        amrex::Real iter_maxerror = -1.;
+        iter_maxerror = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
+        iter_maxerror = std::max(iter_maxerror, Mfield_error[2].norm0());
 
-        if (M_iter_maxerror <= M_tol){
-
-            // normalize M
-	    NormalizeM(Mfield,Ms,M_normalization,geom);
-
-            break;
-        }
-        else{
-
-            // Copy Mfield to Mfield_previous and fill periodic/interior ghost cells
-            for (int i = 0; i < 3; i++){
-                MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
-                MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, 0);
-                MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
-                MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
-                MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
-
-                Mfield_prev[i].FillBoundary(geom.periodicity());
-            }
+        if (iter == 1) {
+            amrex::Print() << "iter = " << iter << ", relative change from old to new = " << iter_maxerror << "\n";
+        } else if (iter < max_iter) {
+            amrex::Print() << "iter = " << iter << ", relative change from prev_new to new = " << iter_maxerror << "\n";
+            if (iter_maxerror <= iterative_tolerance) break;
+        } else {
+            amrex::Print() << "The iter = " << iter << " exceeds the max_iter = " << max_iter << std::endl;
+            amrex::Abort("The iter exceeds the max_iter");
         }
 
-        if (M_iter >= M_max_iter){
-            amrex::Abort("The M_iter exceeds the M_max_iter");
-            amrex::Print() << "The M_iter = " << M_iter << " exceeds the M_max_iter = " << M_max_iter << std::endl;
-        }
-        else{
-            M_iter++;
-            amrex::Print() << "Finish " << M_iter << " times iteration with M_iter_maxerror = " << M_iter_maxerror << " and M_tol = " << M_tol << std::endl;
+        iter++;
+
+        // Copy Mfield and RHS terms to previous
+        for (int i = 0; i < 3; i++){
+            MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
+            MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, 0);
+            MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
+            MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
+            MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
         }
 
     } // end the iteration
