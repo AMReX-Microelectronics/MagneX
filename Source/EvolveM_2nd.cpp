@@ -82,10 +82,6 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 1, 1);
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
         
-        // fill periodic ghost cells
-        Mfield_old[i].FillBoundary(geom.periodicity());
-        Mfield_prev[i].FillBoundary(geom.periodicity());
-
         Mfield_error[i].define(ba, dm, 1, 0);
         Mfield_error[i].setVal(0.); // reset Mfield_error to zero
 
@@ -447,7 +443,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         if (M_iter_maxerror <= M_tol){
 
             // normalize M
-	    NormalizeM(Mfield,Ms,M_normalization);
+	    NormalizeM(Mfield,Ms,M_normalization,geom);
 
             break;
         }
@@ -455,16 +451,13 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
             // Copy Mfield to Mfield_previous and fill periodic/interior ghost cells
             for (int i = 0; i < 3; i++){
-                MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, Mfield[i].nGrow());
-                MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, H_demagfield[i].nGrow());
-                MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, H_exchangefield[i].nGrow());
-                MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, H_DMIfield[i].nGrow());
-                MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, H_anisotropyfield[i].nGrow());
+                MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
+                MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, 0);
+                MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
+                MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
+                MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
+
                 Mfield_prev[i].FillBoundary(geom.periodicity());
-                H_demagfield_prev[i].FillBoundary(geom.periodicity());
-                H_exchangefield_prev[i].FillBoundary(geom.periodicity());
-                H_DMIfield_prev[i].FillBoundary(geom.periodicity());
-                H_anisotropyfield_prev[i].FillBoundary(geom.periodicity());
             }
         }
 
