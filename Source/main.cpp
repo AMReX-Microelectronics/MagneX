@@ -66,6 +66,8 @@ void main_main ()
     int TimeIntegratorOption;
 
     // tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+    // for TimeIntegrationOption=2, iterative_tolerance=0. means force 2 iterations
+    // for TimeIntegrationOption=3, iterative_tolerance=0. means force 1 iteration
     Real iterative_tolerance = 1.e-9;
 
     // time step
@@ -727,7 +729,7 @@ void main_main ()
                 } else {
                     // terminate while loop of error threshold is small enough
                     amrex::Print() << "iter = " << iter << ", relative change from prev_new to new = " << M_mag_error_max << "\n";
-                    if (M_mag_error_max <= iterative_tolerance) break;
+                    if (M_mag_error_max <= iterative_tolerance || iterative_tolerance == 0.) break;
                 }
 
                 // copy new solution into Mfield_prev_iter

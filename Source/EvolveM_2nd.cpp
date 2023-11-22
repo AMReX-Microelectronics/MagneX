@@ -431,7 +431,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         iter_maxerror = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
         iter_maxerror = std::max(iter_maxerror, Mfield_error[2].norm0());
 
-        if (iter == 1) {
+        if (iter == 1 || iterative_tolerance == 0.) {
             amrex::Print() << "iter = " << iter << ", relative change from old to new = " << iter_maxerror << "\n";
         } else if (iter < max_iter) {
             amrex::Print() << "iter = " << iter << ", relative change from prev_new to new = " << iter_maxerror << "\n";
