@@ -43,7 +43,7 @@ TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 # tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
-iterative_tolerance = 1.e-6
+iterative_tolerance = 1.e-9
 
 ## *** Selecting the integrator backend ***
 ## integration.type can take on the following string or int values:

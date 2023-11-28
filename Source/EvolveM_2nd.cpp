@@ -1,14 +1,4 @@
-#include "EvolveM_2nd.H"
-#include "CartesianAlgorithm.H"
-#include <AMReX_OpenBC.H>
-#include "Demagnetization.H"
-#include "EffectiveExchangeField.H"
-#include "EffectiveDMIField.H"
-#include "EffectiveAnisotropyField.H"
-#include "NormalizeM.H"
-#include <AMReX_MLMG.H> 
-#include <AMReX_MultiFab.H> 
-#include <AMReX_VisMF.H>
+#include "MagneX.H"
 
 void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
@@ -48,7 +38,12 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  int M_normalization, 
                  Real mu0,
                  const Geometry& geom,
+                 const Real& time,
                  const Real& dt,
+                 amrex::GpuArray<amrex::Real, 3> prob_lo,
+                 amrex::GpuArray<amrex::Real, 3> prob_hi,
+                 int timedependent_Hbias,
+                 int timedependent_alpha,
                  const Real& iterative_tolerance)
 {
 
@@ -205,6 +200,16 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                     bz_temp_static(i, j, k) = Mz_old(i, j, k) + dt * b_temp_static_coeff * (Mx_old(i, j, k) * Hy_eff_old - My_old(i, j, k) * Hx_eff_old);
                 }
             });
+    }
+
+    // compute new-time Hbias
+    if (timedependent_Hbias) {
+        ComputeHbias(H_biasfield, prob_lo, prob_hi, time+dt, geom);
+    }
+
+    // compute new-time alpha
+    if (timedependent_alpha) {
+        ComputeAlpha(alpha,prob_lo,prob_hi,geom,time+dt);
     }
 
     // initialize max_iter, M_iter, M_tol, M_iter_error
@@ -431,7 +436,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         iter_maxerror = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
         iter_maxerror = std::max(iter_maxerror, Mfield_error[2].norm0());
 
-        if (iter == 1) {
+        if (iter == 1 || iterative_tolerance == 0.) {
             amrex::Print() << "iter = " << iter << ", relative change from old to new = " << iter_maxerror << "\n";
         } else if (iter < max_iter) {
             amrex::Print() << "iter = " << iter << ", relative change from prev_new to new = " << iter_maxerror << "\n";

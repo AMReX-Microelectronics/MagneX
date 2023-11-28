@@ -1,9 +1,6 @@
+#include "MagneX.H"
+
 #include "AMReX_PlotFileUtil.H"
-#include "AMReX_PlotFileDataImpl.H"
-
-#include <sys/stat.h>
-
-#include "Checkpoint.H"
 
 namespace {
     void GotoNextLine (std::istream& is)

@@ -1,4 +1,4 @@
-#include "Diagnostics.H"
+#include "MagneX.H"
 
 long CountMagneticCells(MultiFab& Ms)
 {

@@ -1,9 +1,5 @@
-#include "CartesianAlgorithm.H"
-#include "EffectiveDMIField.H"
-#include <AMReX_MLMG.H> 
-#include <AMReX_MultiFab.H> 
-#include <AMReX_VisMF.H>
-#include <AMReX_OpenBC.H>
+#include "CartesianAlgorithm_K.H"
+#include "MagneX.H"
 
 using namespace amrex;
 

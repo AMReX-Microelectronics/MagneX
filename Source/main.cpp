@@ -1,3 +1,4 @@
+#include "MagneX.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -8,17 +9,6 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
-#include "Initialization.H"
-#include "Demagnetization.H"
-#include "EffectiveExchangeField.H"
-#include "EffectiveDMIField.H"
-#include "EffectiveAnisotropyField.H"
-#include "CartesianAlgorithm.H"
-#include "ComputeLLGRHS.H"
-#include "EvolveM_2nd.H"
-#include "NormalizeM.H"
-#include "Checkpoint.H"
-#include "Diagnostics.H"
 #ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>
 #endif
@@ -66,19 +56,25 @@ void main_main ()
     int TimeIntegratorOption;
 
     // tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
-    Real iterative_tolerance = 1.e-6;
+    // for TimeIntegrationOption=2, iterative_tolerance=0. means force 2 iterations
+    // for TimeIntegrationOption=3, iterative_tolerance=0. means force 1 iteration
+    Real iterative_tolerance;
 
     // time step
     Real dt;
 
     // how often to write a plotfile
-    int plot_int = -1;
+    int plot_int;
 
     // ho often to write a checkpoint
-    int chk_int = -1;
+    int chk_int;
 
     // step to restart from
-    int restart = -1;
+    int restart;
+
+    // what type of extra diagnostics?
+    // 4 = standard problem 4
+    int diag_type;
 
     // permeability
     Real mu0;
@@ -136,20 +132,26 @@ void main_main ()
             prob_hi[i] = temp[i];
         }
 
-        nsteps = 10;
-        pp.query("nsteps",nsteps);
+        pp.get("nsteps",nsteps);
 
         pp.get("TimeIntegratorOption",TimeIntegratorOption);
 
+        iterative_tolerance = 1.e-9;
         pp.query("iterative_tolerance",iterative_tolerance);
 
         pp.get("dt",dt);
 
+        plot_int = -1;
         pp.query("plot_int",plot_int);
 
+        chk_int= -1;
         pp.query("chk_int",chk_int);
 
+        restart = -1;
         pp.query("restart",restart);
+
+        diag_type = -1;
+        pp.query("diag_type",diag_type);
 	
         pp.get("mu0",mu0);
 
@@ -584,14 +586,10 @@ void main_main ()
         Real step_strt_time = ParallelDescriptor::second();
 
         if (timedependent_Hbias) {
-            // Fow now always assume H_bias is constant over the time step
-            // This need to be fixed for second-order options
             ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
         }
 
         if (timedependent_alpha) {
-            // Fow now always assume alpha is constant over the time step
-            // This need to be fixed for second-order options
             ComputeAlpha(alpha,prob_lo,prob_hi,geom,time);
         }
 
@@ -674,7 +672,17 @@ void main_main ()
                 // copy Mfield old into Mfield_prev_iter so we can track the change in the predictor
                 MultiFab::Copy(Mfield_prev_iter[comp], Mfield_old[comp], 0, 0, 1, 1);
             }
-        
+
+            // compute new-time Hbias
+            if (timedependent_Hbias) {
+                ComputeHbias(H_biasfield, prob_lo, prob_hi, time+dt, geom);
+            }
+
+            // compute new-time alpha
+            if (timedependent_alpha) {
+                ComputeAlpha(alpha,prob_lo,prob_hi,geom,time+dt);
+            }
+
             int iter = 1;
 
             while(1) { 
@@ -727,7 +735,7 @@ void main_main ()
                 } else {
                     // terminate while loop of error threshold is small enough
                     amrex::Print() << "iter = " << iter << ", relative change from prev_new to new = " << M_mag_error_max << "\n";
-                    if (M_mag_error_max <= iterative_tolerance) break;
+                    if (M_mag_error_max <= iterative_tolerance || iterative_tolerance == 0.) break;
                 }
 
                 // copy new solution into Mfield_prev_iter
@@ -735,8 +743,8 @@ void main_main ()
                     MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, 1);
                 }
     
-                iter = iter + 1;
-
+                iter++;
+        
                 // Poisson solve and H_demag computation with M_field
                 if (demag_coupling == 1) { 
             
@@ -799,7 +807,8 @@ void main_main ()
                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, Mfield_padded,
                         n_cell_large, geom_large,
                         demag_coupling, demag_solver, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
-                        M_normalization, mu0, geom, dt, iterative_tolerance);
+                        M_normalization, mu0, geom, time, dt, prob_lo, prob_hi,
+                        timedependent_Hbias, timedependent_alpha, iterative_tolerance);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
@@ -893,7 +902,7 @@ void main_main ()
 
         // standard problem 4 diagnostics
         bool diag_std4_plot = false;
-        {
+        if (diag_type == 4) {
             Real normalized_Mx = SumNormalizedM(Ms,Mfield[0]);
             Real normalized_My = SumNormalizedM(Ms,Mfield[1]);
             Real normalized_Mz = SumNormalizedM(Ms,Mfield[2]);

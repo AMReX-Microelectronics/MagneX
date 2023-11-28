@@ -1,3 +1,6 @@
+#include "MagneX.H"
+#include "CartesianAlgorithm_K.H"
+
 #ifdef AMREX_USE_CUDA
 #include <cufft.h>
 #else
@@ -6,9 +9,6 @@
 #endif
 
 #include <AMReX_PlotFileUtil.H>
-
-#include "Demagnetization.H"
-#include "CartesianAlgorithm.H"
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        Array<MultiFab, AMREX_SPACEDIM>& Mfield,
@@ -96,6 +96,8 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
     MultiFab Kyz (ba_large, dm_large, 1, 0);
     MultiFab Kzz (ba_large, dm_large, 1, 0);
 
+    MultiFab Plt (ba_large, dm_large, 6, 0);
+
     Kxx.setVal(0.);
     Kxy.setVal(0.);
     Kxz.setVal(0.);
@@ -171,6 +173,23 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 
         });
     }
+
+
+    MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
+    MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
+    MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
+    MultiFab::Copy(Plt, Kyy, 0, 3, 1, 0);
+    MultiFab::Copy(Plt, Kyz, 0, 4, 1, 0);
+    MultiFab::Copy(Plt, Kzz, 0, 5, 1, 0);
+
+    WriteSingleLevelPlotfile("DemagTensor", Plt,
+                             {"Kxx",
+                              "Kxy",
+                              "Kxz",
+                              "Kyy",
+                              "Kyz",
+                              "Kzz"},
+                             geom_large, 0., 0);
 
     ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large);
     ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large);

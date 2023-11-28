@@ -1,4 +1,4 @@
-#include "Initialization.H"
+#include "MagneX.H"
 
 #include "AMReX_ParmParse.H"
 #include "AMReX_Parser.H"

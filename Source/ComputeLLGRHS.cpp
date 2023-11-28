@@ -1,5 +1,4 @@
-#include "ComputeLLGRHS.H"
-#include "CartesianAlgorithm.H"
+#include "MagneX.H"
 
 /**
  * Compute the x component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
