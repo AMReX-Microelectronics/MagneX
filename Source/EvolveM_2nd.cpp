@@ -1,15 +1,4 @@
-#include "Initialization.H"
-#include "EvolveM_2nd.H"
-#include "CartesianAlgorithm.H"
-#include <AMReX_OpenBC.H>
-#include "Demagnetization.H"
-#include "EffectiveExchangeField.H"
-#include "EffectiveDMIField.H"
-#include "EffectiveAnisotropyField.H"
-#include "NormalizeM.H"
-#include <AMReX_MLMG.H> 
-#include <AMReX_MultiFab.H> 
-#include <AMReX_VisMF.H>
+#include "MagneX.H"
 
 void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,

@@ -1,4 +1,4 @@
-#include "NormalizeM.H"
+#include "MagneX.H"
 
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
 	       	MultiFab& Ms, int M_normalization,

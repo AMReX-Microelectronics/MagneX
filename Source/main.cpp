@@ -1,3 +1,4 @@
+#include "MagneX.H"
 
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
@@ -8,17 +9,6 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
-#include "Initialization.H"
-#include "Demagnetization.H"
-#include "EffectiveExchangeField.H"
-#include "EffectiveDMIField.H"
-#include "EffectiveAnisotropyField.H"
-#include "CartesianAlgorithm.H"
-#include "ComputeLLGRHS.H"
-#include "EvolveM_2nd.H"
-#include "NormalizeM.H"
-#include "Checkpoint.H"
-#include "Diagnostics.H"
 #ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>
 #endif

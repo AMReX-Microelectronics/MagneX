@@ -1,22 +1,15 @@
-#include "CartesianAlgorithm.H"
-#include "EffectiveExchangeField.H"
-#include <AMReX_MLMG.H> 
-#include <AMReX_MultiFab.H> 
-#include <AMReX_VisMF.H>
-#include <AMReX_OpenBC.H>
+#include "MagneX.H"
 
 using namespace amrex;
 
-void CalculateH_anisotropy(
-    Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
-    Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
-    MultiFab&   Ms,
-    MultiFab&   anisotropy,
-    int anisotropy_coupling,
-    amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
-    Real mu0,
-    const Geometry& geom
-)
+void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
+                           Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
+                           MultiFab&   Ms,
+                           MultiFab&   anisotropy,
+                           int anisotropy_coupling,
+                           amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
+                           Real mu0,
+                           const Geometry& geom)
 {
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
