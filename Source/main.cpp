@@ -58,19 +58,23 @@ void main_main ()
     // tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
     // for TimeIntegrationOption=2, iterative_tolerance=0. means force 2 iterations
     // for TimeIntegrationOption=3, iterative_tolerance=0. means force 1 iteration
-    Real iterative_tolerance = 1.e-9;
+    Real iterative_tolerance;
 
     // time step
     Real dt;
 
     // how often to write a plotfile
-    int plot_int = -1;
+    int plot_int;
 
     // ho often to write a checkpoint
-    int chk_int = -1;
+    int chk_int;
 
     // step to restart from
-    int restart = -1;
+    int restart;
+
+    // what type of extra diagnostics?
+    // 4 = standard problem 4
+    int diag_type;
 
     // permeability
     Real mu0;
@@ -128,20 +132,26 @@ void main_main ()
             prob_hi[i] = temp[i];
         }
 
-        nsteps = 10;
-        pp.query("nsteps",nsteps);
+        pp.get("nsteps",nsteps);
 
         pp.get("TimeIntegratorOption",TimeIntegratorOption);
 
+        iterative_tolerance = 1.e-9;
         pp.query("iterative_tolerance",iterative_tolerance);
 
         pp.get("dt",dt);
 
+        plot_int = -1;
         pp.query("plot_int",plot_int);
 
+        chk_int= -1;
         pp.query("chk_int",chk_int);
 
+        restart = -1;
         pp.query("restart",restart);
+
+        diag_type = -1;
+        pp.query("diag_type",diag_type);
 	
         pp.get("mu0",mu0);
 
@@ -892,7 +902,7 @@ void main_main ()
 
         // standard problem 4 diagnostics
         bool diag_std4_plot = false;
-        {
+        if (diag_type == 4) {
             Real normalized_Mx = SumNormalizedM(Ms,Mfield[0]);
             Real normalized_My = SumNormalizedM(Ms,Mfield[1]);
             Real normalized_Mz = SumNormalizedM(Ms,Mfield[2]);
