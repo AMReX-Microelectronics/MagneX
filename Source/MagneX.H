@@ -1,5 +1,12 @@
 #include <AMReX_MultiFab.H>
 
+#ifdef AMREX_USE_CUDA
+#include <cufft.h>
+#else
+#include <fftw3.h>
+#include <fftw3-mpi.h>
+#endif
+
 using namespace amrex;
 
 /*

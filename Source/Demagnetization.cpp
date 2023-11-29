@@ -1,13 +1,5 @@
 #include "MagneX.H"
 #include "CartesianAlgorithm_K.H"
-
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
-#else
-#include <fftw3.h>
-#include <fftw3-mpi.h>
-#endif
-
 #include <AMReX_PlotFileUtil.H>
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
