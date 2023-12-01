@@ -315,6 +315,9 @@ void main_main ()
     DistributionMapping dm_large;
     Geometry geom_large;
 
+    RealBox real_box_large({AMREX_D_DECL(              prob_lo[0],              prob_lo[1],              prob_lo[2])},
+                           {AMREX_D_DECL( 2*prob_hi[0]-prob_lo[0], 2*prob_hi[1]-prob_lo[1], 2*prob_hi[2]-prob_lo[2])});
+
     // Create a zero-padded Magnetization field for the convolution method
     Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
     MultiFab Kxx_dft_real;
@@ -432,7 +435,7 @@ void main_main ()
         dm_large.define(ba_large);
 	     
         // This defines a Geometry object
-        geom_large.define(domain_large, real_box, CoordSys::cartesian, is_periodic);
+        geom_large.define(domain_large, real_box_large, CoordSys::cartesian, is_periodic);
 	    
         for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
             // Cell-centered fields
