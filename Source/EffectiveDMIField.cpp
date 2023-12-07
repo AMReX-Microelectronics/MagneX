@@ -12,6 +12,9 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                     Real mu0,
                     const Geometry& geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("CalculateH_DMI()",CalculateH_DMI);
+
     // calculate the b_temp_static, a_temp_static
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 

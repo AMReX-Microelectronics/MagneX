@@ -11,6 +11,9 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                            Real mu0,
                            const Geometry& geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("CalculateH_anisotropy()",CalculateH_anisotropy);
+
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         // extract dd from the geometry object

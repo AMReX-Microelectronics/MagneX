@@ -15,6 +15,9 @@ void WritePlotfile(MultiFab& Ms,
                    const Real& time,
                    const int& plt_step)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("WritePlotfile()",WritePlotfile);
+
     BoxArray ba = Ms.boxArray();
     DistributionMapping dm = Ms.DistributionMap();
     

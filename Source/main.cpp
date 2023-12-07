@@ -18,6 +18,9 @@ void main_main();
 
 int main (int argc, char* argv[])
 {
+    // timer for profiling
+    BL_PROFILE_VAR("main()",main);
+
     amrex::Initialize(argc,argv);
 
     main_main();
@@ -28,6 +31,8 @@ int main (int argc, char* argv[])
 
 void main_main ()
 {
+    // timer for profiling
+    BL_PROFILE_VAR("main_main()",main_main);
 
     Real total_step_strt_time = ParallelDescriptor::second();
 

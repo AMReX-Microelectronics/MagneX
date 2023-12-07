@@ -14,6 +14,8 @@ void InitializeMagneticProperties(MultiFab& alpha,
                                   const Geometry& geom,
                                   const Real& time)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("InitializeMagneticProperties()",InitializeMagneticProperties);
 
     // Ms is the only material property with ghost cells
     Ms.setVal(0.);
@@ -97,6 +99,8 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                       amrex::GpuArray<amrex::Real, 3> prob_hi,
                       const       Geometry& geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("InitializeFields()",InitializeFields);
 
     ParmParse pp;
 
@@ -152,6 +156,9 @@ void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&  H_biasfield,
                   const           Real& time,
                   const       Geometry& geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeHbias()",ComputeHbias);
+
     ParmParse pp;
 
     std::string Hx_bias_parser_string;
@@ -203,6 +210,8 @@ void ComputeAlpha(MultiFab&  alpha,
                   const Geometry& geom,
                   const Real& time)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeAlpha()",ComputeAlpha);
 
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
