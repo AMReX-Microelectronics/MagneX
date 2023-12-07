@@ -245,3 +245,20 @@ void ComputeAlpha(MultiFab&  alpha,
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
                 MultiFab& Ms, int M_normalization,
                 const Geometry& geom);
+
+/*
+  Plotfile.cpp
+*/
+
+void WritePlotfile(MultiFab& Ms,
+                   Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_exchangefield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                   MultiFab& PoissonRHS,
+                   MultiFab& PoissonPhi,
+                   const Geometry& geom,
+                   const Real& time,
+                   const int& plt_step);
