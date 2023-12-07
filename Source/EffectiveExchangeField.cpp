@@ -3,18 +3,19 @@
 
 using namespace amrex;
 
-void CalculateH_exchange(
-    Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
-    Array< MultiFab, AMREX_SPACEDIM> &   H_exchangefield,
-    MultiFab&   Ms,
-    MultiFab&   exchange,
-    MultiFab&   DMI,
-    int exchange_coupling,
-    int DMI_coupling,
-    Real mu0,
-    const Geometry& geom
-)
+void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+                         Array< MultiFab, AMREX_SPACEDIM>& H_exchangefield,
+                         MultiFab& Ms,
+                         MultiFab& exchange,
+                         MultiFab& DMI,
+                         int exchange_coupling,
+                         int DMI_coupling,
+                         Real mu0,
+                         const Geometry& geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("CalculateH_exchange()",CalculateH_exchange);
+
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         const Box& bx = mfi.validbox();

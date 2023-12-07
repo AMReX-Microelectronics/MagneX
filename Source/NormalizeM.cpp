@@ -4,6 +4,9 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
 	       	MultiFab& Ms, int M_normalization,
                 const Geometry& geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("NormalizeM()",NormalizeM);
+
     for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();

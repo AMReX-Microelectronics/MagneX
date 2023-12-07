@@ -2,6 +2,9 @@
 
 long CountMagneticCells(MultiFab& Ms)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("CountMagneticCells()",CountMagneticCells);
+
     ReduceOps<ReduceOpSum> reduce_op;
     
     ReduceData<long> reduce_data(reduce_op);
@@ -35,6 +38,9 @@ long CountMagneticCells(MultiFab& Ms)
 Real SumNormalizedM(MultiFab& Ms,
                     MultiFab& Mfield)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("SumNormalizedM()",SumNormalizedM);
+
     ReduceOps<ReduceOpSum> reduce_op;
     
     ReduceData<Real> reduce_data(reduce_op);

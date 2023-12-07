@@ -1,19 +1,14 @@
 #include "MagneX.H"
 #include "CartesianAlgorithm_K.H"
-
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
-#else
-#include <fftw3.h>
-#include <fftw3-mpi.h>
-#endif
-
 #include <AMReX_PlotFileUtil.H>
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
                        Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                        const Geometry&                  geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputePoissonRHS()",ComputePoissonRHS);
+
     for ( MFIter mfi(PoissonRHS); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -42,8 +37,10 @@ void ComputeHfromPhi(MultiFab&                        PoissonPhi,
                      Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
                      const Geometry&                  geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeHfromPhi()",ComputeHfromPhi);
+    
        // Calculate H from Phi
-
         for ( MFIter mfi(PoissonPhi); mfi.isValid(); ++mfi )
         {
             const Box& bx = mfi.validbox();
@@ -83,6 +80,9 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         GpuArray<int, 3>                 n_cell_large,
                         const Geometry&                  geom_large)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeDemagTensor()",ComputeDemagTensor);
+
     // Extract the domain data 
     BoxArray ba_large = Kxx_fft_real.boxArray();
     DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
@@ -225,6 +225,9 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
                       GpuArray<int, 3>                       n_cell_large,
                       const Geometry&                        geom_large)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeHFieldFFT()",ComputeHFieldFFT);
+
     BoxArray ba_large = Kxx_fft_real.boxArray();
     DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
 
@@ -384,7 +387,10 @@ void ComputeForwardFFT(const MultiFab&    mf,
 		       MultiFab&          mf_dft_real,
 		       MultiFab&          mf_dft_imag,
 		       const Geometry&    geom)
-{ 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeForwardFFT()",ComputeForwardFFT);
+
     // **********************************
     // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
     // **********************************
@@ -570,6 +576,8 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
 		       GpuArray<int, 3>                 n_cell,
                        const Geometry&                  geom)
 {
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeInverseFFT()",ComputeInverseFFT);
 
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
     BoxArray ba_onegrid(geom.Domain());

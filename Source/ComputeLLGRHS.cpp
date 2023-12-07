@@ -75,7 +75,9 @@ void Compute_LLG_RHS(
                    int M_normalization, 
                    Real mu0)
 {
-    //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
+    // timer for profiling
+    BL_PROFILE_VAR("Compute_LLG_RHS()",Compute_LLG_RHS);
+
     for (MFIter mfi(LLG_RHS[0]); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.validbox();
