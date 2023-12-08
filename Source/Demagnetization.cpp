@@ -126,21 +126,16 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
         // Set the demag tensor
 	amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int L, int M, int N)
         {   
-	    if (L == n_cell_large[0]-1 || M == n_cell_large[1]-1 || N == n_cell_large[2]-1){
-                return;
-            }
-	    if (L == n_cell_large[0]/2-1 && M == n_cell_large[1]/2-1 && N == n_cell_large[2]/2-1){
-                return;
-            }
-	    if (L == 0 && M == 0 && N == 0){
-	        return;
-	    }
-
-            // Need a negative notion of index where demag is centered at the origin, so we make an aritificial copy of it
+            // L,M,N range from 0:n_cell_large-1
+            // I,J,K range from -n_cell_large/2+1:n_cell_large/2
             int I = L - n_cell_large[0]/2 + 1;
             int J = M - n_cell_large[1]/2 + 1;
             int K = N - n_cell_large[2]/2 + 1;
 
+            if (I == n_cell_large[0]/2 || J == n_cell_large[1]/2 || K == n_cell_large[2]/2) {
+                return;
+            }
+            
             // **********************************
             // SET VALUES FOR EACH CELL
             // **********************************
