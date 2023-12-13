@@ -1,7 +1,7 @@
 #include "MagneX.H"
 
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-	       	MultiFab& Ms, int M_normalization,
+	       	MultiFab& Ms,
                 const Geometry& geom)
 {
     // timer for profiling

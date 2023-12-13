@@ -8,9 +8,6 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                          MultiFab& Ms,
                          MultiFab& exchange,
                          MultiFab& DMI,
-                         int exchange_coupling,
-                         int DMI_coupling,
-                         Real mu0,
                          const Geometry& geom)
 {
     // timer for profiling

@@ -9,8 +9,6 @@ void InitializeMagneticProperties(MultiFab& alpha,
                                   MultiFab& exchange,
                                   MultiFab& DMI,
                                   MultiFab& anisotropy,
-                                  amrex::GpuArray<amrex::Real, 3> prob_lo,
-                                  amrex::GpuArray<amrex::Real, 3> prob_hi,
                                   const Geometry& geom,
                                   const Real& time)
 {
@@ -95,8 +93,6 @@ void InitializeMagneticProperties(MultiFab& alpha,
 
 //Initialize fields
 void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
-                      amrex::GpuArray<amrex::Real, 3> prob_lo,
-                      amrex::GpuArray<amrex::Real, 3> prob_hi,
                       const       Geometry& geom)
 {
     // timer for profiling
@@ -151,8 +147,6 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
 }
 
 void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&  H_biasfield,
-                  amrex::GpuArray<amrex::Real, 3> prob_lo,
-                  amrex::GpuArray<amrex::Real, 3> prob_hi,
                   const           Real& time,
                   const       Geometry& geom)
 {
@@ -205,8 +199,6 @@ void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&  H_biasfield,
 }
 
 void ComputeAlpha(MultiFab&  alpha,
-                  amrex::GpuArray<amrex::Real, 3> prob_lo,
-                  amrex::GpuArray<amrex::Real, 3> prob_hi,
                   const Geometry& geom,
                   const Real& time)
 {

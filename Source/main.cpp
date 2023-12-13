@@ -1,6 +1,5 @@
 #include "MagneX.H"
 
-#include <AMReX_ParmParse.H>
 #include <AMReX_MLABecLaplacian.H>
 #include <AMReX_MLMG.H> 
 #include <AMReX_OpenBC.H>
@@ -13,6 +12,7 @@
 #endif
 
 using namespace amrex;
+using namespace MagneX;
 
 void main_main();
 
@@ -35,150 +35,11 @@ void main_main ()
     BL_PROFILE_VAR("main_main()",main_main);
 
     Real total_step_strt_time = ParallelDescriptor::second();
-
-    // **********************************
-    // SIMULATION PARAMETERS
-    // **********************************
-
-    // Number of cells in each dimension
-    amrex::GpuArray<int, 3> n_cell; 
-
-    // maximum size of each box
-    int max_grid_size;
-
-    // physical lo/hi coordiates
-    amrex::GpuArray<amrex::Real, 3> prob_lo;
-    amrex::GpuArray<amrex::Real, 3> prob_hi;
-    
-    // total steps in simulation
-    int nsteps;
-
-    // 1 = first order forward Euler
-    // 2 = iterative predictor-corrector
-    // 3 = iterative direct solver
-    // 4 = AMReX and SUNDIALS integrators
-    int TimeIntegratorOption;
-
-    // tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
-    // for TimeIntegrationOption=2, iterative_tolerance=0. means force 2 iterations
-    // for TimeIntegrationOption=3, iterative_tolerance=0. means force 1 iteration
-    Real iterative_tolerance;
-
-    // time step
-    Real dt;
-
-    // how often to write a plotfile
-    int plot_int;
-
-    // ho often to write a checkpoint
-    int chk_int;
-
-    // step to restart from
-    int restart;
-
-    // what type of extra diagnostics?
-    // 4 = standard problem 4
-    int diag_type;
-
-    // permeability
-    Real mu0;
-
-    // whether to call the parser each time step, or only at initialization
-    int timedependent_Hbias;
-    int timedependent_alpha;
-    
-    // turn on demagnetization
-    int demag_coupling;
-
-    // demagnetization solver type
-    // -1 = periodic/Neumann MLMG
-    // 0 = Open Poisson MLMG
-    // 1 = FFT-based
-    int demag_solver;
-
-    // 0 = unsaturated; 1 = saturated
-    int M_normalization;
-
-    // turn on exchange
-    int exchange_coupling;
-
-    // turn on DMI
-    int DMI_coupling;
-
-    // turn on anisotropy
-    int anisotropy_coupling;
-    amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
-
+  
     // **********************************
     // READ SIMULATION PARAMETERS
     // **********************************
-    {
-        // ParmParse is way of reading inputs from the inputs file
-        // pp.get means we require the inputs file to have it
-        // pp.query means we optionally need the inputs file to have it - but we must supply a default here
-        ParmParse pp;
-
-        amrex::Vector<int> temp_int(AMREX_SPACEDIM);
-        pp.getarr("n_cell",temp_int);
-        for (int i=0; i<AMREX_SPACEDIM; ++i) {
-            n_cell[i] = temp_int[i];
-        }
-
-        pp.get("max_grid_size",max_grid_size);
-
-        amrex::Vector<amrex::Real> temp(AMREX_SPACEDIM);
-        pp.getarr("prob_lo",temp);
-        for (int i=0; i<AMREX_SPACEDIM; ++i) {
-            prob_lo[i] = temp[i];
-        }
-        pp.getarr("prob_hi",temp);
-        for (int i=0; i<AMREX_SPACEDIM; ++i) {
-            prob_hi[i] = temp[i];
-        }
-
-        pp.get("nsteps",nsteps);
-
-        pp.get("TimeIntegratorOption",TimeIntegratorOption);
-
-        iterative_tolerance = 1.e-9;
-        pp.query("iterative_tolerance",iterative_tolerance);
-
-        pp.get("dt",dt);
-
-        plot_int = -1;
-        pp.query("plot_int",plot_int);
-
-        chk_int= -1;
-        pp.query("chk_int",chk_int);
-
-        restart = -1;
-        pp.query("restart",restart);
-
-        diag_type = -1;
-        pp.query("diag_type",diag_type);
-	
-        pp.get("mu0",mu0);
-
-        pp.get("timedependent_Hbias",timedependent_Hbias);
-        pp.get("timedependent_alpha",timedependent_alpha);
-
-        pp.get("demag_coupling",demag_coupling);
-        if (demag_coupling) {
-            pp.get("demag_solver",demag_solver);
-        }
-        
-        pp.get("M_normalization", M_normalization);
-        pp.get("exchange_coupling", exchange_coupling);
-        pp.get("DMI_coupling", DMI_coupling);
-
-        pp.get("anisotropy_coupling", anisotropy_coupling);
-        if (anisotropy_coupling) {
-            pp.getarr("anisotropy_axis",temp);
-            for (int i=0; i<AMREX_SPACEDIM; ++i) {
-                anisotropy_axis[i] = temp[i];
-            }
-        }
-    }
+    InitializeMagneXNamespace();
 
     int start_step = 1;
 
@@ -466,15 +327,15 @@ void main_main ()
 
     }
 
-    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, prob_lo, prob_hi, geom, time);
-    ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
+    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, geom, time);
+    ComputeHbias(H_biasfield, time, geom);
 
     // count how many magnetic cells are in the domain
     long num_mag = CountMagneticCells(Ms);
     
     if (restart == -1) {      
         //Initialize fields
-        InitializeFields(Mfield, prob_lo, prob_hi, geom);
+        InitializeFields(Mfield, geom);
 
         if (demag_coupling == 1) {
             
@@ -513,15 +374,15 @@ void main_main ()
 	}
         
         if (exchange_coupling == 1) {
-            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
         }
 
         if (DMI_coupling == 1) {
-            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
+            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
         }
 
         if (anisotropy_coupling == 1) {
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
         }
     }
 
@@ -551,11 +412,11 @@ void main_main ()
         Real step_strt_time = ParallelDescriptor::second();
 
         if (timedependent_Hbias) {
-            ComputeHbias(H_biasfield, prob_lo, prob_hi, time, geom);
+            ComputeHbias(H_biasfield, time, geom);
         }
 
         if (timedependent_alpha) {
-            ComputeAlpha(alpha,prob_lo,prob_hi,geom,time);
+            ComputeAlpha(alpha,geom,time);
         }
 
         // compute old-time LLG_RHS
@@ -599,15 +460,15 @@ void main_main ()
             }
 
             if (exchange_coupling == 1) {
-                CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, geom);
             }
 
             if (DMI_coupling == 1) {
-                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
+                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, geom);
             }
 
             if (anisotropy_coupling == 1) {
-                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, geom);
             }
         }
         
@@ -616,20 +477,20 @@ void main_main ()
             // Evolve M
             // Compute f^n = f(M^n, H^n)
             Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
-                            Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
+                            Ms, gamma);
 
             // M^{n+1} = M^n + dt * f^n
             for (int i = 0; i < 3; i++) {
                 MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 1, 0);
             }
 
-            NormalizeM(Mfield, Ms, M_normalization, geom);
+            NormalizeM(Mfield, Ms, geom);
             
         } else if (TimeIntegratorOption == 2) { // iterative predictor-corrector
     
             // Compute f^{n} = f(M^{n}, H^{n})
-            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                            gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
+                            Ms, gamma);
 
             for (int comp = 0; comp < 3; comp++) {
                 // copy old RHS into predicted RHS so first pass through is forward Euler
@@ -640,12 +501,12 @@ void main_main ()
 
             // compute new-time Hbias
             if (timedependent_Hbias) {
-                ComputeHbias(H_biasfield, prob_lo, prob_hi, time+dt, geom);
+                ComputeHbias(H_biasfield, time+dt, geom);
             }
 
             // compute new-time alpha
             if (timedependent_alpha) {
-                ComputeAlpha(alpha,prob_lo,prob_hi,geom,time+dt);
+                ComputeAlpha(alpha,geom,time+dt);
             }
 
             int iter = 1;
@@ -660,7 +521,7 @@ void main_main ()
                 }
 
                 // Normalize M
-                NormalizeM(Mfield, Ms, M_normalization, geom);
+                NormalizeM(Mfield, Ms, geom);
                 
                 for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
      
@@ -746,21 +607,21 @@ void main_main ()
                 }
     
                 if (exchange_coupling == 1) {
-                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
                 }
         
                 if (DMI_coupling == 1) {
-                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
+                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
                 }
     
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
                 }
     
                 // LLG RHS with new H_demag and M_field_pre
                 // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-                Compute_LLG_RHS(LLG_RHS_pre, Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                                gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0);
+                Compute_LLG_RHS(LLG_RHS_pre, Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
+                                Ms, gamma);
 
             }
     
@@ -771,9 +632,7 @@ void main_main ()
                         Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, Mfield_padded,
                         n_cell_large, geom_large,
-                        demag_coupling, demag_solver, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis,
-                        M_normalization, mu0, geom, time, dt, prob_lo, prob_hi,
-                        timedependent_Hbias, timedependent_alpha, iterative_tolerance);
+                        geom, time, dt);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
@@ -823,15 +682,15 @@ void main_main ()
                 }
 
                 if (exchange_coupling == 1) {
-                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
                 }
 
                 if (DMI_coupling == 1) {
-                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
+                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
                 }
 
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
                 }
 
                 // Compute f^n = f(M^n, H^n) 
@@ -842,7 +701,7 @@ void main_main ()
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
                 // Call user function to update state MultiFab, e.g. fill BCs
-                NormalizeM(state, Ms, M_normalization, geom);
+                NormalizeM(state, Ms, geom);
                 
                 for (int comp = 0; comp < 3; comp++) {
                     // fill periodic ghost cells

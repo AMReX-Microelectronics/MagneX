@@ -8,8 +8,6 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                     MultiFab&   Ms,
                     MultiFab&   exchange,
                     MultiFab&   DMI,
-                    int DMI_coupling,
-                    Real mu0,
                     const Geometry& geom)
 {
     // timer for profiling

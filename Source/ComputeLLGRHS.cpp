@@ -58,22 +58,16 @@ static amrex::Real LLG_RHS_z(
 
 
 void Compute_LLG_RHS(
-                   Array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
-                   const Array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
-                   Array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
-                   Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
-                   Array< MultiFab, AMREX_SPACEDIM >&   H_exchangefield,
-                   Array< MultiFab, AMREX_SPACEDIM >&   H_DMIfield,
-                   Array< MultiFab, AMREX_SPACEDIM >&   H_anisotropyfield,
+                   Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
+                   Array< MultiFab, AMREX_SPACEDIM >& Mfield_old,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_demagfield,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_biasfield,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_exchangefield,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_DMIfield,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_anisotropyfield,
                    MultiFab&   alpha,
                    MultiFab&   Ms,
-                   MultiFab&   gamma,
-                   int demag_coupling,
-                   int exchange_coupling,
-                   int DMI_coupling,
-                   int anisotropy_coupling,
-                   int M_normalization, 
-                   Real mu0)
+                   MultiFab&   gamma)
 {
     // timer for profiling
     BL_PROFILE_VAR("Compute_LLG_RHS()",Compute_LLG_RHS);
