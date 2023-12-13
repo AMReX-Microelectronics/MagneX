@@ -40,14 +40,14 @@ namespace MagneX {
     extern int diag_type;
 
     // permeability
-    extern amrex::Real mu0;
+    extern AMREX_GPU_MANAGED amrex::Real mu0;
 
     // whether to call the parser each time step, or only at initialization
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
     
     // turn on demagnetization
-    extern int demag_coupling;
+    extern AMREX_GPU_MANAGED int demag_coupling;
 
     // demagnetization solver type
     // -1 = periodic/Neumann MLMG
@@ -56,16 +56,16 @@ namespace MagneX {
     extern int demag_solver;
 
     // 0 = unsaturated; 1 = saturated
-    extern int M_normalization;
+    extern AMREX_GPU_MANAGED int M_normalization;
 
     // turn on exchange
-    extern int exchange_coupling;
+    extern AMREX_GPU_MANAGED int exchange_coupling;
 
     // turn on DMI
-    extern int DMI_coupling;
+    extern AMREX_GPU_MANAGED int DMI_coupling;
 
     // turn on anisotropy
-    extern int anisotropy_coupling;
-    extern amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
+    extern AMREX_GPU_MANAGED int anisotropy_coupling;
+    extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
 }
