@@ -50,14 +50,14 @@ int MagneX::restart;
 int MagneX::diag_type;
 
 // permeability
-amrex::Real MagneX::mu0;
+AMREX_GPU_MANAGED amrex::Real MagneX::mu0;
 
 // whether to call the parser each time step, or only at initialization
 int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
     
 // turn on demagnetization
-int MagneX::demag_coupling;
+AMREX_GPU_MANAGED int MagneX::demag_coupling;
 
 // demagnetization solver type
 // -1 = periodic/Neumann MLMG
@@ -66,17 +66,17 @@ int MagneX::demag_coupling;
 int MagneX::demag_solver;
 
 // 0 = unsaturated; 1 = saturated
-int MagneX::M_normalization;
+AMREX_GPU_MANAGED int MagneX::M_normalization;
 
 // turn on exchange
-int MagneX::exchange_coupling;
+AMREX_GPU_MANAGED int MagneX::exchange_coupling;
 
 // turn on DMI
-int MagneX::DMI_coupling;
+AMREX_GPU_MANAGED int MagneX::DMI_coupling;
 
 // turn on anisotropy
-int MagneX::anisotropy_coupling;
-amrex::GpuArray<amrex::Real, 3> MagneX::anisotropy_axis;
+AMREX_GPU_MANAGED int MagneX::anisotropy_coupling;
+AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::anisotropy_axis;
 
 
 void InitializeMagneXNamespace() {
