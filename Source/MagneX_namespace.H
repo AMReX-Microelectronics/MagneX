@@ -29,6 +29,14 @@ namespace MagneX {
     // how often to write a plotfile
     extern int plot_int;
 
+    // include variables in plotfile
+    extern int plot_Ms;
+    extern int plot_H_bias;
+    extern int plot_exchange;
+    extern int plot_DMI;
+    extern int plot_anisotropy;
+    extern int plot_demag;
+
     // how often to write a checkpoextern int
     extern int chk_int;
 

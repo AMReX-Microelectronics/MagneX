@@ -31,6 +31,14 @@ amrex::Real MagneX::dt;
 // how often to write a plotfile
 int MagneX::plot_int;
 
+// include variables in plotfile
+int MagneX::plot_Ms;
+int MagneX::plot_H_bias;
+int MagneX::plot_exchange;
+int MagneX::plot_DMI;
+int MagneX::plot_anisotropy;
+int MagneX::plot_demag;
+
 // how often to write a checkpoint
 int MagneX::chk_int;
 
@@ -109,6 +117,19 @@ void InitializeMagneXNamespace() {
 
     plot_int = -1;
     pp.query("plot_int",plot_int);
+
+    plot_Ms = 1;
+    pp.query("plot_Ms",plot_Ms);
+    plot_H_bias = 1;
+    pp.query("plot_H_bias",plot_H_bias);
+    plot_exchange = 1;
+    pp.query("plot_exchange",plot_exchange);
+    plot_DMI = 1;
+    pp.query("plot_DMI",plot_DMI);
+    plot_anisotropy = 1;
+    pp.query("plot_anisotropy",plot_anisotropy);
+    plot_demag = 1;
+    pp.query("plot_demag",plot_demag);
 
     chk_int= -1;
     pp.query("chk_int",chk_int);
