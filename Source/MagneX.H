@@ -7,7 +7,15 @@
 #include <fftw3-mpi.h>
 #endif
 
+#include "MagneX_namespace.H"
+
 using namespace amrex;
+using namespace MagneX;
+
+/*
+  MagneX.cpp
+*/
+void InitializeMagneXNamespace();
 
 /*
   Checkpoint.cpp
@@ -31,22 +39,16 @@ void ReadCheckPoint(int& restart,
   ComputeLLGRHS.cpp
 */
 
-void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
-                     const Array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
-                     Array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
-                     Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
-                     Array< MultiFab, AMREX_SPACEDIM >&   H_exchangefield,
-                     Array< MultiFab, AMREX_SPACEDIM >&   H_DMIfield,
-                     Array< MultiFab, AMREX_SPACEDIM >&   H_anisotropyfield,
+void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
+                     Array< MultiFab, AMREX_SPACEDIM >& Mfield_old,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_demagfield,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_biasfield,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_exchangefield,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_DMIfield,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_anisotropyfield,
                      MultiFab&   alpha,
                      MultiFab&   Ms,
-                     MultiFab&   gamma,
-                     int demag_coupling,
-                     int exchange_coupling,
-                     int DMI_coupling,
-                     int anisotropy_coupling,
-                     int M_normalization,
-                     Real mu0);
+                     MultiFab&   gamma);
 
 /*
   Demagnetization.cpp
@@ -124,9 +126,6 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                            Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
                            MultiFab&   Ms,
                            MultiFab&   anisotropy,
-                           int anisotropy_coupling,
-                           amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
-                           Real mu0,
                            const Geometry& geom);
 
 /*
@@ -138,8 +137,6 @@ void CalculateH_DMI(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                     MultiFab&   Ms,
                     MultiFab&   exchange,
                     MultiFab&   DMI,
-                    int DMI_coupling,
-                    Real mu0,
                     const Geometry& geom);
 
 /*
@@ -151,9 +148,6 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                          MultiFab&   Ms,
                          MultiFab&   exchange,
                          MultiFab&   DMI,
-                         int exchange_coupling,
-                         int DMI_coupling,
-                         Real mu0,
                          const Geometry& geom);
 
 /*
@@ -189,22 +183,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &Mfield_padded,
                  GpuArray<int, 3>                      n_cell_large,
                  const Geometry&                       geom_large,
-                 int demag_coupling,
-                 int demag_solver,
-                 int exchange_coupling,
-                 int DMI_coupling,
-                 int anisotropy_coupling,
-                 amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
-                 int M_normalization, 
-                 Real mu0,
                  const Geometry& geom,
                  const Real& time,
-                 const Real& dt,
-                 amrex::GpuArray<amrex::Real, 3> prob_lo,
-                 amrex::GpuArray<amrex::Real, 3> prob_hi,
-                 int timedependent_Hbias,
-                 int timedependent_alpha,
-                 const Real& iterative_tolerance);
+                 const Real& dt);
 
 /*
   Initialization.cpp
@@ -216,25 +197,17 @@ void InitializeMagneticProperties(MultiFab& alpha,
                                   MultiFab& exchange,
                                   MultiFab& DMI,
                                   MultiFab& anisotropy,
-                                  amrex::GpuArray<amrex::Real, 3> prob_lo,
-                                  amrex::GpuArray<amrex::Real, 3> prob_hi,
                                   const Geometry& geom,
                                   const Real& time);
 
 void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
-                      amrex::GpuArray<amrex::Real, 3> prob_lo,
-                      amrex::GpuArray<amrex::Real, 3> prob_hi,
                       const       Geometry& geom);
 
 void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
-                  amrex::GpuArray<amrex::Real, 3> prob_lo,
-                  amrex::GpuArray<amrex::Real, 3> prob_hi,
                   const           Real& time,
                   const       Geometry& geom);
 
 void ComputeAlpha(MultiFab&  alpha,
-                  amrex::GpuArray<amrex::Real, 3> prob_lo,
-                  amrex::GpuArray<amrex::Real, 3> prob_hi,
                   const Geometry& geom,
                   const Real& time);
 
@@ -243,7 +216,7 @@ void ComputeAlpha(MultiFab&  alpha,
 */
 
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-                MultiFab& Ms, int M_normalization,
+                MultiFab& Ms,
                 const Geometry& geom);
 
 /*

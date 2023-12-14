@@ -29,22 +29,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &Mfield_padded,
                  GpuArray<int, 3>                      n_cell_large,
                  const Geometry&                       geom_large,
-                 int demag_coupling,
-                 int demag_solver,
-                 int exchange_coupling,
-                 int DMI_coupling,
-                 int anisotropy_coupling,
-                 amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
-                 int M_normalization, 
-                 Real mu0,
                  const Geometry& geom,
                  const Real& time,
-                 const Real& dt,
-                 amrex::GpuArray<amrex::Real, 3> prob_lo,
-                 amrex::GpuArray<amrex::Real, 3> prob_hi,
-                 int timedependent_Hbias,
-                 int timedependent_alpha,
-                 const Real& iterative_tolerance)
+                 const Real& dt)
 {
     // timer for profiling
     BL_PROFILE_VAR("EvolveM_2nd()",EvolveM_2nd);
@@ -206,12 +193,12 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
     // compute new-time Hbias
     if (timedependent_Hbias) {
-        ComputeHbias(H_biasfield, prob_lo, prob_hi, time+dt, geom);
+        ComputeHbias(H_biasfield, time+dt, geom);
     }
 
     // compute new-time alpha
     if (timedependent_alpha) {
-        ComputeAlpha(alpha,prob_lo,prob_hi,geom,time+dt);
+        ComputeAlpha(alpha,geom,time+dt);
     }
 
     // initialize max_iter, M_iter, M_tol, M_iter_error
@@ -348,7 +335,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         }
 
         // normalize M
-        NormalizeM(Mfield,Ms,M_normalization,geom);
+        NormalizeM(Mfield,Ms,geom);
                 
         for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
      
@@ -422,15 +409,15 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         }
 
        if (exchange_coupling == 1){
-          CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+          CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
        }
 
        if (DMI_coupling == 1){
-          CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, DMI_coupling, mu0, geom);
+          CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
        }
 
        if(anisotropy_coupling == 1){
-         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
        }
 
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed
