@@ -2,8 +2,7 @@
 #include "CartesianAlgorithm_K.H"
 #include <AMReX_PlotFileUtil.H>
 
-// Function accepts the geometry of the problem and then defines the demagnetization tensor in space.  
-// Then we take the Fourier transform of the demagnetization tensor and return that in 12 different multifabs
+// Compute the Demag tensor in realspace and its FFT
 void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         MultiFab&                        Kxx_fft_imag,
                         MultiFab&                        Kxy_fft_real,
@@ -27,12 +26,12 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 	
     // MultiFab storage for the demag tensor
     // TWICE AS BIG AS THE DOMAIN OF THE PROBLEM!!!!!!!!
-    MultiFab Kxx (ba_large, dm_large, 1, 0);
-    MultiFab Kxy (ba_large, dm_large, 1, 0);
-    MultiFab Kxz (ba_large, dm_large, 1, 0);
-    MultiFab Kyy (ba_large, dm_large, 1, 0);
-    MultiFab Kyz (ba_large, dm_large, 1, 0);
-    MultiFab Kzz (ba_large, dm_large, 1, 0);
+    MultiFab Kxx(ba_large, dm_large, 1, 0);
+    MultiFab Kxy(ba_large, dm_large, 1, 0);
+    MultiFab Kxz(ba_large, dm_large, 1, 0);
+    MultiFab Kyy(ba_large, dm_large, 1, 0);
+    MultiFab Kyz(ba_large, dm_large, 1, 0);
+    MultiFab Kzz(ba_large, dm_large, 1, 0);
 
     MultiFab Plt (ba_large, dm_large, 6, 0);
 
@@ -107,7 +106,6 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
         });
     }
 
-
     MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
     MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
     MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
@@ -132,12 +130,8 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
     ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag);
 }
 
-// THIS COMES LAST!!!!!!!!! COULD BE THE TRICKY PART...
-// We will call the three other functions from within this function... which will be called from 'main.cpp' at each time step
-// First we take fft's of Mfield...
-// Then take convolution of the fft of magnetization and the fft of demag tensor 
+// Convolve the convolution magnetization and the demag tensor by taking the dot product of their FFTs.
 // Then take the inverse of that convolution
-// These steps have the form outlined below 
 // Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
 // Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 // Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
@@ -252,7 +246,7 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	    });
      }
 
-    // Allocate Multifabs to store large H_fieldi
+    // Allocate Multifabs to store large H_field
     MultiFab Hx_large(ba_large, dm_large, 1, 0);
     MultiFab Hy_large(ba_large, dm_large, 1, 0);
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
