@@ -151,7 +151,7 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 		      const MultiFab&                        Kzz_fft_imag)
 {
     // timer for profiling
-    BL_PROFILE_VAR("ComputeHFieldFFT()",ComputeHFieldFFT);
+    BL_PROFILE_VAR("ComputeH_demag()",ComputeH_demag);
 
     BoxArray ba_large = Kxx_fft_real.boxArray();
     DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
@@ -256,60 +256,14 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
     ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
 
-    // create a new BoxArray and DistributionMapping for a large MultiFab with 1 grid
-    Box minimalBox_large = Kxx_fft_real.boxArray().minimalBox();
-    BoxArray ba_large_onegrid(minimalBox_large);
-    DistributionMapping dm_onegrid(ba_large_onegrid);
-
-    // Storage for the double-sized Hfield on 1 grid 
-    MultiFab Hx_large_onegrid(ba_large_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hy_large_onegrid(ba_large_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hz_large_onegrid(ba_large_onegrid, dm_onegrid, 1, 0);
-
-    // Copy the distributed Hfield multifabs into onegrid multifabs
-    Hx_large_onegrid.ParallelCopy(Hx_large, 0, 0, 1);
-    Hy_large_onegrid.ParallelCopy(Hy_large, 0, 0, 1);
-    Hz_large_onegrid.ParallelCopy(Hz_large, 0, 0, 1);
-
-    // create a new BoxArray and DistributionMapping for a small MultiFab with 1 grid
-    Box minimalBox_small = H_demagfield[0].boxArray().minimalBox();
-    BoxArray ba_small_onegrid(minimalBox_small);
-    
-    // Storage for the small 1 grid Hfield
-    MultiFab Hx_small_onegrid(ba_small_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hy_small_onegrid(ba_small_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hz_small_onegrid(ba_small_onegrid, dm_onegrid, 1, 0);
-
-    // Copying the elements in the 'upper right'  of the double-sized demag back to multifab that is the problem size
-    for ( MFIter mfi(Hx_small_onegrid); mfi.isValid(); ++mfi )
-    {
-            const Box& bx = mfi.validbox();
-
-            const Array4<Real>& Hx_large_onegrid_ptr = Hx_large_onegrid.array(mfi);
-            const Array4<Real>& Hy_large_onegrid_ptr = Hy_large_onegrid.array(mfi);
-            const Array4<Real>& Hz_large_onegrid_ptr = Hz_large_onegrid.array(mfi);
-
-	    const Array4<Real>& Hx_small_onegrid_ptr = Hx_small_onegrid.array(mfi);
-            const Array4<Real>& Hy_small_onegrid_ptr = Hy_small_onegrid.array(mfi);
-            const Array4<Real>& Hz_small_onegrid_ptr = Hz_small_onegrid.array(mfi);
-
-    	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-                int l = i + n_cell[0] - 1;
-                int m = j + n_cell[1] - 1;
-                int n = k + n_cell[2] - 1;
-                Hx_small_onegrid_ptr(i,j,k) = Hx_large_onegrid_ptr(l,m,n);
-                Hy_small_onegrid_ptr(i,j,k) = Hy_large_onegrid_ptr(l,m,n);
-                Hz_small_onegrid_ptr(i,j,k) = Hz_large_onegrid_ptr(l,m,n);
-            });
-    }
-
-    // Store the final result in the distributed array of multifabs
-    H_demagfield[0].ParallelCopy(Hx_small_onegrid, 0, 0, 1);
-    H_demagfield[1].ParallelCopy(Hy_small_onegrid, 0, 0, 1);
-    H_demagfield[2].ParallelCopy(Hz_small_onegrid, 0, 0, 1);
-    
-
+    // Copying the elements near the 'upper right' of the double-sized demag back to multifab that is the problem size
+    // This is not quite the 'upper right' of the source, it's the destination_coordinate + (n_cell-1)
+    MultiBlockIndexMapping dtos;
+    dtos.offset = IntVect(1-n_cell[0],1-n_cell[1],1-n_cell[2]); // offset = src - dst; "1-n_cell" because we are shifting downward by n_cell-1
+    Box dest_box(IntVect(0),IntVect(n_cell[0]-1,n_cell[1]-1,n_cell[2]-1));
+    ParallelCopy(H_demagfield[0], dest_box, Hx_large, 0, 0, 1, IntVect(0), dtos);
+    ParallelCopy(H_demagfield[1], dest_box, Hy_large, 0, 0, 1, IntVect(0), dtos);
+    ParallelCopy(H_demagfield[2], dest_box, Hz_large, 0, 0, 1, IntVect(0), dtos);
 }
 
 // Function accepts a multifab 'mf_in' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
