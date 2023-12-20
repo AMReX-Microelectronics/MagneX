@@ -24,7 +24,6 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  MultiFab                              &Kyz_dft_imag,
                  MultiFab                              &Kzz_dft_real,
                  MultiFab                              &Kzz_dft_imag,
-                 std::array< MultiFab, AMREX_SPACEDIM> &Mfield_padded,
                  GpuArray<int, 3>                      n_cell_large,
                  const Geometry&                       geom_large,
                  const Geometry& geom,
@@ -368,14 +367,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         // that way at the beginning of the next time step we will have them
         
         // update H_demag
-        if(demag_coupling == 1) {
-            
-            for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                Mfield_padded[dir].setVal(0.);
-                Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-            }
-
-            ComputeHFieldFFT(Mfield_padded, H_demagfield,
+        if(demag_coupling == 1) {            
+            CalculateH_demag(Mfield, H_demagfield,
                              Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                              Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
                              n_cell_large, geom_large);

@@ -135,14 +135,14 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 
 // THIS COMES LAST!!!!!!!!! COULD BE THE TRICKY PART...
 // We will call the three other functions from within this function... which will be called from 'main.cpp' at each time step
-// First we take fft's of M_field...
+// First we take fft's of Mfield...
 // Then take convolution of the fft of magnetization and the fft of demag tensor 
 // Then take the inverse of that convolution
 // These steps have the form outlined below 
 // Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
 // Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 // Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
-void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
+void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	              Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
                       const MultiFab&                        Kxx_fft_real,
 		      const MultiFab&                        Kxx_fft_imag,
@@ -165,7 +165,15 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
     BoxArray ba_large = Kxx_fft_real.boxArray();
     DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
 
-    // Allocate M_field fft multifabs
+    // copy Mfield into Mfield_padded
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+        Mfield_padded[dir].define(ba_large, dm_large, 1, 1);
+        Mfield_padded[dir].setVal(0.);
+        Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+    }
+
+    // Allocate Mfield fft multifabs
     MultiFab M_dft_real_x(ba_large, dm_large, 1, 0);
     MultiFab M_dft_imag_x(ba_large, dm_large, 1, 0);
     MultiFab M_dft_real_y(ba_large, dm_large, 1, 0);
@@ -175,9 +183,9 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 
     // Calculate the Mx, My, and Mz fft's at the current time step
     // Each fft will be stored in seperate real and imaginary multifabs
-    ComputeForwardFFT(M_field_padded[0], M_dft_real_x, M_dft_imag_x, geom_large);
-    ComputeForwardFFT(M_field_padded[1], M_dft_real_y, M_dft_imag_y, geom_large);
-    ComputeForwardFFT(M_field_padded[2], M_dft_real_z, M_dft_imag_z, geom_large);
+    ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x, geom_large);
+    ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y, geom_large);
+    ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z, geom_large);
 
     // Allocate 6 Multifabs to store the convolutions in Fourier space for H_field
     // This could be done in main but then we have an insane amount of arguments in this function
@@ -188,7 +196,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
     MultiFab H_dft_real_z(ba_large, dm_large, 1, 0);
     MultiFab H_dft_imag_z(ba_large, dm_large, 1, 0);
 
-    for ( MFIter mfi(M_field_padded[0]); mfi.isValid(); ++mfi )
+    for ( MFIter mfi(Mfield_padded[0]); mfi.isValid(); ++mfi )
     {
             const Box& bx = mfi.validbox();
 
