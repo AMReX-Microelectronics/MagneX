@@ -2,67 +2,6 @@
 #include "CartesianAlgorithm_K.H"
 #include <AMReX_PlotFileUtil.H>
 
-void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       const Geometry&                  geom)
-{
-    // timer for profiling
-    BL_PROFILE_VAR("ComputePoissonRHS()",ComputePoissonRHS);
-
-    for ( MFIter mfi(PoissonRHS); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-            // extract dx from the geometry object
-            GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
-
-            const Array4<Real const>& Mx = Mfield[0].array(mfi);         
-            const Array4<Real const>& My = Mfield[1].array(mfi);         
-            const Array4<Real const>& Mz = Mfield[2].array(mfi);   
-
-            const Array4<Real>& rhs = PoissonRHS.array(mfi);
-
-            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-
-                rhs(i,j,k) =  DivergenceDx_Mag(Mx, i, j, k, dx)
-                            + DivergenceDy_Mag(My, i, j, k, dx)
-                            + DivergenceDz_Mag(Mz, i, j, k, dx);
-                
-            });
-        }
-
-}
-
-void ComputeHfromPhi(MultiFab&                        PoissonPhi,
-                     Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                     const Geometry&                  geom)
-{
-    // timer for profiling
-    BL_PROFILE_VAR("ComputeHfromPhi()",ComputeHfromPhi);
-    
-       // Calculate H from Phi
-        for ( MFIter mfi(PoissonPhi); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-
-            // extract dx from the geometry object
-            GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
-
-            const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);
-            const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);
-            const Array4<Real>& Hz_demag = H_demagfield[2].array(mfi);
-
-            const Array4<Real>& phi = PoissonPhi.array(mfi);
-
-            amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-                Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
-                Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
-                Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
-            });
-        }
-}
-
 // Function accepts the geometry of the problem and then defines the demagnetization tensor in space.  
 // Then we take the Fourier transform of the demagnetization tensor and return that in 12 different multifabs
 void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
@@ -314,9 +253,9 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
 
     // Compute the inverse FFT of H_field with respect to the three coordinates and store them in 3 multifabs that this function returns
-    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x, n_cell_large, geom_large);
-    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y, n_cell_large, geom_large);
-    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z, n_cell_large, geom_large); 
+    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x, geom_large);
+    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y, geom_large);
+    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z, geom_large); 
 
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
     BoxArray ba_onegrid(geom_large.Domain());
@@ -568,7 +507,6 @@ void ComputeForwardFFT(const MultiFab&    mf,
 void ComputeInverseFFT(MultiFab&                        mf_2,
 		       const MultiFab&                  mf_dft_real,
                        const MultiFab&                  mf_dft_imag,				   
-		       GpuArray<int, 3>                 n_cell,
                        const Geometry&                  geom)
 {
     // timer for profiling
@@ -708,11 +646,11 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
 
       // Standard scaling after fft and inverse fft using FFTW
 #if (AMREX_SPACEDIM == 2)
-    mf_onegrid_2.mult(1./(n_cell[0]*n_cell[1]));
+    mf_onegrid_2.mult(1./(geom.Domain().length(0)*geom.Domain().length(1)));
 #elif (AMREX_SPACEDIM == 3)
-    mf_onegrid_2.mult(1./(n_cell[0]*n_cell[1]*n_cell[2]));
+    mf_onegrid_2.mult(1./(geom.Domain().length(0)*geom.Domain().length(1)*geom.Domain().length(2)));
 #endif
-    
+
     // copy contents of mf_onegrid_2 into mf
     mf_2.ParallelCopy(mf_onegrid_2, 0, 0, 1);
 

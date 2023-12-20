@@ -54,14 +54,6 @@ void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
   Demagnetization.cpp
 */
 
-void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       const Geometry&                  geom);
-
-void ComputeHfromPhi(MultiFab&                         PoissonPhi,
-                      Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                      const Geometry&                  geom);
-
 void ComputeForwardFFT(const MultiFab&    mf,
                        MultiFab&          mf_dft_real,
                        MultiFab&          mf_dft_imag,
@@ -70,7 +62,6 @@ void ComputeForwardFFT(const MultiFab&    mf,
 void ComputeInverseFFT(MultiFab&        mf_2,
                        const MultiFab&  mf_dft_real,
                        const MultiFab&  mf_dft_imag,
-                       GpuArray<int, 3> n_cell,
                        const Geometry&  geom);
 
 void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
@@ -160,8 +151,6 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
                  std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
-                 MultiFab                              &PoissonRHS, 
-                 MultiFab                              &PoissonPhi, 
                  MultiFab                              &alpha,
                  MultiFab                              &Ms,
                  MultiFab                              &gamma,
@@ -230,8 +219,6 @@ void WritePlotfile(MultiFab& Ms,
                    Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                   MultiFab& PoissonRHS,
-                   MultiFab& PoissonPhi,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step);

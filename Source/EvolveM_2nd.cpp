@@ -6,8 +6,6 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
                  std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
-                 MultiFab                              &PoissonRHS, 
-                 MultiFab                              &PoissonPhi, 
                  MultiFab                              &alpha,
                  MultiFab                              &Ms,
                  MultiFab                              &gamma,
@@ -372,40 +370,15 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         // update H_demag
         if(demag_coupling == 1) {
             
-            if (demag_solver == -1 || demag_solver == 0) {
-
-                amrex::Abort("FIXME: MLMG solvers in EvolveM_2nd");
-                /*
-                //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                //Compute RHS of Poisson equation
-                ComputePoissonRHS(PoissonRHS, Mfield, geom);
-                     
-                //Initial guess for phi
-                PoissonPhi.setVal(0.);
-
-                if (demag_solver == -1) {
-                    mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                } else if (demag_solver == 0) {
-                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                }
-
-                // Calculate H from Phi
-                ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-                */
-                
-            } else {
-
-                // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                    Mfield_padded[dir].setVal(0.);
-                    Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-                }
-
-                ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                 Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                 Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                 n_cell_large, geom_large);
+            for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+                Mfield_padded[dir].setVal(0.);
+                Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
             }
+
+            ComputeHFieldFFT(Mfield_padded, H_demagfield,
+                             Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
+                             Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
+                             n_cell_large, geom_large);
         }
 
        if (exchange_coupling == 1){
