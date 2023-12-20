@@ -116,8 +116,7 @@ Real SumNormalizedM(MultiFab& Ms,
 void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                            Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
                            MultiFab&   Ms,
-                           MultiFab&   anisotropy,
-                           const Geometry& geom);
+                           MultiFab&   anisotropy);
 
 /*
   EffectiveDMIField.cpp

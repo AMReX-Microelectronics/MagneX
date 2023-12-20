@@ -266,7 +266,7 @@ void main_main ()
         }
 
         if (anisotropy_coupling == 1) {
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
         }
     }
 
@@ -325,7 +325,7 @@ void main_main ()
             }
 
             if (anisotropy_coupling == 1) {
-                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, geom);
+                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy);
             }
         }
         
@@ -445,7 +445,7 @@ void main_main ()
                 }
     
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
                 }
     
                 // LLG RHS with new H_demag and Mfield_pre
@@ -493,7 +493,7 @@ void main_main ()
                 }
 
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
                 }
 
                 // Compute f^n = f(M^n, H^n) 

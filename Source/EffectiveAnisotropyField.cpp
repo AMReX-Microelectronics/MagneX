@@ -5,16 +5,12 @@ using namespace amrex;
 void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                            Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
                            MultiFab&   Ms,
-                           MultiFab&   anisotropy,
-                           const Geometry& geom)
+                           MultiFab&   anisotropy)
 {
     // timer for profiling
     BL_PROFILE_VAR("CalculateH_anisotropy()",CalculateH_anisotropy);
 
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
-
-        // extract dd from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();
 
         const Box& bx = mfi.validbox();
 

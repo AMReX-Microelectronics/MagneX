@@ -383,7 +383,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
        }
 
        if(anisotropy_coupling == 1){
-         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
        }
 
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed
