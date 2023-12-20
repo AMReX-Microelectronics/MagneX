@@ -371,7 +371,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             CalculateH_demag(Mfield, H_demagfield,
                              Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
                              Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                             n_cell_large, geom_large);
+                             n_cell_large);
         }
 
        if (exchange_coupling == 1){

@@ -125,12 +125,12 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                               "Kzz"},
                              geom_large, 0., 0);
 
-    ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large);
-    ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large);
-    ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag, geom_large);
-    ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag, geom_large);
-    ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag, geom_large);
-    ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag, geom_large);
+    ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag);
+    ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag);
+    ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag);
+    ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag);
+    ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag);
+    ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag);
 }
 
 // THIS COMES LAST!!!!!!!!! COULD BE THE TRICKY PART...
@@ -156,8 +156,7 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 		      const MultiFab&                        Kyz_fft_imag,
 		      const MultiFab&                        Kzz_fft_real,
 		      const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<int, 3>                       n_cell_large,
-                      const Geometry&                        geom_large)
+                      GpuArray<int, 3>                       n_cell_large)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeHFieldFFT()",ComputeHFieldFFT);
@@ -183,9 +182,9 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 
     // Calculate the Mx, My, and Mz fft's at the current time step
     // Each fft will be stored in seperate real and imaginary multifabs
-    ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x, geom_large);
-    ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y, geom_large);
-    ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z, geom_large);
+    ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
+    ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
+    ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
 
     // Allocate 6 Multifabs to store the convolutions in Fourier space for H_field
     // This could be done in main but then we have an insane amount of arguments in this function
@@ -261,12 +260,14 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
 
     // Compute the inverse FFT of H_field with respect to the three coordinates and store them in 3 multifabs that this function returns
-    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x, geom_large);
-    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y, geom_large);
-    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z, geom_large); 
+    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x);
+    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
+    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
 
+    Box minimalBox = Kxx_fft_real.boxArray().minimalBox();
+    
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(geom_large.Domain());
+    BoxArray ba_onegrid(minimalBox);
     DistributionMapping dm_onegrid(ba_onegrid);
 
     // Storage for the double-sized Hfield on 1 grid 
@@ -324,11 +325,10 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 
 }
 
-// Function accepts a multifab 'mf' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
-void ComputeForwardFFT(const MultiFab&    mf,
+// Function accepts a multifab 'mf_in' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
+void ComputeForwardFFT(const MultiFab&    mf_in,
 		       MultiFab&          mf_dft_real,
-		       MultiFab&          mf_dft_imag,
-		       const Geometry&    geom)
+		       MultiFab&          mf_dft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeForwardFFT()",ComputeForwardFFT);
@@ -337,17 +337,19 @@ void ComputeForwardFFT(const MultiFab&    mf,
     // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
     // **********************************
 
+    Box minimalBox = mf_in.boxArray().minimalBox();
+    
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(geom.Domain());
+    BoxArray ba_onegrid(minimalBox);
     DistributionMapping dm_onegrid(ba_onegrid);
 
     // storage for phi and the dft
-    MultiFab mf_onegrid         (ba_onegrid, dm_onegrid, 1, 0);
+    MultiFab mf_in_onegrid      (ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_real_onegrid(ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_imag_onegrid(ba_onegrid, dm_onegrid, 1, 0);
 
     // copy phi into phi_onegrid
-    mf_onegrid.ParallelCopy(mf, 0, 0, 1);
+    mf_in_onegrid.ParallelCopy(mf_in, 0, 0, 1);
 
     // **********************************
     // COMPUTE FFT
@@ -366,7 +368,7 @@ void ComputeForwardFFT(const MultiFab&    mf,
 
     Vector<FFTplan> forward_plan;
 
-    for (MFIter mfi(mf_onegrid); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(mf_in_onegrid); mfi.isValid(); ++mfi) {
 
       // grab a single box including ghost cell range
       Box realspace_bx = mfi.fabbox();
@@ -407,13 +409,13 @@ void ComputeForwardFFT(const MultiFab&    mf,
 
 #if (AMREX_SPACEDIM == 2)
       fplan = fftw_plan_dft_r2c_2d(fft_size[1], fft_size[0],
-                   mf_onegrid[mfi].dataPtr(),
+                   mf_in_onegrid[mfi].dataPtr(),
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
                    FFTW_ESTIMATE);
 #elif (AMREX_SPACEDIM == 3)
       fplan = fftw_plan_dft_r2c_3d(fft_size[2], fft_size[1], fft_size[0],
-                   mf_onegrid[mfi].dataPtr(),
+                   mf_in_onegrid[mfi].dataPtr(),
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
                    FFTW_ESTIMATE);
@@ -427,12 +429,12 @@ void ComputeForwardFFT(const MultiFab&    mf,
     ParallelDescriptor::Barrier();
 
     // ForwardTransform
-    for (MFIter mfi(mf_onegrid); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(mf_in_onegrid); mfi.isValid(); ++mfi) {
       int i = mfi.LocalIndex();
 #ifdef AMREX_USE_CUDA
       cufftSetStream(forward_plan[i], Gpu::gpuStream());
       cufftResult result = cufftExecD2Z(forward_plan[i],
-                    mf_onegrid[mfi].dataPtr(),
+                    mf_in_onegrid[mfi].dataPtr(),
                     reinterpret_cast<FFTcomplex*>
                     (spectral_field[i]->dataPtr()));
       if (result != CUFFT_SUCCESS) {
@@ -510,22 +512,23 @@ void ComputeForwardFFT(const MultiFab&    mf,
 }
 
 
-// This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_2'
+// This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_out'
 // The FFTW c2r function is called which accepts complex data in the frequency domain and returns real data in the normal cartesian plane
-void ComputeInverseFFT(MultiFab&                        mf_2,
+void ComputeInverseFFT(MultiFab&                        mf_out,
 		       const MultiFab&                  mf_dft_real,
-                       const MultiFab&                  mf_dft_imag,				   
-                       const Geometry&                  geom)
+                       const MultiFab&                  mf_dft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeInverseFFT()",ComputeInverseFFT);
 
+    Box minimalBox = mf_out.boxArray().minimalBox();
+
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(geom.Domain());
+    BoxArray ba_onegrid(minimalBox);
     DistributionMapping dm_onegrid(ba_onegrid);
     
     // Declare multifabs to store entire dataset in one grid.
-    MultiFab mf_onegrid_2 (ba_onegrid, dm_onegrid, 1, 0);
+    MultiFab mf_onegrid_out     (ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_real_onegrid(ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_imag_onegrid(ba_onegrid, dm_onegrid, 1, 0);
 
@@ -581,12 +584,12 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
         });
     }
 
-    // Compute the inverse FFT on spectral_field and store it in 'mf_onegrid_2'
+    // Compute the inverse FFT on spectral_field and store it in 'mf_onegrid_out'
     Vector<FFTplan> backward_plan;
 
     // Now that we have a spectral field full of the data from the DFT..
-    // We perform the inverse DFT on spectral field and store it in mf_onegrid_2
-    for (MFIter mfi(mf_onegrid_2); mfi.isValid(); ++mfi) {
+    // We perform the inverse DFT on spectral field and store it in mf_onegrid_out
+    for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
 
        // grab a single box including ghost cell range
        Box realspace_bx = mfi.fabbox();
@@ -618,13 +621,13 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       bplan = fftw_plan_dft_c2r_2d(fft_size[1], fft_size[0],
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
-                   mf_onegrid_2[mfi].dataPtr(),
+                   mf_onegrid_out[mfi].dataPtr(),
                    FFTW_ESTIMATE);
 #elif (AMREX_SPACEDIM == 3)
       bplan = fftw_plan_dft_c2r_3d(fft_size[2], fft_size[1], fft_size[0],
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
-                   mf_onegrid_2[mfi].dataPtr(),
+                   mf_onegrid_out[mfi].dataPtr(),
                    FFTW_ESTIMATE);
 #endif
 
@@ -633,7 +636,7 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       backward_plan.push_back(bplan);// This adds an instance of bplan to the end of backward_plan
       }
 
-    for (MFIter mfi(mf_onegrid_2); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
       int i = mfi.LocalIndex();
 
 #ifdef AMREX_USE_CUDA
@@ -641,7 +644,7 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       cufftResult result = cufftExecZ2D(backward_plan[i],
                            reinterpret_cast<FFTcomplex*>
                            (spectral_field[i]->dataPtr()),
-                           mf_onegrid_2[mfi].dataPtr());
+                           mf_onegrid_out[mfi].dataPtr());
        if (result != CUFFT_SUCCESS) {
          AllPrint() << " inverse transform using cufftExec failed! Error: "
          << cufftErrorToString(result) << "\n";
@@ -654,13 +657,13 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
 
       // Standard scaling after fft and inverse fft using FFTW
 #if (AMREX_SPACEDIM == 2)
-    mf_onegrid_2.mult(1./(geom.Domain().length(0)*geom.Domain().length(1)));
+    mf_onegrid_out.mult(1./(minimalBox.length(0)*minimalBox.length(1)));
 #elif (AMREX_SPACEDIM == 3)
-    mf_onegrid_2.mult(1./(geom.Domain().length(0)*geom.Domain().length(1)*geom.Domain().length(2)));
+    mf_onegrid_out.mult(1./(minimalBox.length(0)*minimalBox.length(1)*minimalBox.length(2)));
 #endif
 
-    // copy contents of mf_onegrid_2 into mf
-    mf_2.ParallelCopy(mf_onegrid_2, 0, 0, 1);
+    // copy contents of mf_onegrid_out into mf
+    mf_out.ParallelCopy(mf_onegrid_out, 0, 0, 1);
 
     // destroy ifft plan
     for (int i = 0; i < backward_plan.size(); ++i) {

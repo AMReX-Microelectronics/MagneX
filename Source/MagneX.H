@@ -54,15 +54,13 @@ void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
   Demagnetization.cpp
 */
 
-void ComputeForwardFFT(const MultiFab&    mf,
+void ComputeForwardFFT(const MultiFab&    mf_in,
                        MultiFab&          mf_dft_real,
-                       MultiFab&          mf_dft_imag,
-                       const Geometry&    geom);
+                       MultiFab&          mf_dft_imag);
 
-void ComputeInverseFFT(MultiFab&        mf_2,
+void ComputeInverseFFT(MultiFab&        mf_out,
                        const MultiFab&  mf_dft_real,
-                       const MultiFab&  mf_dft_imag,
-                       const Geometry&  geom);
+                       const MultiFab&  mf_dft_imag);
 
 void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         MultiFab&                        Kxx_fft_imag,
@@ -93,8 +91,7 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                       const MultiFab&                        Kyz_fft_imag,
                       const MultiFab&                        Kzz_fft_real,
                       const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<int, 3>                       n_cell_large,
-                      const Geometry&                        geom_large);
+                      GpuArray<int, 3>                       n_cell_large);
  
 #ifdef AMREX_USE_CUDA
 std::string cufftErrorToString (const cufftResult& err);
