@@ -295,9 +295,9 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 
     	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                int l = i + n_cell[0];
-                int m = j + n_cell[1];
-                int n = k + n_cell[2];
+                int l = i + n_cell[0] - 1;
+                int m = j + n_cell[1] - 1;
+                int n = k + n_cell[2] - 1;
                 Hx_small_onegrid_ptr(i,j,k) = Hx_large_onegrid_ptr(l,m,n);
                 Hy_small_onegrid_ptr(i,j,k) = Hy_large_onegrid_ptr(l,m,n);
                 Hz_small_onegrid_ptr(i,j,k) = Hz_large_onegrid_ptr(l,m,n);
