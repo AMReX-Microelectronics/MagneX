@@ -259,12 +259,12 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     // create a new BoxArray and DistributionMapping for a large MultiFab with 1 grid
     Box minimalBox_large = Kxx_fft_real.boxArray().minimalBox();
     BoxArray ba_large_onegrid(minimalBox_large);
-    DistributionMapping dm_large_onegrid(ba_large_onegrid);
+    DistributionMapping dm_onegrid(ba_large_onegrid);
 
     // Storage for the double-sized Hfield on 1 grid 
-    MultiFab Hx_large_onegrid(ba_large_onegrid, dm_large_onegrid, 1, 0);
-    MultiFab Hy_large_onegrid(ba_large_onegrid, dm_large_onegrid, 1, 0);
-    MultiFab Hz_large_onegrid(ba_large_onegrid, dm_large_onegrid, 1, 0);
+    MultiFab Hx_large_onegrid(ba_large_onegrid, dm_onegrid, 1, 0);
+    MultiFab Hy_large_onegrid(ba_large_onegrid, dm_onegrid, 1, 0);
+    MultiFab Hz_large_onegrid(ba_large_onegrid, dm_onegrid, 1, 0);
 
     // Copy the distributed Hfield multifabs into onegrid multifabs
     Hx_large_onegrid.ParallelCopy(Hx_large, 0, 0, 1);
@@ -274,12 +274,11 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     // create a new BoxArray and DistributionMapping for a small MultiFab with 1 grid
     Box minimalBox_small = H_demagfield[0].boxArray().minimalBox();
     BoxArray ba_small_onegrid(minimalBox_small);
-    DistributionMapping dm_small_onegrid(ba_small_onegrid);
     
     // Storage for the small 1 grid Hfield
-    MultiFab Hx_small_onegrid(ba_small_onegrid, dm_small_onegrid, 1, 0);
-    MultiFab Hy_small_onegrid(ba_small_onegrid, dm_small_onegrid, 1, 0);
-    MultiFab Hz_small_onegrid(ba_small_onegrid, dm_small_onegrid, 1, 0);
+    MultiFab Hx_small_onegrid(ba_small_onegrid, dm_onegrid, 1, 0);
+    MultiFab Hy_small_onegrid(ba_small_onegrid, dm_onegrid, 1, 0);
+    MultiFab Hz_small_onegrid(ba_small_onegrid, dm_onegrid, 1, 0);
 
     // Copying the elements in the 'upper right'  of the double-sized demag back to multifab that is the problem size
     for ( MFIter mfi(Hx_small_onegrid); mfi.isValid(); ++mfi )
