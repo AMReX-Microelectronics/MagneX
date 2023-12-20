@@ -299,9 +299,9 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                 int l = i + n_cell[0];
                 int m = j + n_cell[1];
                 int n = k + n_cell[2];
-                Hx_small_onegrid_ptr(i,j,k) = Hx_large_onegrid_ptr(i,j,k);
-                Hy_small_onegrid_ptr(i,j,k) = Hy_large_onegrid_ptr(i,j,k);
-                Hz_small_onegrid_ptr(i,j,k) = Hz_large_onegrid_ptr(i,j,k);
+                Hx_small_onegrid_ptr(i,j,k) = Hx_large_onegrid_ptr(l,m,n);
+                Hy_small_onegrid_ptr(i,j,k) = Hy_large_onegrid_ptr(l,m,n);
+                Hz_small_onegrid_ptr(i,j,k) = Hz_large_onegrid_ptr(l,m,n);
             });
     }
 
