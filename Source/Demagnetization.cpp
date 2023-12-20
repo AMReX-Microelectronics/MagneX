@@ -1,28 +1,62 @@
+#include "Demagnetization.H"
 #include "MagneX.H"
 #include "CartesianAlgorithm_K.H"
 #include <AMReX_PlotFileUtil.H>
 
+Demagnetization::Demagnetization() {}
+
 // Compute the Demag tensor in realspace and its FFT
-void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
-                        MultiFab&                        Kxx_fft_imag,
-                        MultiFab&                        Kxy_fft_real,
-                        MultiFab&                        Kxy_fft_imag,
-                        MultiFab&                        Kxz_fft_real,
-                        MultiFab&                        Kxz_fft_imag,
-                        MultiFab&                        Kyy_fft_real,
-                        MultiFab&                        Kyy_fft_imag,
-                        MultiFab&                        Kyz_fft_real,
-                        MultiFab&                        Kyz_fft_imag,
-                        MultiFab&                        Kzz_fft_real,
-                        MultiFab&                        Kzz_fft_imag,
-                        const Geometry&                  geom_large)
+void Demagnetization::define()
 {
     // timer for profiling
-    BL_PROFILE_VAR("ComputeDemagTensor()",ComputeDemagTensor);
+    BL_PROFILE_VAR("Demagnetization::define()",DemagDefine);
 
-    // Extract the domain data 
-    BoxArray ba_large = Kxx_fft_real.boxArray();
-    DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
+
+    RealBox real_box_large({AMREX_D_DECL(              prob_lo[0],              prob_lo[1],              prob_lo[2])},
+                           {AMREX_D_DECL( 2*prob_hi[0]-prob_lo[0], 2*prob_hi[1]-prob_lo[1], 2*prob_hi[2]-prob_lo[2])});
+
+    // **********************************
+    // SIMULATION SETUP
+    // make BoxArray and Geometry
+    // ba will contain a list of boxes that cover the domain
+    // geom contains information such as the physical domain size,
+    // number of points in the domain, and periodicity
+
+    // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
+    IntVect dom_lo_large(AMREX_D_DECL(            0,             0,             0));
+    IntVect dom_hi_large(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
+
+    // Make a single box that is the entire domain
+    Box domain_large(dom_lo_large, dom_hi_large);
+
+    // Initialize the boxarray "ba" from the single box "domain"
+    ba_large.define(domain_large);
+
+    // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+    ba_large.maxSize(max_grid_size);
+
+    // How Boxes are distrubuted among MPI processes
+    dm_large.define(ba_large);
+
+    // periodic in x and y directions
+    Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
+
+    // This defines a Geometry object
+    geom_large.define(domain_large, real_box_large, CoordSys::cartesian, is_periodic);
+
+    // Allocate the demag tensor fft multifabs
+    Kxx_fft_real.define(ba_large, dm_large, 1, 0);
+    Kxx_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kxy_fft_real.define(ba_large, dm_large, 1, 0);
+    Kxy_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kxz_fft_real.define(ba_large, dm_large, 1, 0);
+    Kxz_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kyy_fft_real.define(ba_large, dm_large, 1, 0);
+    Kyy_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kyz_fft_real.define(ba_large, dm_large, 1, 0);
+    Kyz_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kzz_fft_real.define(ba_large, dm_large, 1, 0);
+    Kzz_fft_imag.define(ba_large, dm_large, 1, 0);
 	
     // MultiFab storage for the demag tensor
     // TWICE AS BIG AS THE DOMAIN OF THE PROBLEM!!!!!!!!
@@ -135,20 +169,8 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 // Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
 // Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 // Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
-void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-	              Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
-                      const MultiFab&                        Kxx_fft_real,
-		      const MultiFab&                        Kxx_fft_imag,
-                      const MultiFab&                        Kxy_fft_real,
-		      const MultiFab&                        Kxy_fft_imag,
- 		      const MultiFab&                        Kxz_fft_real,
-		      const MultiFab&                        Kxz_fft_imag,
-		      const MultiFab&                        Kyy_fft_real,
-		      const MultiFab&                        Kyy_fft_imag,
-		      const MultiFab&                        Kyz_fft_real,
-		      const MultiFab&                        Kyz_fft_imag,
-		      const MultiFab&                        Kzz_fft_real,
-		      const MultiFab&                        Kzz_fft_imag)
+void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+                                       Array<MultiFab, AMREX_SPACEDIM>& H_demagfield)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeH_demag()",ComputeH_demag);
@@ -267,9 +289,9 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 }
 
 // Function accepts a multifab 'mf_in' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
-void ComputeForwardFFT(const MultiFab&    mf_in,
-		       MultiFab&          mf_dft_real,
-		       MultiFab&          mf_dft_imag)
+void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
+                                        MultiFab&          mf_dft_real,
+                                        MultiFab&          mf_dft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeForwardFFT()",ComputeForwardFFT);
@@ -455,9 +477,9 @@ void ComputeForwardFFT(const MultiFab&    mf_in,
 
 // This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_out'
 // The FFTW c2r function is called which accepts complex data in the frequency domain and returns real data in the normal cartesian plane
-void ComputeInverseFFT(MultiFab&                        mf_out,
-		       const MultiFab&                  mf_dft_real,
-                       const MultiFab&                  mf_dft_imag)
+void Demagnetization::ComputeInverseFFT(MultiFab&                        mf_out,
+                                        const MultiFab&                  mf_dft_real,
+                                        const MultiFab&                  mf_dft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeInverseFFT()",ComputeInverseFFT);
@@ -619,7 +641,7 @@ void ComputeInverseFFT(MultiFab&                        mf_out,
 }
 
 #ifdef AMREX_USE_CUDA
-std::string cufftErrorToString (const cufftResult& err)
+std::string Demagnetization::cufftErrorToString (const cufftResult& err)
 {
     switch (err) {
     case CUFFT_SUCCESS:  return "CUFFT_SUCCESS";

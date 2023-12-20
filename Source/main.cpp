@@ -1,4 +1,5 @@
 #include "MagneX.H"
+#include "Demagnetization.H"
 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
@@ -162,82 +163,11 @@ void main_main ()
         H_demagfield[idim].setVal(0.);
     }
 
-    // needed for FFT-based demag solver
-    BoxArray ba_large;
-    DistributionMapping dm_large;
-    Geometry geom_large;
-
-    RealBox real_box_large({AMREX_D_DECL(              prob_lo[0],              prob_lo[1],              prob_lo[2])},
-                           {AMREX_D_DECL( 2*prob_hi[0]-prob_lo[0], 2*prob_hi[1]-prob_lo[1], 2*prob_hi[2]-prob_lo[2])});
-
     // Create a zero-padded Magnetization field for the convolution method
-    MultiFab Kxx_dft_real;
-    MultiFab Kxx_dft_imag;
-    MultiFab Kxy_dft_real;
-    MultiFab Kxy_dft_imag;
-    MultiFab Kxz_dft_real;
-    MultiFab Kxz_dft_imag;
-    MultiFab Kyy_dft_real;
-    MultiFab Kyy_dft_imag;
-    MultiFab Kyz_dft_real;
-    MultiFab Kyz_dft_imag;
-    MultiFab Kzz_dft_real;
-    MultiFab Kzz_dft_imag;
-
-    // Create a double-sized n_cell array
-    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
-    n_cell_large[0] = 2*n_cell[0];
-    n_cell_large[1] = 2*n_cell[1];
-    n_cell_large[2] = 2*n_cell[2];
-
+    Demagnetization demag_solver;
+    
     if (demag_coupling == 1) {
-
-        // **********************************
-        // SIMULATION SETUP
-        // make BoxArray and Geometry
-        // ba will contain a list of boxes that cover the domain
-        // geom contains information such as the physical domain size,
-        // number of points in the domain, and periodicity
-
-        // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
-        IntVect dom_lo_large(AMREX_D_DECL(                0,                 0,                 0));
-        IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
-
-        // Make a single box that is the entire domain
-        Box domain_large(dom_lo_large, dom_hi_large);
-
-        // Initialize the boxarray "ba" from the single box "domain"
-        ba_large.define(domain_large);
-
-        // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-        ba_large.maxSize(max_grid_size);
-
-        // How Boxes are distrubuted among MPI processes
-        dm_large.define(ba_large);
-	     
-        // This defines a Geometry object
-        geom_large.define(domain_large, real_box_large, CoordSys::cartesian, is_periodic);
-
-        // Allocate the demag tensor fft multifabs
-        Kxx_dft_real.define(ba_large, dm_large, 1, 0);
-        Kxx_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kxy_dft_real.define(ba_large, dm_large, 1, 0);
-        Kxy_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kxz_dft_real.define(ba_large, dm_large, 1, 0);
-        Kxz_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kyy_dft_real.define(ba_large, dm_large, 1, 0);
-        Kyy_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kyz_dft_real.define(ba_large, dm_large, 1, 0);
-        Kyz_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kzz_dft_real.define(ba_large, dm_large, 1, 0);
-        Kzz_dft_imag.define(ba_large, dm_large, 1, 0);
-
-        // Call function that computes the demag tensors and then takes the forward FFT of each of them, which are returns
-        ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                           Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                           geom_large);
-        
-
+        demag_solver.define();       
     }
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, geom, time);
@@ -251,9 +181,7 @@ void main_main ()
         InitializeFields(Mfield, geom);
 
         if (demag_coupling == 1) {
-            CalculateH_demag(Mfield, H_demagfield,
-                             Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                             Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag);
+            demag_solver.CalculateH_demag(Mfield, H_demagfield);
 	}
         
         if (exchange_coupling == 1) {
@@ -309,9 +237,7 @@ void main_main ()
             
     	    // Evolve H_demag
             if (demag_coupling == 1) {
-                CalculateH_demag(Mfield_old, H_demagfield,
-                                 Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                 Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag);
+                demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
             }
 
             if (exchange_coupling == 1) {
@@ -428,9 +354,7 @@ void main_main ()
         
                 // Poisson solve and H_demag computation with Mfield
                 if (demag_coupling == 1) { 
-                    CalculateH_demag(Mfield, H_demagfield,
-                                     Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                     Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag);
+                    demag_solver.CalculateH_demag(Mfield, H_demagfield);
                 }
     
                 if (exchange_coupling == 1) {
@@ -455,10 +379,7 @@ void main_main ()
         } else if (TimeIntegratorOption == 3) { // iterative direct solver (ARTEMIS way)
         
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                        gamma, exchange, DMI, anisotropy,
-                        Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                        Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                        n_cell_large, geom_large,
+                        gamma, exchange, DMI, anisotropy, demag_solver,
                         geom, time, dt);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
@@ -475,9 +396,7 @@ void main_main ()
  
     	        // Evolve H_demag
                 if (demag_coupling == 1) {
-                    CalculateH_demag(old_state, H_demagfield,
-                                     Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                     Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag);
+                    demag_solver.CalculateH_demag(old_state, H_demagfield);
                 }
 
                 if (exchange_coupling == 1) {

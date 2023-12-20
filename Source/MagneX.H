@@ -6,8 +6,8 @@
 #include <fftw3.h>
 #include <fftw3-mpi.h>
 #endif
-
 #include "MagneX_namespace.H"
+#include "Demagnetization.H"
 
 using namespace amrex;
 using namespace MagneX;
@@ -49,51 +49,6 @@ void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
                      MultiFab&   alpha,
                      MultiFab&   Ms,
                      MultiFab&   gamma);
-
-/*
-  Demagnetization.cpp
-*/
-
-void ComputeForwardFFT(const MultiFab&    mf_in,
-                       MultiFab&          mf_dft_real,
-                       MultiFab&          mf_dft_imag);
-
-void ComputeInverseFFT(MultiFab&        mf_out,
-                       const MultiFab&  mf_dft_real,
-                       const MultiFab&  mf_dft_imag);
-
-void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
-                        MultiFab&                        Kxx_fft_imag,
-                        MultiFab&                        Kxy_fft_real,
-                        MultiFab&                        Kxy_fft_imag,
-                        MultiFab&                        Kxz_fft_real,
-                        MultiFab&                        Kxz_fft_imag,
-                        MultiFab&                        Kyy_fft_real,
-                        MultiFab&                        Kyy_fft_imag,
-                        MultiFab&                        Kyz_fft_real,
-                        MultiFab&                        Kyz_fft_imag,
-                        MultiFab&                        Kzz_fft_real,
-                        MultiFab&                        Kzz_fft_imag,
-			const Geometry&                  geom_large);
-
-void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                      Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
-                      const MultiFab&                        Kxx_fft_real,
-                      const MultiFab&                        Kxx_fft_imag,
-                      const MultiFab&                        Kxy_fft_real,
-                      const MultiFab&                        Kxy_fft_imag,
-                      const MultiFab&                        Kxz_fft_real,
-                      const MultiFab&                        Kxz_fft_imag,
-                      const MultiFab&                        Kyy_fft_real,
-                      const MultiFab&                        Kyy_fft_imag,
-                      const MultiFab&                        Kyz_fft_real,
-                      const MultiFab&                        Kyz_fft_imag,
-                      const MultiFab&                        Kzz_fft_real,
-                      const MultiFab&                        Kzz_fft_imag);
- 
-#ifdef AMREX_USE_CUDA
-std::string cufftErrorToString (const cufftResult& err);
-#endif
 
 /*
   Diagnostics.cpp
@@ -151,20 +106,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  MultiFab                              &exchange,
                  MultiFab                              &DMI,
                  MultiFab                              &anisotropy,
-                 MultiFab                              &Kxx_dft_real,
-                 MultiFab                              &Kxx_dft_imag,
-                 MultiFab                              &Kxy_dft_real,
-                 MultiFab                              &Kxy_dft_imag,
-                 MultiFab                              &Kxz_dft_real,
-                 MultiFab                              &Kxz_dft_imag,
-                 MultiFab                              &Kyy_dft_real,
-                 MultiFab                              &Kyy_dft_imag,
-                 MultiFab                              &Kyz_dft_real,
-                 MultiFab                              &Kyz_dft_imag,
-                 MultiFab                              &Kzz_dft_real,
-                 MultiFab                              &Kzz_dft_imag,
-                 GpuArray<int, 3>                      n_cell_large,
-                 const Geometry&                       geom_large,
+                 Demagnetization                       &demag_solver,
                  const Geometry& geom,
                  const Real& time,
                  const Real& dt);

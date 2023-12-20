@@ -1,4 +1,5 @@
 #include "MagneX.H"
+#include "Demagnetization.H"
 
 void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
@@ -12,20 +13,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  MultiFab                              &exchange,
                  MultiFab                              &DMI,
                  MultiFab                              &anisotropy,
-                 MultiFab                              &Kxx_dft_real,
-                 MultiFab                              &Kxx_dft_imag,
-                 MultiFab                              &Kxy_dft_real,
-                 MultiFab                              &Kxy_dft_imag,
-                 MultiFab                              &Kxz_dft_real,
-                 MultiFab                              &Kxz_dft_imag,
-                 MultiFab                              &Kyy_dft_real,
-                 MultiFab                              &Kyy_dft_imag,
-                 MultiFab                              &Kyz_dft_real,
-                 MultiFab                              &Kyz_dft_imag,
-                 MultiFab                              &Kzz_dft_real,
-                 MultiFab                              &Kzz_dft_imag,
-                 GpuArray<int, 3>                      n_cell_large,
-                 const Geometry&                       geom_large,
+                 Demagnetization                       &demag_solver,
                  const Geometry& geom,
                  const Real& time,
                  const Real& dt)
@@ -368,9 +356,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         
         // update H_demag
         if(demag_coupling == 1) {            
-            CalculateH_demag(Mfield, H_demagfield,
-                             Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                             Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag);
+            demag_solver.CalculateH_demag(Mfield, H_demagfield);
         }
 
        if (exchange_coupling == 1){
