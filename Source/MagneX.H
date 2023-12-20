@@ -74,7 +74,6 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         MultiFab&                        Kyz_fft_imag,
                         MultiFab&                        Kzz_fft_real,
                         MultiFab&                        Kzz_fft_imag,
-                        GpuArray<int, 3>                 n_cell_large,
 			const Geometry&                  geom_large);
 
 void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
@@ -90,8 +89,7 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                       const MultiFab&                        Kyz_fft_real,
                       const MultiFab&                        Kyz_fft_imag,
                       const MultiFab&                        Kzz_fft_real,
-                      const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<int, 3>                       n_cell_large);
+                      const MultiFab&                        Kzz_fft_imag);
  
 #ifdef AMREX_USE_CUDA
 std::string cufftErrorToString (const cufftResult& err);

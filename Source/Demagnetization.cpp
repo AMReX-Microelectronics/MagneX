@@ -16,7 +16,6 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                         MultiFab&                        Kyz_fft_imag,
                         MultiFab&                        Kzz_fft_real,
                         MultiFab&                        Kzz_fft_imag,
-                        GpuArray<int, 3>                 n_cell_large,
                         const Geometry&                  geom_large)
 {
     // timer for profiling
@@ -65,13 +64,13 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
         // Set the demag tensor
 	amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int L, int M, int N)
         {   
-            // L,M,N range from 0:n_cell_large-1
-            // I,J,K range from -n_cell_large/2+1:n_cell_large/2
-            int I = L - n_cell_large[0]/2 + 1;
-            int J = M - n_cell_large[1]/2 + 1;
-            int K = N - n_cell_large[2]/2 + 1;
+            // L,M,N range from 0:2*n_cell-1
+            // I,J,K range from -n_cell+1:n_cell/2
+            int I = L - n_cell[0] + 1;
+            int J = M - n_cell[1] + 1;
+            int K = N - n_cell[2] + 1;
 
-            if (I == n_cell_large[0]/2 || J == n_cell_large[1]/2 || K == n_cell_large[2]/2) {
+            if (I == n_cell[0] || J == n_cell[1] || K == n_cell[2]) {
                 return;
             }
             
@@ -155,8 +154,7 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 		      const MultiFab&                        Kyz_fft_real,
 		      const MultiFab&                        Kyz_fft_imag,
 		      const MultiFab&                        Kzz_fft_real,
-		      const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<int, 3>                       n_cell_large)
+		      const MultiFab&                        Kzz_fft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeHFieldFFT()",ComputeHFieldFFT);
@@ -264,26 +262,30 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
     ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
 
-    Box minimalBox = Kxx_fft_real.boxArray().minimalBox();
-    
-    // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(minimalBox);
-    DistributionMapping dm_onegrid(ba_onegrid);
+    // create a new BoxArray and DistributionMapping for a large MultiFab with 1 grid
+    Box minimalBox_large = Kxx_fft_real.boxArray().minimalBox();
+    BoxArray ba_large_onegrid(minimalBox_large);
+    DistributionMapping dm_large_onegrid(ba_large_onegrid);
 
     // Storage for the double-sized Hfield on 1 grid 
-    MultiFab Hx_large_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hy_large_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hz_large_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+    MultiFab Hx_large_onegrid(ba_large_onegrid, dm_large_onegrid, 1, 0);
+    MultiFab Hy_large_onegrid(ba_large_onegrid, dm_large_onegrid, 1, 0);
+    MultiFab Hz_large_onegrid(ba_large_onegrid, dm_large_onegrid, 1, 0);
 
     // Copy the distributed Hfield multifabs into onegrid multifabs
     Hx_large_onegrid.ParallelCopy(Hx_large, 0, 0, 1);
     Hy_large_onegrid.ParallelCopy(Hy_large, 0, 0, 1);
     Hz_large_onegrid.ParallelCopy(Hz_large, 0, 0, 1);
 
+    // create a new BoxArray and DistributionMapping for a small MultiFab with 1 grid
+    Box minimalBox_small = H_demagfield[0].boxArray().minimalBox();
+    BoxArray ba_small_onegrid(minimalBox_small);
+    DistributionMapping dm_small_onegrid(ba_small_onegrid);
+    
     // Storage for the small 1 grid Hfield
-    MultiFab Hx_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
+    MultiFab Hx_small_onegrid(ba_small_onegrid, dm_small_onegrid, 1, 0);
+    MultiFab Hy_small_onegrid(ba_small_onegrid, dm_small_onegrid, 1, 0);
+    MultiFab Hz_small_onegrid(ba_small_onegrid, dm_small_onegrid, 1, 0);
 
     // Copying the elements in the 'upper right'  of the double-sized demag back to multifab that is the problem size
     for ( MFIter mfi(Hx_small_onegrid); mfi.isValid(); ++mfi )
@@ -298,22 +300,14 @@ void CalculateH_demag(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
             const Array4<Real>& Hy_small_onegrid_ptr = Hy_small_onegrid.array(mfi);
             const Array4<Real>& Hz_small_onegrid_ptr = Hz_small_onegrid.array(mfi);
 
-  
-  	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+    	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                if (i >= ((n_cell_large[0]/2)-1) && j >= ((n_cell_large[1]/2)-1) && k >= ((n_cell_large[2]/2)-1)){
-		    if (i >= n_cell_large[0]-1 || j >= n_cell_large[1]-1 || k >= n_cell_large[2]-1){
-                        return;
-                    }
-		    int l = i - n_cell_large[0]/2 + 1;
-		    int m = j - n_cell_large[1]/2 + 1;
-		    int n = k - n_cell_large[2]/2 + 1;
-                    Hx_small_onegrid_ptr(l,m,n) = Hx_large_onegrid_ptr(i,j,k);
-		    Hy_small_onegrid_ptr(l,m,n) = Hy_large_onegrid_ptr(i,j,k);
-		    Hz_small_onegrid_ptr(l,m,n) = Hz_large_onegrid_ptr(i,j,k);
-                }
-    
-                
+                int l = i + n_cell[0];
+                int m = j + n_cell[1];
+                int n = k + n_cell[2];
+                Hx_small_onegrid_ptr(i,j,k) = Hx_large_onegrid_ptr(i,j,k);
+                Hy_small_onegrid_ptr(i,j,k) = Hy_large_onegrid_ptr(i,j,k);
+                Hz_small_onegrid_ptr(i,j,k) = Hz_large_onegrid_ptr(i,j,k);
             });
     }
 
