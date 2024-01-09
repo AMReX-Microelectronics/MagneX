@@ -146,8 +146,8 @@ void Demagnetization::define()
                     for (int k = -sub/2; k <= sub/2-1; k++) {
 
                         Real x = I*dx[0] + (i+0.5)*dx[0]/sub;
-                        Real y = J*dx[0] + (j+0.5)*dx[1]/sub;
-                        Real z = K*dx[0] + (k+0.5)*dx[2]/sub;
+                        Real y = J*dx[1] + (j+0.5)*dx[1]/sub;
+                        Real z = K*dx[2] + (k+0.5)*dx[2]/sub;
                         Real r = std::sqrt(x*x+y*y+z*z);
 
                         Kxx_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(x/r)*(x/r)) * vol;
