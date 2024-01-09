@@ -98,7 +98,7 @@ void Demagnetization::define()
 	amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int L, int M, int N)
         {   
             // L,M,N range from 0:2*n_cell-1
-            // I,J,K range from -n_cell+1:n_cell/2
+            // I,J,K range from -n_cell+1:n_cell
             int I = L - n_cell[0] + 1;
             int J = M - n_cell[1] + 1;
             int K = N - n_cell[2] + 1;
@@ -106,10 +106,18 @@ void Demagnetization::define()
             if (I == n_cell[0] || J == n_cell[1] || K == n_cell[2]) {
                 return;
             }
+
+            // HACK this cell is coming out differently using integration strategies
+            /*
+            if (I == 0 && J == 0 && K == 0) {
+                return;
+            }
+            */
             
             // **********************************
             // SET VALUES FOR EACH CELL
             // **********************************
+#if 1
             for (int i = 0; i <= 1; i++) { // helper indices
                 for (int j = 0; j <= 1; j++) { 
                     for (int k = 0; k <= 1; k++) {
@@ -129,7 +137,30 @@ void Demagnetization::define()
                     }
                 }
             }
+#else
+            int sub = 100;
+            Real vol = dx[0]*dx[1]*dx[2]/(sub*sub*sub);
 
+            for (int i = -sub/2; i <= sub/2-1; i++) { // helper indices
+                for (int j = -sub/2; j <= sub/2-1; j++) {
+                    for (int k = -sub/2; k <= sub/2-1; k++) {
+
+                        Real x = I*dx[0] + (i+0.5)*dx[0]/sub;
+                        Real y = J*dx[0] + (j+0.5)*dx[1]/sub;
+                        Real z = K*dx[0] + (k+0.5)*dx[2]/sub;
+                        Real r = std::sqrt(x*x+y*y+z*z);
+
+                        Kxx_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(x/r)*(x/r)) * vol;
+                        Kyy_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(y/r)*(y/r)) * vol;
+                        Kzz_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(z/r)*(z/r)) * vol;
+
+                        Kxy_ptr(L,M,N) -= (1./(r*r*r)) * (3.*(x/r)*(y/r)) * vol;
+                        Kxz_ptr(L,M,N) -= (1./(r*r*r)) * (3.*(x/r)*(z/r)) * vol;
+                        Kyz_ptr(L,M,N) -= (1./(r*r*r)) * (3.*(y/r)*(z/r)) * vol;
+                    }
+                }
+            }
+#endif
             Kxx_ptr(L,M,N) *= prefactor;
             Kxy_ptr(L,M,N) *= (-prefactor);
             Kxz_ptr(L,M,N) *= (-prefactor);
