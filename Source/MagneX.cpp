@@ -3,7 +3,7 @@
 #include <AMReX_ParmParse.H>
 
 // Number of cells in each dimension
-amrex::GpuArray<int, 3> MagneX::n_cell;
+AMREX_GPU_MANAGED amrex::GpuArray<int, 3> MagneX::n_cell;
 
 int MagneX::max_grid_size;
 

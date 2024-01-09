@@ -3,6 +3,10 @@
 
 #include <AMReX_MultiFab.H> 
 
+#ifdef AMREX_USE_CUDA
+#include <cufft.h>
+#endif
+
 using namespace amrex;
 
 class Demagnetization {
