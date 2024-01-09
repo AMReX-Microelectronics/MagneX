@@ -1,7 +1,7 @@
 namespace MagneX {
 
     // Number of cells in each dimension
-    extern amrex::GpuArray<int, 3> n_cell;
+    extern AMREX_GPU_MANAGED amrex::GpuArray<int, 3> n_cell;
 
     extern int max_grid_size;
 
