@@ -1,100 +1,71 @@
+#include "Demagnetization.H"
 #include "MagneX.H"
 #include "CartesianAlgorithm_K.H"
 #include <AMReX_PlotFileUtil.H>
 
-void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       const Geometry&                  geom)
+Demagnetization::Demagnetization() {}
+
+// Compute the Demag tensor in realspace and its FFT
+void Demagnetization::define()
 {
     // timer for profiling
-    BL_PROFILE_VAR("ComputePoissonRHS()",ComputePoissonRHS);
+    BL_PROFILE_VAR("Demagnetization::define()",DemagDefine);
 
-    for ( MFIter mfi(PoissonRHS); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-            // extract dx from the geometry object
-            GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-            const Array4<Real const>& Mx = Mfield[0].array(mfi);         
-            const Array4<Real const>& My = Mfield[1].array(mfi);         
-            const Array4<Real const>& Mz = Mfield[2].array(mfi);   
+    RealBox real_box_large({AMREX_D_DECL(              prob_lo[0],              prob_lo[1],              prob_lo[2])},
+                           {AMREX_D_DECL( 2*prob_hi[0]-prob_lo[0], 2*prob_hi[1]-prob_lo[1], 2*prob_hi[2]-prob_lo[2])});
 
-            const Array4<Real>& rhs = PoissonRHS.array(mfi);
+    // **********************************
+    // SIMULATION SETUP
+    // make BoxArray and Geometry
+    // ba will contain a list of boxes that cover the domain
+    // geom contains information such as the physical domain size,
+    // number of points in the domain, and periodicity
 
-            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
+    // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
+    IntVect dom_lo_large(AMREX_D_DECL(            0,             0,             0));
+    IntVect dom_hi_large(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
 
-                rhs(i,j,k) =  DivergenceDx_Mag(Mx, i, j, k, dx)
-                            + DivergenceDy_Mag(My, i, j, k, dx)
-                            + DivergenceDz_Mag(Mz, i, j, k, dx);
-                
-            });
-        }
+    // Make a single box that is the entire domain
+    Box domain_large(dom_lo_large, dom_hi_large);
 
-}
+    // Initialize the boxarray "ba" from the single box "domain"
+    ba_large.define(domain_large);
 
-void ComputeHfromPhi(MultiFab&                        PoissonPhi,
-                     Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                     const Geometry&                  geom)
-{
-    // timer for profiling
-    BL_PROFILE_VAR("ComputeHfromPhi()",ComputeHfromPhi);
-    
-       // Calculate H from Phi
-        for ( MFIter mfi(PoissonPhi); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
+    // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+    ba_large.maxSize(max_grid_size);
 
-            // extract dx from the geometry object
-            GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+    // How Boxes are distrubuted among MPI processes
+    dm_large.define(ba_large);
 
-            const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);
-            const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);
-            const Array4<Real>& Hz_demag = H_demagfield[2].array(mfi);
+    // periodic in x and y directions
+    Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // nonperiodic in all directions
 
-            const Array4<Real>& phi = PoissonPhi.array(mfi);
+    // This defines a Geometry object
+    geom_large.define(domain_large, real_box_large, CoordSys::cartesian, is_periodic);
 
-            amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-                Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
-                Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
-                Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
-            });
-        }
-}
-
-// Function accepts the geometry of the problem and then defines the demagnetization tensor in space.  
-// Then we take the Fourier transform of the demagnetization tensor and return that in 12 different multifabs
-void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
-                        MultiFab&                        Kxx_fft_imag,
-                        MultiFab&                        Kxy_fft_real,
-                        MultiFab&                        Kxy_fft_imag,
-                        MultiFab&                        Kxz_fft_real,
-                        MultiFab&                        Kxz_fft_imag,
-                        MultiFab&                        Kyy_fft_real,
-                        MultiFab&                        Kyy_fft_imag,
-                        MultiFab&                        Kyz_fft_real,
-                        MultiFab&                        Kyz_fft_imag,
-                        MultiFab&                        Kzz_fft_real,
-                        MultiFab&                        Kzz_fft_imag,
-                        GpuArray<int, 3>                 n_cell_large,
-                        const Geometry&                  geom_large)
-{
-    // timer for profiling
-    BL_PROFILE_VAR("ComputeDemagTensor()",ComputeDemagTensor);
-
-    // Extract the domain data 
-    BoxArray ba_large = Kxx_fft_real.boxArray();
-    DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
+    // Allocate the demag tensor fft multifabs
+    Kxx_fft_real.define(ba_large, dm_large, 1, 0);
+    Kxx_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kxy_fft_real.define(ba_large, dm_large, 1, 0);
+    Kxy_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kxz_fft_real.define(ba_large, dm_large, 1, 0);
+    Kxz_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kyy_fft_real.define(ba_large, dm_large, 1, 0);
+    Kyy_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kyz_fft_real.define(ba_large, dm_large, 1, 0);
+    Kyz_fft_imag.define(ba_large, dm_large, 1, 0);
+    Kzz_fft_real.define(ba_large, dm_large, 1, 0);
+    Kzz_fft_imag.define(ba_large, dm_large, 1, 0);
 	
     // MultiFab storage for the demag tensor
     // TWICE AS BIG AS THE DOMAIN OF THE PROBLEM!!!!!!!!
-    MultiFab Kxx (ba_large, dm_large, 1, 0);
-    MultiFab Kxy (ba_large, dm_large, 1, 0);
-    MultiFab Kxz (ba_large, dm_large, 1, 0);
-    MultiFab Kyy (ba_large, dm_large, 1, 0);
-    MultiFab Kyz (ba_large, dm_large, 1, 0);
-    MultiFab Kzz (ba_large, dm_large, 1, 0);
+    MultiFab Kxx(ba_large, dm_large, 1, 0);
+    MultiFab Kxy(ba_large, dm_large, 1, 0);
+    MultiFab Kxz(ba_large, dm_large, 1, 0);
+    MultiFab Kyy(ba_large, dm_large, 1, 0);
+    MultiFab Kyz(ba_large, dm_large, 1, 0);
+    MultiFab Kzz(ba_large, dm_large, 1, 0);
 
     MultiFab Plt (ba_large, dm_large, 6, 0);
 
@@ -126,19 +97,27 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
         // Set the demag tensor
 	amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int L, int M, int N)
         {   
-            // L,M,N range from 0:n_cell_large-1
-            // I,J,K range from -n_cell_large/2+1:n_cell_large/2
-            int I = L - n_cell_large[0]/2 + 1;
-            int J = M - n_cell_large[1]/2 + 1;
-            int K = N - n_cell_large[2]/2 + 1;
+            // L,M,N range from 0:2*n_cell-1
+            // I,J,K range from -n_cell+1:n_cell
+            int I = L - n_cell[0] + 1;
+            int J = M - n_cell[1] + 1;
+            int K = N - n_cell[2] + 1;
 
-            if (I == n_cell_large[0]/2 || J == n_cell_large[1]/2 || K == n_cell_large[2]/2) {
+            if (I == n_cell[0] || J == n_cell[1] || K == n_cell[2]) {
                 return;
             }
+
+            // HACK this cell is coming out differently using integration strategies
+            /*
+            if (I == 0 && J == 0 && K == 0) {
+                return;
+            }
+            */
             
             // **********************************
             // SET VALUES FOR EACH CELL
             // **********************************
+#if 1
             for (int i = 0; i <= 1; i++) { // helper indices
                 for (int j = 0; j <= 1; j++) { 
                     for (int k = 0; k <= 1; k++) {
@@ -158,7 +137,30 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                     }
                 }
             }
+#else
+            int sub = 100;
+            Real vol = dx[0]*dx[1]*dx[2]/(sub*sub*sub);
 
+            for (int i = -sub/2; i <= sub/2-1; i++) { // helper indices
+                for (int j = -sub/2; j <= sub/2-1; j++) {
+                    for (int k = -sub/2; k <= sub/2-1; k++) {
+
+                        Real x = I*dx[0] + (i+0.5)*dx[0]/sub;
+                        Real y = J*dx[1] + (j+0.5)*dx[1]/sub;
+                        Real z = K*dx[2] + (k+0.5)*dx[2]/sub;
+                        Real r = std::sqrt(x*x+y*y+z*z);
+
+                        Kxx_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(x/r)*(x/r)) * vol;
+                        Kyy_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(y/r)*(y/r)) * vol;
+                        Kzz_ptr(L,M,N) -= (1./(r*r*r)) * (1. - 3.*(z/r)*(z/r)) * vol;
+
+                        Kxy_ptr(L,M,N) -= (1./(r*r*r)) * (3.*(x/r)*(y/r)) * vol;
+                        Kxz_ptr(L,M,N) -= (1./(r*r*r)) * (3.*(x/r)*(z/r)) * vol;
+                        Kyz_ptr(L,M,N) -= (1./(r*r*r)) * (3.*(y/r)*(z/r)) * vol;
+                    }
+                }
+            }
+#endif
             Kxx_ptr(L,M,N) *= prefactor;
             Kxy_ptr(L,M,N) *= (-prefactor);
             Kxz_ptr(L,M,N) *= (-prefactor);
@@ -168,7 +170,6 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
 
         });
     }
-
 
     MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
     MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
@@ -186,47 +187,37 @@ void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
                               "Kzz"},
                              geom_large, 0., 0);
 
-    ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag, geom_large);
-    ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag, geom_large);
-    ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag, geom_large);
-    ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag, geom_large);
-    ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag, geom_large);
-    ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag, geom_large);
+    ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag);
+    ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag);
+    ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag);
+    ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag);
+    ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag);
+    ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag);
 }
 
-// THIS COMES LAST!!!!!!!!! COULD BE THE TRICKY PART...
-// We will call the three other functions from within this function... which will be called from 'main.cpp' at each time step
-// First we take fft's of M_field...
-// Then take convolution of the fft of magnetization and the fft of demag tensor 
+// Convolve the convolution magnetization and the demag tensor by taking the dot product of their FFTs.
 // Then take the inverse of that convolution
-// These steps have the form outlined below 
 // Hx = ifftn(fftn(Mx) .* Kxx_fft + fftn(My) .* Kxy_fft + fftn(Mz) .* Kxz_fft); % calc demag field with fft
 // Hy = ifftn(fftn(Mx) .* Kxy_fft + fftn(My) .* Kyy_fft + fftn(Mz) .* Kyz_fft);
 // Hz = ifftn(fftn(Mx) .* Kxz_fft + fftn(My) .* Kyz_fft + fftn(Mz) .* Kzz_fft);
-void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
-	              Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
-                      const MultiFab&                        Kxx_fft_real,
-		      const MultiFab&                        Kxx_fft_imag,
-                      const MultiFab&                        Kxy_fft_real,
-		      const MultiFab&                        Kxy_fft_imag,
- 		      const MultiFab&                        Kxz_fft_real,
-		      const MultiFab&                        Kxz_fft_imag,
-		      const MultiFab&                        Kyy_fft_real,
-		      const MultiFab&                        Kyy_fft_imag,
-		      const MultiFab&                        Kyz_fft_real,
-		      const MultiFab&                        Kyz_fft_imag,
-		      const MultiFab&                        Kzz_fft_real,
-		      const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<int, 3>                       n_cell_large,
-                      const Geometry&                        geom_large)
+void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+                                       Array<MultiFab, AMREX_SPACEDIM>& H_demagfield)
 {
     // timer for profiling
-    BL_PROFILE_VAR("ComputeHFieldFFT()",ComputeHFieldFFT);
+    BL_PROFILE_VAR("ComputeH_demag()",ComputeH_demag);
 
     BoxArray ba_large = Kxx_fft_real.boxArray();
     DistributionMapping dm_large = Kxx_fft_real.DistributionMap();
 
-    // Allocate M_field fft multifabs
+    // copy Mfield into Mfield_padded
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+        Mfield_padded[dir].define(ba_large, dm_large, 1, 1);
+        Mfield_padded[dir].setVal(0.);
+        Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
+    }
+
+    // Allocate Mfield fft multifabs
     MultiFab M_dft_real_x(ba_large, dm_large, 1, 0);
     MultiFab M_dft_imag_x(ba_large, dm_large, 1, 0);
     MultiFab M_dft_real_y(ba_large, dm_large, 1, 0);
@@ -236,9 +227,9 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 
     // Calculate the Mx, My, and Mz fft's at the current time step
     // Each fft will be stored in seperate real and imaginary multifabs
-    ComputeForwardFFT(M_field_padded[0], M_dft_real_x, M_dft_imag_x, geom_large);
-    ComputeForwardFFT(M_field_padded[1], M_dft_real_y, M_dft_imag_y, geom_large);
-    ComputeForwardFFT(M_field_padded[2], M_dft_real_z, M_dft_imag_z, geom_large);
+    ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
+    ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
+    ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
 
     // Allocate 6 Multifabs to store the convolutions in Fourier space for H_field
     // This could be done in main but then we have an insane amount of arguments in this function
@@ -249,7 +240,7 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
     MultiFab H_dft_real_z(ba_large, dm_large, 1, 0);
     MultiFab H_dft_imag_z(ba_large, dm_large, 1, 0);
 
-    for ( MFIter mfi(M_field_padded[0]); mfi.isValid(); ++mfi )
+    for ( MFIter mfi(Mfield_padded[0]); mfi.isValid(); ++mfi )
     {
             const Box& bx = mfi.validbox();
 
@@ -308,80 +299,30 @@ void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field_padded,
 	    });
      }
 
-    // Allocate Multifabs to store large H_fieldi
+    // Allocate Multifabs to store large H_field
     MultiFab Hx_large(ba_large, dm_large, 1, 0);
     MultiFab Hy_large(ba_large, dm_large, 1, 0);
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
 
     // Compute the inverse FFT of H_field with respect to the three coordinates and store them in 3 multifabs that this function returns
-    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x, n_cell_large, geom_large);
-    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y, n_cell_large, geom_large);
-    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z, n_cell_large, geom_large); 
+    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x);
+    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
+    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
 
-    // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(geom_large.Domain());
-    DistributionMapping dm_onegrid(ba_onegrid);
-
-    // Storage for the double-sized Hfield on 1 grid 
-    MultiFab Hx_large_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hy_large_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hz_large_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-
-    // Copy the distributed Hfield multifabs into onegrid multifabs
-    Hx_large_onegrid.ParallelCopy(Hx_large, 0, 0, 1);
-    Hy_large_onegrid.ParallelCopy(Hy_large, 0, 0, 1);
-    Hz_large_onegrid.ParallelCopy(Hz_large, 0, 0, 1);
-
-    // Storage for the small 1 grid Hfield
-    MultiFab Hx_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hy_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab Hz_small_onegrid (ba_onegrid, dm_onegrid, 1, 0);
-
-    // Copying the elements in the 'upper right'  of the double-sized demag back to multifab that is the problem size
-    for ( MFIter mfi(Hx_small_onegrid); mfi.isValid(); ++mfi )
-    {
-            const Box& bx = mfi.validbox();
-
-            const Array4<Real>& Hx_large_onegrid_ptr = Hx_large_onegrid.array(mfi);
-            const Array4<Real>& Hy_large_onegrid_ptr = Hy_large_onegrid.array(mfi);
-            const Array4<Real>& Hz_large_onegrid_ptr = Hz_large_onegrid.array(mfi);
-
-	    const Array4<Real>& Hx_small_onegrid_ptr = Hx_small_onegrid.array(mfi);
-            const Array4<Real>& Hy_small_onegrid_ptr = Hy_small_onegrid.array(mfi);
-            const Array4<Real>& Hz_small_onegrid_ptr = Hz_small_onegrid.array(mfi);
-
-  
-  	    amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-                if (i >= ((n_cell_large[0]/2)-1) && j >= ((n_cell_large[1]/2)-1) && k >= ((n_cell_large[2]/2)-1)){
-		    if (i >= n_cell_large[0]-1 || j >= n_cell_large[1]-1 || k >= n_cell_large[2]-1){
-                        return;
-                    }
-		    int l = i - n_cell_large[0]/2 + 1;
-		    int m = j - n_cell_large[1]/2 + 1;
-		    int n = k - n_cell_large[2]/2 + 1;
-                    Hx_small_onegrid_ptr(l,m,n) = Hx_large_onegrid_ptr(i,j,k);
-		    Hy_small_onegrid_ptr(l,m,n) = Hy_large_onegrid_ptr(i,j,k);
-		    Hz_small_onegrid_ptr(l,m,n) = Hz_large_onegrid_ptr(i,j,k);
-                }
-    
-                
-            });
-    }
-
-    // Store the final result in the distributed array of multifabs
-    H_demagfield[0].ParallelCopy(Hx_small_onegrid, 0, 0, 1);
-    H_demagfield[1].ParallelCopy(Hy_small_onegrid, 0, 0, 1);
-    H_demagfield[2].ParallelCopy(Hz_small_onegrid, 0, 0, 1);
-    
-
+    // Copying the elements near the 'upper right' of the double-sized demag back to multifab that is the problem size
+    // This is not quite the 'upper right' of the source, it's the destination_coordinate + (n_cell-1)
+    MultiBlockIndexMapping dtos;
+    dtos.offset = IntVect(1-n_cell[0],1-n_cell[1],1-n_cell[2]); // offset = src - dst; "1-n_cell" because we are shifting downward by n_cell-1
+    Box dest_box(IntVect(0),IntVect(n_cell[0]-1,n_cell[1]-1,n_cell[2]-1));
+    ParallelCopy(H_demagfield[0], dest_box, Hx_large, 0, 0, 1, IntVect(0), dtos);
+    ParallelCopy(H_demagfield[1], dest_box, Hy_large, 0, 0, 1, IntVect(0), dtos);
+    ParallelCopy(H_demagfield[2], dest_box, Hz_large, 0, 0, 1, IntVect(0), dtos);
 }
 
-// Function accepts a multifab 'mf' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
-void ComputeForwardFFT(const MultiFab&    mf,
-		       MultiFab&          mf_dft_real,
-		       MultiFab&          mf_dft_imag,
-		       const Geometry&    geom)
+// Function accepts a multifab 'mf_in' and computes the FFT, storing it in mf_dft_real amd mf_dft_imag multifabs
+void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
+                                        MultiFab&          mf_dft_real,
+                                        MultiFab&          mf_dft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeForwardFFT()",ComputeForwardFFT);
@@ -390,17 +331,19 @@ void ComputeForwardFFT(const MultiFab&    mf,
     // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
     // **********************************
 
+    Box minimalBox = mf_in.boxArray().minimalBox();
+    
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(geom.Domain());
+    BoxArray ba_onegrid(minimalBox);
     DistributionMapping dm_onegrid(ba_onegrid);
 
     // storage for phi and the dft
-    MultiFab mf_onegrid         (ba_onegrid, dm_onegrid, 1, 0);
+    MultiFab mf_in_onegrid      (ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_real_onegrid(ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_imag_onegrid(ba_onegrid, dm_onegrid, 1, 0);
 
     // copy phi into phi_onegrid
-    mf_onegrid.ParallelCopy(mf, 0, 0, 1);
+    mf_in_onegrid.ParallelCopy(mf_in, 0, 0, 1);
 
     // **********************************
     // COMPUTE FFT
@@ -419,7 +362,7 @@ void ComputeForwardFFT(const MultiFab&    mf,
 
     Vector<FFTplan> forward_plan;
 
-    for (MFIter mfi(mf_onegrid); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(mf_in_onegrid); mfi.isValid(); ++mfi) {
 
       // grab a single box including ghost cell range
       Box realspace_bx = mfi.fabbox();
@@ -460,13 +403,13 @@ void ComputeForwardFFT(const MultiFab&    mf,
 
 #if (AMREX_SPACEDIM == 2)
       fplan = fftw_plan_dft_r2c_2d(fft_size[1], fft_size[0],
-                   mf_onegrid[mfi].dataPtr(),
+                   mf_in_onegrid[mfi].dataPtr(),
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
                    FFTW_ESTIMATE);
 #elif (AMREX_SPACEDIM == 3)
       fplan = fftw_plan_dft_r2c_3d(fft_size[2], fft_size[1], fft_size[0],
-                   mf_onegrid[mfi].dataPtr(),
+                   mf_in_onegrid[mfi].dataPtr(),
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
                    FFTW_ESTIMATE);
@@ -480,12 +423,12 @@ void ComputeForwardFFT(const MultiFab&    mf,
     ParallelDescriptor::Barrier();
 
     // ForwardTransform
-    for (MFIter mfi(mf_onegrid); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(mf_in_onegrid); mfi.isValid(); ++mfi) {
       int i = mfi.LocalIndex();
 #ifdef AMREX_USE_CUDA
       cufftSetStream(forward_plan[i], Gpu::gpuStream());
       cufftResult result = cufftExecD2Z(forward_plan[i],
-                    mf_onegrid[mfi].dataPtr(),
+                    mf_in_onegrid[mfi].dataPtr(),
                     reinterpret_cast<FFTcomplex*>
                     (spectral_field[i]->dataPtr()));
       if (result != CUFFT_SUCCESS) {
@@ -563,23 +506,23 @@ void ComputeForwardFFT(const MultiFab&    mf,
 }
 
 
-// This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_2'
+// This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_out'
 // The FFTW c2r function is called which accepts complex data in the frequency domain and returns real data in the normal cartesian plane
-void ComputeInverseFFT(MultiFab&                        mf_2,
-		       const MultiFab&                  mf_dft_real,
-                       const MultiFab&                  mf_dft_imag,				   
-		       GpuArray<int, 3>                 n_cell,
-                       const Geometry&                  geom)
+void Demagnetization::ComputeInverseFFT(MultiFab&                        mf_out,
+                                        const MultiFab&                  mf_dft_real,
+                                        const MultiFab&                  mf_dft_imag)
 {
     // timer for profiling
     BL_PROFILE_VAR("ComputeInverseFFT()",ComputeInverseFFT);
 
+    Box minimalBox = mf_out.boxArray().minimalBox();
+
     // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(geom.Domain());
+    BoxArray ba_onegrid(minimalBox);
     DistributionMapping dm_onegrid(ba_onegrid);
     
     // Declare multifabs to store entire dataset in one grid.
-    MultiFab mf_onegrid_2 (ba_onegrid, dm_onegrid, 1, 0);
+    MultiFab mf_onegrid_out     (ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_real_onegrid(ba_onegrid, dm_onegrid, 1, 0);
     MultiFab mf_dft_imag_onegrid(ba_onegrid, dm_onegrid, 1, 0);
 
@@ -635,12 +578,12 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
         });
     }
 
-    // Compute the inverse FFT on spectral_field and store it in 'mf_onegrid_2'
+    // Compute the inverse FFT on spectral_field and store it in 'mf_onegrid_out'
     Vector<FFTplan> backward_plan;
 
     // Now that we have a spectral field full of the data from the DFT..
-    // We perform the inverse DFT on spectral field and store it in mf_onegrid_2
-    for (MFIter mfi(mf_onegrid_2); mfi.isValid(); ++mfi) {
+    // We perform the inverse DFT on spectral field and store it in mf_onegrid_out
+    for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
 
        // grab a single box including ghost cell range
        Box realspace_bx = mfi.fabbox();
@@ -672,13 +615,13 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       bplan = fftw_plan_dft_c2r_2d(fft_size[1], fft_size[0],
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
-                   mf_onegrid_2[mfi].dataPtr(),
+                   mf_onegrid_out[mfi].dataPtr(),
                    FFTW_ESTIMATE);
 #elif (AMREX_SPACEDIM == 3)
       bplan = fftw_plan_dft_c2r_3d(fft_size[2], fft_size[1], fft_size[0],
                    reinterpret_cast<FFTcomplex*>
                    (spectral_field.back()->dataPtr()),
-                   mf_onegrid_2[mfi].dataPtr(),
+                   mf_onegrid_out[mfi].dataPtr(),
                    FFTW_ESTIMATE);
 #endif
 
@@ -687,7 +630,7 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       backward_plan.push_back(bplan);// This adds an instance of bplan to the end of backward_plan
       }
 
-    for (MFIter mfi(mf_onegrid_2); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
       int i = mfi.LocalIndex();
 
 #ifdef AMREX_USE_CUDA
@@ -695,7 +638,7 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
       cufftResult result = cufftExecZ2D(backward_plan[i],
                            reinterpret_cast<FFTcomplex*>
                            (spectral_field[i]->dataPtr()),
-                           mf_onegrid_2[mfi].dataPtr());
+                           mf_onegrid_out[mfi].dataPtr());
        if (result != CUFFT_SUCCESS) {
          AllPrint() << " inverse transform using cufftExec failed! Error: "
          << cufftErrorToString(result) << "\n";
@@ -708,13 +651,13 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
 
       // Standard scaling after fft and inverse fft using FFTW
 #if (AMREX_SPACEDIM == 2)
-    mf_onegrid_2.mult(1./(n_cell[0]*n_cell[1]));
+    mf_onegrid_out.mult(1./(minimalBox.length(0)*minimalBox.length(1)));
 #elif (AMREX_SPACEDIM == 3)
-    mf_onegrid_2.mult(1./(n_cell[0]*n_cell[1]*n_cell[2]));
+    mf_onegrid_out.mult(1./(minimalBox.length(0)*minimalBox.length(1)*minimalBox.length(2)));
 #endif
-    
-    // copy contents of mf_onegrid_2 into mf
-    mf_2.ParallelCopy(mf_onegrid_2, 0, 0, 1);
+
+    // copy contents of mf_onegrid_out into mf
+    mf_out.ParallelCopy(mf_onegrid_out, 0, 0, 1);
 
     // destroy ifft plan
     for (int i = 0; i < backward_plan.size(); ++i) {
@@ -729,7 +672,7 @@ void ComputeInverseFFT(MultiFab&                        mf_2,
 }
 
 #ifdef AMREX_USE_CUDA
-std::string cufftErrorToString (const cufftResult& err)
+std::string Demagnetization::cufftErrorToString (const cufftResult& err)
 {
     switch (err) {
     case CUFFT_SUCCESS:  return "CUFFT_SUCCESS";

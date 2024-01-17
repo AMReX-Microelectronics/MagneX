@@ -1,9 +1,6 @@
 #include "MagneX.H"
+#include "Demagnetization.H"
 
-#include <AMReX_MLABecLaplacian.H>
-#include <AMReX_MLMG.H> 
-#include <AMReX_OpenBC.H>
-#include <AMReX_MLPoisson.H>
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
@@ -159,13 +156,6 @@ void main_main ()
     amrex::Print() << " TimeIntegratorOption = " << TimeIntegratorOption << "\n";
     amrex::Print() << "=======================================================\n";
 
-    MultiFab PoissonRHS(ba, dm, 1, 0);
-    MultiFab PoissonPhi(ba, dm, 1, 1); // one ghost cell
-
-    // initialize to zero; for demag_coupling==0 these aren't used but are still included in plotfile
-    PoissonPhi.setVal(0.);
-    PoissonRHS.setVal(0.);
-
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         LLG_RHS[idim].setVal(0.);
         LLG_RHS_pre[idim].setVal(0.);
@@ -173,158 +163,11 @@ void main_main ()
         H_demagfield[idim].setVal(0.);
     }
 
-    // needed for FFT-based demag solver
-    BoxArray ba_large;
-    DistributionMapping dm_large;
-    Geometry geom_large;
-
-    RealBox real_box_large({AMREX_D_DECL(              prob_lo[0],              prob_lo[1],              prob_lo[2])},
-                           {AMREX_D_DECL( 2*prob_hi[0]-prob_lo[0], 2*prob_hi[1]-prob_lo[1], 2*prob_hi[2]-prob_lo[2])});
-
     // Create a zero-padded Magnetization field for the convolution method
-    Array<MultiFab, AMREX_SPACEDIM> Mfield_padded;
-    MultiFab Kxx_dft_real;
-    MultiFab Kxx_dft_imag;
-    MultiFab Kxy_dft_real;
-    MultiFab Kxy_dft_imag;
-    MultiFab Kxz_dft_real;
-    MultiFab Kxz_dft_imag;
-    MultiFab Kyy_dft_real;
-    MultiFab Kyy_dft_imag;
-    MultiFab Kyz_dft_real;
-    MultiFab Kyz_dft_imag;
-    MultiFab Kzz_dft_real;
-    MultiFab Kzz_dft_imag;
-
-    // Create a double-sized n_cell array
-    amrex::GpuArray<int, 3> n_cell_large; // Number of cells in each dimension
-    n_cell_large[0] = 2*n_cell[0];
-    n_cell_large[1] = 2*n_cell[1];
-    n_cell_large[2] = 2*n_cell[2];
-
-    // Solver for Poisson equation
-    LPInfo info;
-
-    ///////////////////////////////
-    // periodic / neumann multigrid solver
-    ///////////////////////////////
-
-    std::unique_ptr<MLMG> mlmg;
-    MLABecLaplacian mlabec;
-
-    if (demag_coupling == 1 && demag_solver == -1) {
+    Demagnetization demag_solver;
     
-        mlabec.define({geom}, {ba}, {dm}, info);
-        mlabec.setEnforceSingularSolvable(false);
-
-        // order of stencil
-        int linop_maxorder = 2;
-        mlabec.setMaxOrder(linop_maxorder);
-
-        // build array of boundary conditions needed by MLABecLaplacian
-        std::array<LinOpBCType, AMREX_SPACEDIM> lo_mlmg_bc;
-        std::array<LinOpBCType, AMREX_SPACEDIM> hi_mlmg_bc;
-
-        // boundary conditions - FIXME allow for user to control periodicity
-        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-            if (is_periodic[idim]) {
-                lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
-            } else {
-                lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
-            }
-        }
-
-        mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
-
-        MultiFab alpha_cc(ba, dm, 1, 0);
-        std::array< MultiFab, AMREX_SPACEDIM > beta_face;
-        AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                     beta_face[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                     beta_face[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-        alpha_cc.setVal(0.);
-        beta_face[0].setVal(1.);
-        beta_face[1].setVal(1.);
-        beta_face[2].setVal(1.);
-
-        // (A*alpha_cc - B * div beta grad) phi = rhs
-        mlabec.setScalars(0.0, 1.0); // A = 0.0, B = 1.0
-        mlabec.setACoeffs(0, alpha_cc); //First argument 0 is lev
-        mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_face));
-
-        // set boundary conditions to homogeneous Neumann
-        mlabec.setLevelBC(0, &PoissonPhi);
-
-        // declare MLMG object
-        mlmg = std::make_unique<MLMG>(mlabec);
-        mlmg->setVerbose(2);
-    }
-        
-
-    ///////////////////////////////
-    // openBC multigrid solver
-    ///////////////////////////////
-
-    OpenBCSolver openbc;
-    
-    if (demag_coupling == 1 && demag_solver == 0) {
-        openbc.define({geom}, {ba}, {dm}, info);
-        openbc.setVerbose(2);
-    }
-
-    if (demag_coupling == 1 && demag_solver == 1) {
-
-        // **********************************
-        // SIMULATION SETUP
-        // make BoxArray and Geometry
-        // ba will contain a list of boxes that cover the domain
-        // geom contains information such as the physical domain size,
-        // number of points in the domain, and periodicity
-
-        // AMREX_D_DECL means "do the first X of these, where X is the dimensionality of the simulation"
-        IntVect dom_lo_large(AMREX_D_DECL(                0,                 0,                 0));
-        IntVect dom_hi_large(AMREX_D_DECL(n_cell_large[0]-1, n_cell_large[1]-1, n_cell_large[2]-1));
-
-        // Make a single box that is the entire domain
-        Box domain_large(dom_lo_large, dom_hi_large);
-
-        // Initialize the boxarray "ba" from the single box "domain"
-        ba_large.define(domain_large);
-
-        // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-        ba_large.maxSize(max_grid_size);
-
-        // How Boxes are distrubuted among MPI processes
-        dm_large.define(ba_large);
-	     
-        // This defines a Geometry object
-        geom_large.define(domain_large, real_box_large, CoordSys::cartesian, is_periodic);
-	    
-        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-            // Cell-centered fields
-            Mfield_padded[dir].define(ba_large, dm_large, 1, 1);
-        }
-
-        // Allocate the demag tensor fft multifabs
-        Kxx_dft_real.define(ba_large, dm_large, 1, 0);
-        Kxx_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kxy_dft_real.define(ba_large, dm_large, 1, 0);
-        Kxy_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kxz_dft_real.define(ba_large, dm_large, 1, 0);
-        Kxz_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kyy_dft_real.define(ba_large, dm_large, 1, 0);
-        Kyy_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kyz_dft_real.define(ba_large, dm_large, 1, 0);
-        Kyz_dft_imag.define(ba_large, dm_large, 1, 0);
-        Kzz_dft_real.define(ba_large, dm_large, 1, 0);
-        Kzz_dft_imag.define(ba_large, dm_large, 1, 0);
-
-        // Call function that computes the demag tensors and then takes the forward FFT of each of them, which are returns
-        ComputeDemagTensor(Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                           Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                           n_cell_large, geom_large);
-        
-
+    if (demag_coupling == 1) {
+        demag_solver.define();       
     }
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, geom, time);
@@ -338,39 +181,7 @@ void main_main ()
         InitializeFields(Mfield, geom);
 
         if (demag_coupling == 1) {
-            
-	    if (demag_solver == -1 || demag_solver == 0) {
-
-                // Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                // Compute RHS of Poisson equation
-                ComputePoissonRHS(PoissonRHS, Mfield, geom);
-
-		//Initial guess for phi
-                PoissonPhi.setVal(0.);
-
-                if (demag_solver == -1) {                    
-                    mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                } else if (demag_solver == 0) {
-                    
-                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                }
-
-	        // Calculate H from Phi
-	        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);	    
-
-            } else {
-
-                // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                    Mfield_padded[dir].setVal(0.);
-                    Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-                }
-
-                ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                 Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                 Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                 n_cell_large, geom_large);
-	    }
+            demag_solver.CalculateH_demag(Mfield, H_demagfield);
 	}
         
         if (exchange_coupling == 1) {
@@ -382,7 +193,7 @@ void main_main ()
         }
 
         if (anisotropy_coupling == 1) {
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
         }
     }
 
@@ -395,7 +206,7 @@ void main_main ()
         }
 
         WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                      H_demagfield, PoissonRHS, PoissonPhi, geom, time, plt_step);
+                      H_demagfield, geom, time, plt_step);
     }
 
     // copy new solution into old solution
@@ -426,37 +237,7 @@ void main_main ()
             
     	    // Evolve H_demag
             if (demag_coupling == 1) {
-            
-                if (demag_solver == -1 || demag_solver == 0) {
-
-                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                    //Compute RHS of Poisson equation
-                    ComputePoissonRHS(PoissonRHS, Mfield_old, geom);
-                
-                    //Initial guess for phi
-                    PoissonPhi.setVal(0.);
-
-                    if (demag_solver == -1) {
-                        mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                    } else if (demag_solver == 0) {
-                        openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                    }
-
-                    // Calculate H from Phi
-                    ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-                } else {
-
-                    // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                        Mfield_padded[dir].setVal(0.);
-                        Mfield_padded[dir].ParallelCopy(Mfield_old[dir], 0, 0, 1);
-                    }
-
-                    ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                     Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                     Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                     n_cell_large, geom_large);
-                }
+                demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
             }
 
             if (exchange_coupling == 1) {
@@ -468,7 +249,7 @@ void main_main ()
             }
 
             if (anisotropy_coupling == 1) {
-                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, geom);
+                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy);
             }
         }
         
@@ -571,39 +352,9 @@ void main_main ()
     
                 iter++;
         
-                // Poisson solve and H_demag computation with M_field
+                // Poisson solve and H_demag computation with Mfield
                 if (demag_coupling == 1) { 
-            
-                    if (demag_solver == -1 || demag_solver == 0) {
-                        //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                        //Compute RHS of Poisson equation
-                        ComputePoissonRHS(PoissonRHS, Mfield, geom);
-    
-                        //Initial guess for phi
-                        PoissonPhi.setVal(0.);
-
-                        if (demag_solver == -1) {
-                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                        } else if (demag_solver == 0) {
-                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                        }
-
-                        // Calculate H from Phi
-                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-
-                    } else {
-
-                        // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                            Mfield_padded[dir].setVal(0.);
-                            Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-                        }
-
-                        ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                         Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                         n_cell_large, geom_large);
-                    }
+                    demag_solver.CalculateH_demag(Mfield, H_demagfield);
                 }
     
                 if (exchange_coupling == 1) {
@@ -615,10 +366,10 @@ void main_main ()
                 }
     
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
                 }
     
-                // LLG RHS with new H_demag and M_field_pre
+                // LLG RHS with new H_demag and Mfield_pre
                 // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
                 Compute_LLG_RHS(LLG_RHS_pre, Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
                                 Ms, gamma);
@@ -627,11 +378,8 @@ void main_main ()
     
         } else if (TimeIntegratorOption == 3) { // iterative direct solver (ARTEMIS way)
         
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms,
-                        gamma, exchange, DMI, anisotropy,
-                        Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                        Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag, Mfield_padded,
-                        n_cell_large, geom_large,
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
+                        gamma, exchange, DMI, anisotropy, demag_solver,
                         geom, time, dt);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
@@ -648,37 +396,7 @@ void main_main ()
  
     	        // Evolve H_demag
                 if (demag_coupling == 1) {
-            
-                    if (demag_solver == -1 || demag_solver == 0) {
-
-                        //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                        //Compute RHS of Poisson equation
-                        ComputePoissonRHS(PoissonRHS, old_state, geom);
-                     
-                        //Initial guess for phi
-                        PoissonPhi.setVal(0.);
-
-                        if (demag_solver == -1) {
-                            mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                        } else if (demag_solver == 0) {
-                            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                        }
-
-                        // Calculate H from Phi
-                        ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-                    } else {
-
-                        // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                            Mfield_padded[dir].setVal(0.);
-                            Mfield_padded[dir].ParallelCopy(old_state[dir], 0, 0, 1);
-                        }
-
-                        ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                         Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                         Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                         n_cell_large, geom_large);
-                    }
+                    demag_solver.CalculateH_demag(old_state, H_demagfield);
                 }
 
                 if (exchange_coupling == 1) {
@@ -690,7 +408,7 @@ void main_main ()
                 }
 
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
                 }
 
                 // Compute f^n = f(M^n, H^n) 
@@ -761,7 +479,7 @@ void main_main ()
         // Write a plotfile of the data if plot_int > 0
         if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
             WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, PoissonRHS, PoissonPhi, geom, time, step);
+                          H_demagfield, geom, time, step);
         }
 
         // Write a checkpoint file if chk_int > 0

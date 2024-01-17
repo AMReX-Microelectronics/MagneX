@@ -6,8 +6,8 @@
 #include <fftw3.h>
 #include <fftw3-mpi.h>
 #endif
-
 #include "MagneX_namespace.H"
+#include "Demagnetization.H"
 
 using namespace amrex;
 using namespace MagneX;
@@ -51,65 +51,6 @@ void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
                      MultiFab&   gamma);
 
 /*
-  Demagnetization.cpp
-*/
-
-void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-                       const Geometry&                  geom);
-
-void ComputeHfromPhi(MultiFab&                         PoissonPhi,
-                      Array<MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                      const Geometry&                  geom);
-
-void ComputeForwardFFT(const MultiFab&    mf,
-                       MultiFab&          mf_dft_real,
-                       MultiFab&          mf_dft_imag,
-                       const Geometry&    geom);
-
-void ComputeInverseFFT(MultiFab&        mf_2,
-                       const MultiFab&  mf_dft_real,
-                       const MultiFab&  mf_dft_imag,
-                       GpuArray<int, 3> n_cell,
-                       const Geometry&  geom);
-
-void ComputeDemagTensor(MultiFab&                        Kxx_fft_real,
-                        MultiFab&                        Kxx_fft_imag,
-                        MultiFab&                        Kxy_fft_real,
-                        MultiFab&                        Kxy_fft_imag,
-                        MultiFab&                        Kxz_fft_real,
-                        MultiFab&                        Kxz_fft_imag,
-                        MultiFab&                        Kyy_fft_real,
-                        MultiFab&                        Kyy_fft_imag,
-                        MultiFab&                        Kyz_fft_real,
-                        MultiFab&                        Kyz_fft_imag,
-                        MultiFab&                        Kzz_fft_real,
-                        MultiFab&                        Kzz_fft_imag,
-                        GpuArray<int, 3>                 n_cell_large,
-			const Geometry&                  geom_large);
-
-void ComputeHFieldFFT(const Array<MultiFab, AMREX_SPACEDIM>& M_field,
-                      Array<MultiFab, AMREX_SPACEDIM>&       H_demagfield,
-                      const MultiFab&                        Kxx_fft_real,
-                      const MultiFab&                        Kxx_fft_imag,
-                      const MultiFab&                        Kxy_fft_real,
-                      const MultiFab&                        Kxy_fft_imag,
-                      const MultiFab&                        Kxz_fft_real,
-                      const MultiFab&                        Kxz_fft_imag,
-                      const MultiFab&                        Kyy_fft_real,
-                      const MultiFab&                        Kyy_fft_imag,
-                      const MultiFab&                        Kyz_fft_real,
-                      const MultiFab&                        Kyz_fft_imag,
-                      const MultiFab&                        Kzz_fft_real,
-                      const MultiFab&                        Kzz_fft_imag,
-                      GpuArray<int, 3>                       n_cell_large,
-                      const Geometry&                        geom_large);
- 
-#ifdef AMREX_USE_CUDA
-std::string cufftErrorToString (const cufftResult& err);
-#endif
-
-/*
   Diagnostics.cpp
 */
 
@@ -125,8 +66,7 @@ Real SumNormalizedM(MultiFab& Ms,
 void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                            Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
                            MultiFab&   Ms,
-                           MultiFab&   anisotropy,
-                           const Geometry& geom);
+                           MultiFab&   anisotropy);
 
 /*
   EffectiveDMIField.cpp
@@ -160,29 +100,13 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
                  std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
-                 MultiFab                              &PoissonRHS, 
-                 MultiFab                              &PoissonPhi, 
                  MultiFab                              &alpha,
                  MultiFab                              &Ms,
                  MultiFab                              &gamma,
                  MultiFab                              &exchange,
                  MultiFab                              &DMI,
                  MultiFab                              &anisotropy,
-                 MultiFab                              &Kxx_dft_real,
-                 MultiFab                              &Kxx_dft_imag,
-                 MultiFab                              &Kxy_dft_real,
-                 MultiFab                              &Kxy_dft_imag,
-                 MultiFab                              &Kxz_dft_real,
-                 MultiFab                              &Kxz_dft_imag,
-                 MultiFab                              &Kyy_dft_real,
-                 MultiFab                              &Kyy_dft_imag,
-                 MultiFab                              &Kyz_dft_real,
-                 MultiFab                              &Kyz_dft_imag,
-                 MultiFab                              &Kzz_dft_real,
-                 MultiFab                              &Kzz_dft_imag,
-                 std::array< MultiFab, AMREX_SPACEDIM> &Mfield_padded,
-                 GpuArray<int, 3>                      n_cell_large,
-                 const Geometry&                       geom_large,
+                 Demagnetization                       &demag_solver,
                  const Geometry& geom,
                  const Real& time,
                  const Real& dt);
@@ -230,8 +154,6 @@ void WritePlotfile(MultiFab& Ms,
                    Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
-                   MultiFab& PoissonRHS,
-                   MultiFab& PoissonPhi,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step);

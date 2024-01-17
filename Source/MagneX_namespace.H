@@ -1,7 +1,7 @@
 namespace MagneX {
 
     // Number of cells in each dimension
-    extern amrex::GpuArray<int, 3> n_cell;
+    extern AMREX_GPU_MANAGED amrex::GpuArray<int, 3> n_cell;
 
     extern int max_grid_size;
 
@@ -56,12 +56,6 @@ namespace MagneX {
     
     // turn on demagnetization
     extern AMREX_GPU_MANAGED int demag_coupling;
-
-    // demagnetization solver type
-    // -1 = periodic/Neumann MLMG
-    // 0 = Open Poisson MLMG
-    // 1 = FFT-based
-    extern int demag_solver;
 
     // 0 = unsaturated; 1 = saturated
     extern AMREX_GPU_MANAGED int M_normalization;

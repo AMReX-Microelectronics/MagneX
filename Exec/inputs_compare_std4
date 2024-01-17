@@ -39,7 +39,6 @@ anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
 demag_coupling = 1
-demag_solver = 1  # -1 = periodic/Neumann MLMG; 0 = Open Poisson MLMG; 1 = FFT-based
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
 exchange_coupling = 1
 anisotropy_coupling = 0

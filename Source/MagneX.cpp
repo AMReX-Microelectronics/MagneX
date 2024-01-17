@@ -3,7 +3,7 @@
 #include <AMReX_ParmParse.H>
 
 // Number of cells in each dimension
-amrex::GpuArray<int, 3> MagneX::n_cell;
+AMREX_GPU_MANAGED amrex::GpuArray<int, 3> MagneX::n_cell;
 
 int MagneX::max_grid_size;
 
@@ -58,12 +58,6 @@ int MagneX::timedependent_alpha;
     
 // turn on demagnetization
 AMREX_GPU_MANAGED int MagneX::demag_coupling;
-
-// demagnetization solver type
-// -1 = periodic/Neumann MLMG
-// 0 = Open Poisson MLMG
-// 1 = FFT-based
-int MagneX::demag_solver;
 
 // 0 = unsaturated; 1 = saturated
 AMREX_GPU_MANAGED int MagneX::M_normalization;
@@ -146,9 +140,6 @@ void InitializeMagneXNamespace() {
     pp.get("timedependent_alpha",timedependent_alpha);
 
     pp.get("demag_coupling",demag_coupling);
-    if (demag_coupling) {
-        pp.get("demag_solver",demag_solver);
-    }
         
     pp.get("M_normalization", M_normalization);
     pp.get("exchange_coupling", exchange_coupling);

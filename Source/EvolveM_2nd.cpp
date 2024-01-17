@@ -1,4 +1,5 @@
 #include "MagneX.H"
+#include "Demagnetization.H"
 
 void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_demagfield,
@@ -6,29 +7,13 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
                  std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
-                 MultiFab                              &PoissonRHS, 
-                 MultiFab                              &PoissonPhi, 
                  MultiFab                              &alpha,
                  MultiFab                              &Ms,
                  MultiFab                              &gamma,
                  MultiFab                              &exchange,
                  MultiFab                              &DMI,
                  MultiFab                              &anisotropy,
-                 MultiFab                              &Kxx_dft_real,
-                 MultiFab                              &Kxx_dft_imag,
-                 MultiFab                              &Kxy_dft_real,
-                 MultiFab                              &Kxy_dft_imag,
-                 MultiFab                              &Kxz_dft_real,
-                 MultiFab                              &Kxz_dft_imag,
-                 MultiFab                              &Kyy_dft_real,
-                 MultiFab                              &Kyy_dft_imag,
-                 MultiFab                              &Kyz_dft_real,
-                 MultiFab                              &Kyz_dft_imag,
-                 MultiFab                              &Kzz_dft_real,
-                 MultiFab                              &Kzz_dft_imag,
-                 std::array< MultiFab, AMREX_SPACEDIM> &Mfield_padded,
-                 GpuArray<int, 3>                      n_cell_large,
-                 const Geometry&                       geom_large,
+                 Demagnetization                       &demag_solver,
                  const Geometry& geom,
                  const Real& time,
                  const Real& dt)
@@ -370,42 +355,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         // that way at the beginning of the next time step we will have them
         
         // update H_demag
-        if(demag_coupling == 1) {
-            
-            if (demag_solver == -1 || demag_solver == 0) {
-
-                amrex::Abort("FIXME: MLMG solvers in EvolveM_2nd");
-                /*
-                //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                //Compute RHS of Poisson equation
-                ComputePoissonRHS(PoissonRHS, Mfield, geom);
-                     
-                //Initial guess for phi
-                PoissonPhi.setVal(0.);
-
-                if (demag_solver == -1) {
-                    mlmg->solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                } else if (demag_solver == 0) {
-                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-                }
-
-                // Calculate H from Phi
-                ComputeHfromPhi(PoissonPhi, H_demagfield, geom);
-                */
-                
-            } else {
-
-                // copy Mfield used for the RHS calculation in the Poisson option into Mfield_padded
-                for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-                    Mfield_padded[dir].setVal(0.);
-                    Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
-                }
-
-                ComputeHFieldFFT(Mfield_padded, H_demagfield,
-                                 Kxx_dft_real, Kxx_dft_imag, Kxy_dft_real, Kxy_dft_imag, Kxz_dft_real, Kxz_dft_imag,
-                                 Kyy_dft_real, Kyy_dft_imag, Kyz_dft_real, Kyz_dft_imag, Kzz_dft_real, Kzz_dft_imag,
-                                 n_cell_large, geom_large);
-            }
+        if(demag_coupling == 1) {            
+            demag_solver.CalculateH_demag(Mfield, H_demagfield);
         }
 
        if (exchange_coupling == 1){
@@ -417,7 +368,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
        }
 
        if(anisotropy_coupling == 1){
-         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, geom);
+         CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
        }
 
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed

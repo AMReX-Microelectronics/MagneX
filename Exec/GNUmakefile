@@ -19,8 +19,6 @@ INCLUDE_LOCATIONS += ../Source
 
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package 
-include $(AMREX_HOME)/Src/LinearSolvers/MLMG/Make.package 
-include $(AMREX_HOME)/Src/LinearSolvers/OpenBC/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 ifeq ($(USE_SUNDIALS),TRUE)
