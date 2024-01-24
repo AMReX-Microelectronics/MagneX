@@ -187,12 +187,23 @@ void Demagnetization::define()
                               "Kzz"},
                              geom_large, 0., 0);
 
-    ComputeForwardFFT_heffte(Kxx, Kxx_fft_real, Kxx_fft_imag);
-    ComputeForwardFFT_heffte(Kxy, Kxy_fft_real, Kxy_fft_imag);
-    ComputeForwardFFT_heffte(Kxz, Kxz_fft_real, Kxz_fft_imag);
-    ComputeForwardFFT_heffte(Kyy, Kyy_fft_real, Kyy_fft_imag);
-    ComputeForwardFFT_heffte(Kyz, Kyz_fft_real, Kyz_fft_imag);
-    ComputeForwardFFT_heffte(Kzz, Kzz_fft_real, Kzz_fft_imag);
+    if (FFT_solver == 0) {
+        ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag);
+        ComputeForwardFFT(Kxy, Kxy_fft_real, Kxy_fft_imag);
+        ComputeForwardFFT(Kxz, Kxz_fft_real, Kxz_fft_imag);
+        ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag);
+        ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag);
+        ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag);
+    }
+
+    else {
+        ComputeForwardFFT_heffte(Kxx, Kxx_fft_real, Kxx_fft_imag);
+        ComputeForwardFFT_heffte(Kxy, Kxy_fft_real, Kxy_fft_imag);
+        ComputeForwardFFT_heffte(Kxz, Kxz_fft_real, Kxz_fft_imag);
+        ComputeForwardFFT_heffte(Kyy, Kyy_fft_real, Kyy_fft_imag);
+        ComputeForwardFFT_heffte(Kyz, Kyz_fft_real, Kyz_fft_imag);
+        ComputeForwardFFT_heffte(Kzz, Kzz_fft_real, Kzz_fft_imag);
+    }
 
     MultiFab::Copy(Plt, Kxx_fft_real, 0, 0, 1, 0);
     MultiFab::Copy(Plt, Kxy_fft_real, 0, 1, 1, 0);
@@ -259,9 +270,18 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 
     // Calculate the Mx, My, and Mz fft's at the current time step
     // Each fft will be stored in seperate real and imaginary multifabs
-    ComputeForwardFFT_heffte(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
-    ComputeForwardFFT_heffte(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
-    ComputeForwardFFT_heffte(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
+    
+    if (FFT_solver == 0) {
+        ComputeForwardFFT_heffte(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
+        ComputeForwardFFT_heffte(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
+        ComputeForwardFFT_heffte(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
+    }
+
+    else {
+        ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
+        ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
+        ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
+    }
 
     // Allocate 6 Multifabs to store the convolutions in Fourier space for H_field
     // This could be done in main but then we have an insane amount of arguments in this function
@@ -411,7 +431,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // for real->complex fft's, the fft is stored in an (nx/2+1) x ny x nz dataset
 
     // start by coarsening each box by 2 in the x-direction
-    Box c_local_box = local_box;// amrex::coarsen(local_box, IntVect(AMREX_D_DECL(2,1,1)));
+    Box c_local_box =  amrex::coarsen(local_box, IntVect(AMREX_D_DECL(4,1,1)));
 
     // if the coarsened box's high-x index is even, we shrink the size in 1 in x
     // this avoids overlap between coarsened boxes
@@ -421,7 +441,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // for any boxes that touch the hi-x domain we
     // increase the size of boxes by 1 in x
     // this makes the overall fft dataset have size (Nx/2+1 x Ny x Nz)
-    if (local_box.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
+    if (local_box.bigEnd(0) == geom_large.Domain().bigEnd(0)/2) {
         c_local_box.growHi(0,1);
     }
 
@@ -461,7 +481,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
             Box b = ba_large[i];
 
             Box r_box = b;
-            Box c_box = amrex::coarsen(r_box, IntVect(AMREX_D_DECL(2,1,1)));
+            Box c_box = amrex::coarsen(r_box, IntVect(AMREX_D_DECL(4,1,1)));
 
             // this avoids overlap for the cases when one or more r_box's
             // have an even cell index in the hi-x cell
@@ -471,7 +491,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
 
             // increase the size of boxes touching the hi-x domain by 1 in x
             // this is an (Nx x Ny x Nz) -> (Nx/2+1 x Ny x Nz) real-to-complex sizing
-            if (b.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
+            if (b.bigEnd(0) == geom_large.Domain().bigEnd(0)/2) {
                 c_box.growHi(0,1);
             }
             bl.push_back(c_box);
@@ -531,7 +551,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
 
     IntVect dom_lo(AMREX_D_DECL(            0,             0,             0));
     // IntVect dom_hi_large(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
-    IntVect dom_hi(AMREX_D_DECL((domain_large.length(0)+1)/2, (domain_large.length(1)+1)/2, (domain_large.length(2)+1)/2));
+    IntVect dom_hi(AMREX_D_DECL((domain_large.length(0)+1)/2 - 1, (domain_large.length(1)+1)/2 - 1, (domain_large.length(2)+1)/2 - 1));
 
     // Make a single box that is the entire domain
     Box domain(dom_lo, dom_hi);
@@ -550,9 +570,10 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // into the appropriate place in the full MultiFab
     for (MFIter mfi(fft_data_onegrid); mfi.isValid(); ++mfi) {
 
-        Array4<Real> const& data = fft_data_onegrid.array(mfi);
-
-        const Box& bx = mfi.fabbox();
+        // Array4<Real> const& data = fft_data_onegrid.array(mfi);
+        const Array4<Real>& data = fft_data_onegrid.array(mfi); 
+        
+	const Box& bx = mfi.fabbox();
 
         ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -609,16 +630,11 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // mf_dft_real.ParallelCopy(fft_data_onegrid_shifted[0], 0, 0, 1);
     // mf_dft_imag.ParallelCopy(fft_data_onegrid_shifted[1], 0, 0, 1);
 
-    mf_dft_real = 0.;
-    mf_dft_imag = 0.;
+    // mf_dft_real = 0.;
+    // mf_dft_imag = 0.;
 
     mf_dft_real.ParallelCopy(fft_data_onegrid, 0, 0, 1);
     mf_dft_imag.ParallelCopy(fft_data_onegrid, 1, 0, 1);
-
-    WriteSingleLevelPlotfile("plt", fft_data_onegrid,
-                             {"phi_dft_real", "phi_dft_imag", "phi_dft_magitude", "phi_dft_phase"},
-                              geom_large, time, step);
-
 }
 
 // Serial FFT

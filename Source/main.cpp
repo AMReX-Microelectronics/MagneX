@@ -153,6 +153,7 @@ void main_main ()
     amrex::Print() << " exchange_coupling    = " << exchange_coupling   << "\n";
     amrex::Print() << " DMI_coupling         = " << DMI_coupling        << "\n";
     amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
+    amrex::Print() << " FFT_solver           = " << FFT_solver          << "\n";
     amrex::Print() << " TimeIntegratorOption = " << TimeIntegratorOption << "\n";
     amrex::Print() << "=======================================================\n";
 
