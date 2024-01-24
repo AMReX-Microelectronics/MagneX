@@ -380,32 +380,6 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // timer for profiling
     BL_PROFILE_VAR("ComputeForwardFFT_heffte()",ComputeForwardFFT_heffte);
 
-    // periodic in all direction
-    // Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(1,1,1)};
-
-    // **********************************
-    // COPY INPUT MULTIFAB INTO A MULTIFAB WITH ONE BOX
-    // **********************************
-
-
-    /*
-    Box minimalBox = mf_in.boxArray().minimalBox();
-    
-    // create a new BoxArray and DistributionMapping for a MultiFab with 1 grid
-    BoxArray ba_onegrid(minimalBox);
-    DistributionMapping dm_onegrid(ba_onegrid);
-
-    // storage for phi and the dft
-    MultiFab mf_in_onegrid      (ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab mf_dft_real_onegrid(ba_onegrid, dm_onegrid, 1, 0);
-    MultiFab mf_dft_imag_onegrid(ba_onegrid, dm_onegrid, 1, 0);
-
-    // copy phi into phi_onegrid
-    mf_in_onegrid.ParallelCopy(mf_in, 0, 0, 1);
-    */
-
-
-
     // **********************************
     // COMPUTE FFT
     // **********************************
@@ -447,7 +421,6 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
 
     // each MPI rank gets storage for its piece of the fft
     BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
-
 
 #ifdef AMREX_USE_CUDA
     heffte::fft2d_r2c<heffte::backend::cufft> fft
@@ -536,22 +509,8 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
         });
     }
 
-
-    /*
-    // shrink by 1 in x in case there are an odd number of cells in the x-direction in domain
-    if (domain_large.bigEnd(0) * 2 == minimalBox.bigEnd(0)) {
-        domain_large.setBig(0,domain_large.bigEnd(0)-1);
-    }
-
-    // grow by 1 in the x-direction to match the size of the FFT
-    domain_large.growHi(0,1);
-
-    WriteSingleLevelPlotfile("fft_data", fft_data, {"real", "imag", "magitude", "phase"}, geom_large, time, step);
-    */
-
     IntVect dom_lo(AMREX_D_DECL(            0,             0,             0));
     IntVect dom_hi(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
-    // IntVect dom_hi(AMREX_D_DECL((domain_large.length(0)+1)/2 - 1, (domain_large.length(1)+1)/2 - 1, (domain_large.length(2)+1)/2 - 1));
 
     // Make a single box that is the entire domain
     Box domain(dom_lo, dom_hi);
@@ -626,13 +585,8 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
 
         });
     }
+    
     // Copy the full multifabs back into the output multifabs
-    // mf_dft_real.ParallelCopy(fft_data_onegrid_shifted[0], 0, 0, 1);
-    // mf_dft_imag.ParallelCopy(fft_data_onegrid_shifted[1], 0, 0, 1);
-
-    // mf_dft_real = 0.;
-    // mf_dft_imag = 0.;
-
     mf_dft_real.ParallelCopy(fft_data_onegrid, 0, 0, 1);
     mf_dft_imag.ParallelCopy(fft_data_onegrid, 1, 0, 1);
 }

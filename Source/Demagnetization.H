@@ -17,9 +17,6 @@ class Demagnetization {
     DistributionMapping dm_large;
     Geometry geom_large;
 
-    Box domain_large;
-    RealBox real_box_large;
-    
     MultiFab Kxx_fft_real;
     MultiFab Kxx_fft_imag;
     MultiFab Kxy_fft_real;

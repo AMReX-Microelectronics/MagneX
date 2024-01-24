@@ -1,5 +1,5 @@
 n_cell = 32 32 8
-max_grid_size = 512
+max_grid_size = 16 
 dt = 1.0e-14
 nsteps = 0
 plot_int = 1
@@ -29,12 +29,12 @@ anisotropy_parser(x,y,z) = "(x>-1.5625e-8)*(x<1.5625e-8)*(y>-15.625e-9)*(y<15.62
 DMI_parser(x,y,z) = "0.0"
 
 demag_coupling = 1
+FFT_solver = 0
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
 exchange_coupling = 1
 anisotropy_coupling = 0
 anisotropy_axis = 0.0 1.0 0.0
 DMI_coupling = 0
-FFT_solver = 0
 
 # INTEGRATION
 
