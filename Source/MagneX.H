@@ -8,6 +8,7 @@
 #endif
 #include "MagneX_namespace.H"
 #include "Demagnetization.H"
+#include <heffte.h>
 
 using namespace amrex;
 using namespace MagneX;
