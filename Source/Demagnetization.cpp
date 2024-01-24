@@ -431,7 +431,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // for real->complex fft's, the fft is stored in an (nx/2+1) x ny x nz dataset
 
     // start by coarsening each box by 2 in the x-direction
-    Box c_local_box =  amrex::coarsen(local_box, IntVect(AMREX_D_DECL(4,1,1)));
+    Box c_local_box =  amrex::coarsen(local_box, IntVect(AMREX_D_DECL(2,1,1)));
 
     // if the coarsened box's high-x index is even, we shrink the size in 1 in x
     // this avoids overlap between coarsened boxes
@@ -441,7 +441,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // for any boxes that touch the hi-x domain we
     // increase the size of boxes by 1 in x
     // this makes the overall fft dataset have size (Nx/2+1 x Ny x Nz)
-    if (local_box.bigEnd(0) == geom_large.Domain().bigEnd(0)/2) {
+    if (local_box.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
         c_local_box.growHi(0,1);
     }
 
@@ -481,7 +481,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
             Box b = ba_large[i];
 
             Box r_box = b;
-            Box c_box = amrex::coarsen(r_box, IntVect(AMREX_D_DECL(4,1,1)));
+            Box c_box = amrex::coarsen(r_box, IntVect(AMREX_D_DECL(2,1,1)));
 
             // this avoids overlap for the cases when one or more r_box's
             // have an even cell index in the hi-x cell
@@ -491,7 +491,7 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
 
             // increase the size of boxes touching the hi-x domain by 1 in x
             // this is an (Nx x Ny x Nz) -> (Nx/2+1 x Ny x Nz) real-to-complex sizing
-            if (b.bigEnd(0) == geom_large.Domain().bigEnd(0)/2) {
+            if (b.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
                 c_box.growHi(0,1);
             }
             bl.push_back(c_box);
@@ -550,8 +550,8 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     */
 
     IntVect dom_lo(AMREX_D_DECL(            0,             0,             0));
-    // IntVect dom_hi_large(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
-    IntVect dom_hi(AMREX_D_DECL((domain_large.length(0)+1)/2 - 1, (domain_large.length(1)+1)/2 - 1, (domain_large.length(2)+1)/2 - 1));
+    IntVect dom_hi(AMREX_D_DECL(2*n_cell[0]-1, 2*n_cell[1]-1, 2*n_cell[2]-1));
+    // IntVect dom_hi(AMREX_D_DECL((domain_large.length(0)+1)/2 - 1, (domain_large.length(1)+1)/2 - 1, (domain_large.length(2)+1)/2 - 1));
 
     // Make a single box that is the entire domain
     Box domain(dom_lo, dom_hi);
