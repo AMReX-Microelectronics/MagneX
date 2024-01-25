@@ -72,6 +72,8 @@ AMREX_GPU_MANAGED int MagneX::DMI_coupling;
 AMREX_GPU_MANAGED int MagneX::anisotropy_coupling;
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::anisotropy_axis;
 
+// Choose an FFT solver, either FFTW or heFFTe
+AMREX_GPU_MANAGED int MagneX::FFT_solver;
 
 void InitializeMagneXNamespace() {
 
@@ -140,6 +142,10 @@ void InitializeMagneXNamespace() {
     pp.get("timedependent_alpha",timedependent_alpha);
 
     pp.get("demag_coupling",demag_coupling);
+
+    if (demag_coupling == 1) {
+        pp.get("FFT_solver",FFT_solver);
+    }
         
     pp.get("M_normalization", M_normalization);
     pp.get("exchange_coupling", exchange_coupling);

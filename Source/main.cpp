@@ -149,6 +149,9 @@ void main_main ()
 
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
+    if (demag_coupling == 1) amrex::Print() << " FFT_solver = " << FFT_solver << "\n";
+    amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
+    amrex::Print() << " FFT_solver           = " << FFT_solver          << "\n";
     amrex::Print() << " M_normalization      = " << M_normalization     << "\n";
     amrex::Print() << " exchange_coupling    = " << exchange_coupling   << "\n";
     amrex::Print() << " DMI_coupling         = " << DMI_coupling        << "\n";

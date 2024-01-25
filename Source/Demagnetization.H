@@ -1,11 +1,9 @@
 #ifndef _DEMAG_H_
 #define _DEMAG_H_
 
-#include <AMReX_MultiFab.H> 
+#include <heffte.h>
 
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
-#endif
+#include <AMReX_MultiFab.H> 
 
 using namespace amrex;
 
@@ -14,7 +12,7 @@ class Demagnetization {
     BoxArray ba_large;
     DistributionMapping dm_large;
     Geometry geom_large;
-    
+
     MultiFab Kxx_fft_real;
     MultiFab Kxx_fft_imag;
     MultiFab Kxy_fft_real;
@@ -36,6 +34,10 @@ public:
 
     void CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                           Array<MultiFab, AMREX_SPACEDIM>& H_demagfield);
+    
+    void ComputeForwardFFT_heffte(const MultiFab&    mf_in,
+                                  MultiFab&          mf_dft_real,
+                                  MultiFab&          mf_dft_imag);
 
     void ComputeForwardFFT(const MultiFab&    mf_in,
                            MultiFab&          mf_dft_real,

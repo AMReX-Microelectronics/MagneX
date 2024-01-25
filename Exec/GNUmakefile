@@ -1,10 +1,13 @@
 # AMREX_HOME defines the directory in which we will find all the AMReX code.
 AMREX_HOME ?= ../../amrex
+HEFFTE_HOME ?= ../../heffte/build
+
 
 DEBUG        = FALSE
 USE_MPI      = TRUE
 USE_OMP      = FALSE
 USE_CUDA     = FALSE
+USE_HIP      = FALSE
 COMP         = gnu
 DIM          = 3
 
@@ -15,7 +18,12 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ../Source/Make.package
 VPATH_LOCATIONS  += ../Source
+VPATH_LOCATIONS += $(HEFFTE_HOME)/include
+INCLUDE_LOCATIONS += $(HEFFTE_HOME)/include
+LIBRARY_LOCATIONS += $(HEFFTE_HOME)/lib
 INCLUDE_LOCATIONS += ../Source
+
+libraries += -lheffte
 
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package 
@@ -38,8 +46,13 @@ LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
 endif
 
 ifeq ($(USE_CUDA),TRUE)
-  LIBRARIES += -lcufft
+  libraries += -lcufft
+else ifeq ($(USE_HIP),TRUE)
+  # Use rocFFT.  ROC_PATH is defined in amrex
+  INCLUDE_LOCATIONS += $(ROC_PATH)/rocfft/include
+  LIBRARY_LOCATIONS += $(ROC_PATH)/rocfft/lib
+  LIBRARIES += -L$(ROC_PATH)/rocfft/lib -lrocfft
 else
-  LIBRARIES += -L$(FFTW_DIR) -lfftw3_mpi -lfftw3
+  libraries += -lfftw3_mpi -lfftw3f -lfftw3
 endif
 
