@@ -1,5 +1,5 @@
-#include "CartesianAlgorithm_K.H"
 #include "MagneX.H"
+#include "CartesianAlgorithm_K.H"
 
 using namespace amrex;
 

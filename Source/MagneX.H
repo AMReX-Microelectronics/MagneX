@@ -1,4 +1,4 @@
-#include <AMReX_MultiFab.H>
+#include <heffte.h>
 
 #ifdef AMREX_USE_CUDA
 #include <cufft.h>
@@ -6,9 +6,11 @@
 #include <fftw3.h>
 #include <fftw3-mpi.h>
 #endif
+
+#include <AMReX_MultiFab.H>
+
 #include "MagneX_namespace.H"
 #include "Demagnetization.H"
-#include <heffte.h>
 
 using namespace amrex;
 using namespace MagneX;

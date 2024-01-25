@@ -1,13 +1,9 @@
 #ifndef _DEMAG_H_
 #define _DEMAG_H_
 
-#include <AMReX_MultiFab.H> 
-
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
-#endif
-
 #include <heffte.h>
+
+#include <AMReX_MultiFab.H> 
 
 using namespace amrex;
 
