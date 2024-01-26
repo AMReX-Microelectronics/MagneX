@@ -13,6 +13,8 @@ class Demagnetization {
     DistributionMapping dm_large;
     Geometry geom_large;
 
+    BoxArray ba_fft; 
+
     MultiFab Kxx_fft_real;
     MultiFab Kxx_fft_imag;
     MultiFab Kxy_fft_real;
@@ -42,6 +44,10 @@ public:
     void ComputeForwardFFT(const MultiFab&    mf_in,
                            MultiFab&          mf_dft_real,
                            MultiFab&          mf_dft_imag);
+
+    void ComputeInverseFFT_heffte(MultiFab&                        mf_out,
+                                  const MultiFab&                  mf_dft_real,
+                                  const MultiFab&                  mf_dft_imag);
 
     void ComputeInverseFFT(MultiFab&                        mf_out,
                            const MultiFab&                  mf_dft_real,

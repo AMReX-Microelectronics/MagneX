@@ -57,6 +57,9 @@ namespace MagneX {
     // turn on demagnetization
     extern AMREX_GPU_MANAGED int demag_coupling;
 
+    // Choose FFTW or heFFTe
+    extern AMREX_GPU_MANAGED int FFT_solver;
+
     // 0 = unsaturated; 1 = saturated
     extern AMREX_GPU_MANAGED int M_normalization;
 
@@ -70,5 +73,4 @@ namespace MagneX {
     extern AMREX_GPU_MANAGED int anisotropy_coupling;
     extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
-    extern AMREX_GPU_MANAGED int FFT_solver;
 }

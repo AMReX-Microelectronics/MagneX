@@ -44,6 +44,38 @@ void Demagnetization::define()
     // This defines a Geometry object
     geom_large.define(domain_large, real_box_large, CoordSys::cartesian, is_periodic);
 
+    if (FFT_solver == 1) {
+    // create a BoxArray containing the fft boxes
+    // by construction, these boxes correlate to the associated spectral_data
+    // this we can copy the spectral data into this multifab since we know they are owned by the same MPI rank
+    {
+        BoxList bl;
+        bl.reserve(ba_large.size());
+
+        for (int i = 0; i < ba_large.size(); ++i) {
+            Box b = ba_large[i];
+
+            Box r_box = b;
+            Box c_box = amrex::coarsen(r_box, IntVect(AMREX_D_DECL(2,1,1)));
+
+            // this avoids overlap for the cases when one or more r_box's
+            // have an even cell index in the hi-x cell
+            if (c_box.bigEnd(0) * 2 == r_box.bigEnd(0)) {
+                c_box.setBig(0,c_box.bigEnd(0)-1);
+            }
+
+            // increase the size of boxes touching the hi-x domain by 1 in x
+            // this is an (Nx x Ny x Nz) -> (Nx/2+1 x Ny x Nz) real-to-complex sizing
+            if (b.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
+                c_box.growHi(0,1);
+            }
+            bl.push_back(c_box);
+
+        }
+        ba_fft.define(std::move(bl));
+    }
+    }
+
     // Allocate the demag tensor fft multifabs
     Kxx_fft_real.define(ba_large, dm_large, 1, 0);
     Kxx_fft_imag.define(ba_large, dm_large, 1, 0);
@@ -356,10 +388,19 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     MultiFab Hy_large(ba_large, dm_large, 1, 0);
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
 
-    // Compute the inverse FFT of H_field with respect to the three coordinates and store them in 3 multifabs that this function returns
-    ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x);
-    ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
-    ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
+
+    if (FFT_solver == 0) {
+       // Compute the inverse FFT of H_field with respect to the three coordinates and store them in 3 multifabs that this function returns
+       ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x);
+       ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
+       ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
+    }
+
+    else {
+       ComputeInverseFFT_heffte(Hx_large, H_dft_real_x, H_dft_imag_x);
+       ComputeInverseFFT_heffte(Hy_large, H_dft_real_y, H_dft_imag_y);
+       ComputeInverseFFT_heffte(Hz_large, H_dft_real_z, H_dft_imag_z);
+    }
 
     // Copying the elements near the 'upper right' of the double-sized demag back to multifab that is the problem size
     // This is not quite the 'upper right' of the source, it's the destination_coordinate + (n_cell-1)
@@ -442,39 +483,11 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     BL_PROFILE("ForwardTransform");
     fft.forward(mf_in[local_boxid].dataPtr(), spectral_data);
 
-    // create a BoxArray containing the fft boxes
-    // by construction, these boxes correlate to the associated spectral_data
-    // this we can copy the spectral data into this multifab since we know they are owned by the same MPI rank
-    BoxArray fft_ba;
-    {
-        BoxList bl;
-        bl.reserve(ba_large.size());
-
-        for (int i = 0; i < ba_large.size(); ++i) {
-            Box b = ba_large[i];
-
-            Box r_box = b;
-            Box c_box = amrex::coarsen(r_box, IntVect(AMREX_D_DECL(2,1,1)));
-
-            // this avoids overlap for the cases when one or more r_box's
-            // have an even cell index in the hi-x cell
-            if (c_box.bigEnd(0) * 2 == r_box.bigEnd(0)) {
-                c_box.setBig(0,c_box.bigEnd(0)-1);
-            }
-
-            // increase the size of boxes touching the hi-x domain by 1 in x
-            // this is an (Nx x Ny x Nz) -> (Nx/2+1 x Ny x Nz) real-to-complex sizing
-            if (b.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
-                c_box.growHi(0,1);
-            }
-            bl.push_back(c_box);
-
-        }
-        fft_ba.define(std::move(bl));
-    }
-
     // storage for real, imaginary, magnitude, and phase
-    MultiFab fft_data(fft_ba,dm_large,4,0);
+    MultiFab fft_data(ba_fft,dm_large,4,0);
+
+	Print() << "ba_fft " << ba_fft << std::endl;
+	Print() << "ba_large " << ba_large << std::endl;
 
     // this copies the spectral data into a distributed MultiFab
     for (MFIter mfi(fft_data); mfi.isValid(); ++mfi) {
@@ -778,7 +791,169 @@ void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
      }
 }
 
+// Inverse FFT for GPUs
+// This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_out'
+// The FFTW c2r function is called which accepts complex data in the frequency domain and returns real data in the normal cartesian plane
+void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
+                                               const MultiFab&          mf_dft_real,
+                                               const MultiFab&          mf_dft_imag)
+{
+    /*
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeInverseFFT_heffte()",ComputeInverseFFT_heffte);
 
+    // **********************************
+    // COMPUTE FFT
+    // **********************************
+
+    // since there is 1 MPI rank per box, here each MPI rank obtains its local box and the associated boxid
+    Box local_box;
+    int local_boxid;
+    {
+        for (int i = 0; i < ba_large.size(); ++i) {
+            Box b = ba_large[i];
+            // each MPI rank has its own local_box Box and local_boxid ID
+            if (ParallelDescriptor::MyProc() == dm_large[i]) {
+                local_box = b;
+                local_boxid = i;
+            }
+        }
+    }
+
+    // now each MPI rank works on its own box
+    // for real->complex fft's, the fft is stored in an (nx/2+1) x ny x nz dataset
+
+    // start by coarsening each box by 2 in the x-direction
+    Box c_local_box =  amrex::coarsen(local_box, IntVect(AMREX_D_DECL(2,1,1)));
+
+    // if the coarsened box's high-x index is even, we shrink the size in 1 in x
+    // this avoids overlap between coarsened boxes
+    if (c_local_box.bigEnd(0) * 2 == local_box.bigEnd(0)) {
+        c_local_box.setBig(0,c_local_box.bigEnd(0)-1);
+    }
+    // for any boxes that touch the hi-x domain we
+    // increase the size of boxes by 1 in x
+    // this makes the overall fft dataset have size (Nx/2+1 x Ny x Nz)
+    if (local_box.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
+        c_local_box.growHi(0,1);
+    }
+
+    // each MPI rank gets storage for its piece of the fft
+    BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
+
+#ifdef AMREX_USE_CUDA
+    heffte::fft2d_r2c<heffte::backend::cufft> fft
+#elif AMREX_USE_HIP
+    heffte::fft2d_r2c<heffte::backend::rocfft> fft
+#else
+    heffte::fft2d_r2c<heffte::backend::fftw> fft
+#endif
+        ({{local_box.smallEnd(0),local_box.smallEnd(1),local_box.smallEnd(2)},
+          {local_box.bigEnd(0)  ,local_box.bigEnd(1)  ,local_box.bigEnd(2)}},
+         {{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
+          {c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}},
+         0, ParallelDescriptor::Communicator());
+
+    using heffte_complex = typename heffte::fft_output<Real>::type;
+    heffte_complex* spectral_data = (heffte_complex*) spectral_field.dataPtr();
+
+
+    // storage for real, imaginary, magnitude, and phase
+    MultiFab fft_data(fft_ba,dm_large,4,0);
+
+    fft_data.ParallelCopy(mf_dft_real, 1, 0, 1);
+    fft_data.ParallelCopy(mf_dft_imag, 2, 0, 1);
+
+    // this copies the spectral data into a distributed MultiFab
+    for (MFIter mfi(fft_data); mfi.isValid(); ++mfi) {
+
+        Array4<Real> const& data = fft_data.array(mfi);
+        // Array4< GpuComplex<Real> > spectral = spectral_field.array();
+
+        const Box& bx = mfi.fabbox();
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            Real re = data(i,j,k,0);
+            Real im = data(i,j,k,1);
+
+	    spectral(i,j,k).real() = re
+	    spectral(i,j,k).imag() = im 
+            }
+        });
+    }
+
+    Real time = 0.;
+    int step = 0;
+    
+    // since there is 1 MPI rank per box, here each MPI rank obtains its local box and the associated boxid
+    Box local_box;
+    int local_boxid;
+    {
+        for (int i = 0; i < ba_large.size(); ++i) {
+            Box b = ba_large[i];
+            // each MPI rank has its own local_box Box and local_boxid ID
+            if (ParallelDescriptor::MyProc() == dm_large[i]) {
+                local_box = b;
+                local_boxid = i;
+            }
+        }
+    }
+
+    // now each MPI rank works on its own box
+    // for real->complex fft's, the fft is stored in an (nx/2+1) x ny x nz dataset
+
+    // start by coarsening each box by 2 in the x-direction
+    Box c_local_box =  amrex::coarsen(local_box, IntVect(AMREX_D_DECL(2,1,1)));
+
+    // if the coarsened box's high-x index is even, we shrink the size in 1 in x
+    // this avoids overlap between coarsened boxes
+    if (c_local_box.bigEnd(0) * 2 == local_box.bigEnd(0)) {
+        c_local_box.setBig(0,c_local_box.bigEnd(0)-1);
+    }
+    // for any boxes that touch the hi-x domain we
+    // increase the size of boxes by 1 in x
+    // this makes the overall fft dataset have size (Nx/2+1 x Ny x Nz)
+    if (local_box.bigEnd(0) == geom_large.Domain().bigEnd(0)) {
+        c_local_box.growHi(0,1);
+    }
+
+    // each MPI rank gets storage for its piece of the fft
+    BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
+
+#ifdef AMREX_USE_CUDA
+    heffte::fft3d_r2c<heffte::backend::cufft> fft
+#elif AMREX_USE_HIP
+    heffte::fft3d_r2c<heffte::backend::rocfft> fft
+#else
+    heffte::fft3d_r2c<heffte::backend::fftw> fft
+#endif
+        
+    ({{local_box.smallEnd(0),local_box.smallEnd(1),local_box.smallEnd(2)},
+          {local_box.bigEnd(0)  ,local_box.bigEnd(1)  ,local_box.bigEnd(2)}},
+         {{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
+          {c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}},
+         0, ParallelDescriptor::Communicator());
+
+    using heffte_complex = typename heffte::fft_output<Real>::type;
+    heffte_complex* spectral_data = (heffte_complex*) spectral_field.dataPtr();
+
+    for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
+      int i = mfi.LocalIndex();
+      {
+        BL_PROFILE("BackwardTransform");
+        fft.backward(spectral_field[i]->dataPtr(), mf_onegrid_out[mfi].dataPtr());
+      }
+    }
+    
+    // copy contents of mf_onegrid_out into mf
+    mf_out.ParallelCopy(mf_onegrid_out, 0, 0, 1);
+    */
+    mf_out = 0.;	    
+    
+}
+
+// Serial FFT
 // This function takes the real and imaginary parts of data from the frequency domain and performs an inverse FFT, storing the result in 'mf_out'
 // The FFTW c2r function is called which accepts complex data in the frequency domain and returns real data in the normal cartesian plane
 void Demagnetization::ComputeInverseFFT(MultiFab&                        mf_out,
