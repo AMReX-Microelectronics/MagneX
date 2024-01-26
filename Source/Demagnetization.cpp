@@ -304,15 +304,15 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     // Each fft will be stored in seperate real and imaginary multifabs
     
     if (FFT_solver == 0) {
-        ComputeForwardFFT_heffte(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
-        ComputeForwardFFT_heffte(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
-        ComputeForwardFFT_heffte(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
-    }
-
-    else {
         ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
         ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
         ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
+    }
+
+    else {
+        ComputeForwardFFT_heffte(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
+        ComputeForwardFFT_heffte(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
+        ComputeForwardFFT_heffte(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
     }
 
     // Allocate 6 Multifabs to store the convolutions in Fourier space for H_field
@@ -949,8 +949,7 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
     // copy contents of mf_onegrid_out into mf
     mf_out.ParallelCopy(mf_onegrid_out, 0, 0, 1);
     */
-    mf_out = 0.;	    
-    
+    mf_out = 0.;
 }
 
 // Serial FFT
