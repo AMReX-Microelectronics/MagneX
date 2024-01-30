@@ -409,16 +409,22 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	H_dft_real_z.define(ba_large, dm_large, 1, 0);
 	H_dft_imag_z.define(ba_large, dm_large, 1, 0);
 
-        MultiFab Plt (ba_large, dm_large, 3, 0);
+        MultiFab Plt (ba_large, dm_large, 6, 0);
 	
 	MultiFab::Copy(Plt, M_dft_real_x, 0, 0, 1, 0);
 	MultiFab::Copy(Plt, M_dft_imag_x, 0, 1, 1, 0);
 	MultiFab::Copy(Plt, M_dft_real_y, 0, 2, 1, 0);
+	MultiFab::Copy(Plt, M_dft_imag_y, 0, 3, 1, 0);
+        MultiFab::Copy(Plt, M_dft_real_z, 0, 4, 1, 0);
+        MultiFab::Copy(Plt, M_dft_imag_z, 0, 5, 1, 0);
 	
 	WriteSingleLevelPlotfile("M_dft_fftw", Plt,
 	{"M_dft_real_x",
 	"M_dft_imag_x",
-	"M_dft_real_y"},
+	"M_dft_real_y",
+	"M_dft_imag_y",
+	"M_dft_real_z",
+	"M_dft_imag_z"},
 	geom_large, 0., 0);
 	
     } else {
@@ -435,18 +441,23 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	H_dft_imag_z.define(ba_fft, dm_large, 1, 0);
     
    
-        MultiFab Plt_heffte (ba_fft, dm_large, 3, 0);
+        MultiFab Plt_heffte (ba_fft, dm_large, 6, 0);
 	
 	MultiFab::Copy(Plt_heffte, M_dft_real_x, 0, 0, 1, 0);
 	MultiFab::Copy(Plt_heffte, M_dft_imag_x, 0, 1, 1, 0);
 	MultiFab::Copy(Plt_heffte, M_dft_real_y, 0, 2, 1, 0);
+	MultiFab::Copy(Plt_heffte, M_dft_imag_y, 0, 3, 1, 0);
+        MultiFab::Copy(Plt_heffte, M_dft_real_z, 0, 4, 1, 0);
+        MultiFab::Copy(Plt_heffte, M_dft_imag_z, 0, 5, 1, 0);
 	
-	WriteSingleLevelPlotfile("M_dft_heffte", Plt_heffte,
+	WriteSingleLevelPlotfile("M_dft_fftw", Plt_heffte,
 	{"M_dft_real_x",
 	"M_dft_imag_x",
-	"M_dft_real_y"},
+	"M_dft_real_y",
+	"M_dft_imag_y",
+	"M_dft_real_z",
+	"M_dft_imag_z"},
 	geom_fft, 0., 0);
-
     }
 
     if (FFT_solver == 0){
