@@ -13,7 +13,8 @@ class Demagnetization {
     DistributionMapping dm_large;
     Geometry geom_large;
 
-    BoxArray ba_fft; 
+    BoxArray ba_fft;
+    Geometry geom_fft;
 
     MultiFab Kxx_fft_real;
     MultiFab Kxx_fft_imag;
