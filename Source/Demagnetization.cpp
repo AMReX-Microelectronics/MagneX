@@ -113,7 +113,7 @@ void Demagnetization::define()
 	Kyz_fft_imag.define(ba_large, dm_large, 1, 0);
 	Kzz_fft_real.define(ba_large, dm_large, 1, 0);
 	Kzz_fft_imag.define(ba_large, dm_large, 1, 0);
-      }
+    }
 
     // Allocate the plot file for the large FFT
     MultiFab Plt (ba_large, dm_large, 6, 0);
@@ -252,40 +252,7 @@ void Demagnetization::define()
         ComputeForwardFFT(Kyy, Kyy_fft_real, Kyy_fft_imag);
         ComputeForwardFFT(Kyz, Kyz_fft_real, Kyz_fft_imag);
         ComputeForwardFFT(Kzz, Kzz_fft_real, Kzz_fft_imag);
-	
-	MultiFab::Copy(Plt, Kxx_fft_real, 0, 0, 1, 0);
-	MultiFab::Copy(Plt, Kxy_fft_real, 0, 1, 1, 0);
-	MultiFab::Copy(Plt, Kxz_fft_real, 0, 2, 1, 0);
-	MultiFab::Copy(Plt, Kyy_fft_real, 0, 3, 1, 0);
-	MultiFab::Copy(Plt, Kyz_fft_real, 0, 4, 1, 0);
-	MultiFab::Copy(Plt, Kzz_fft_real, 0, 5, 1, 0);
-	
-	WriteSingleLevelPlotfile("DemagTensor_FFT_FFTW_real", Plt,
-	{"Kxx_fft_real",
-	"Kxy_fft_real",
-	"Kxz_fft_real",
-	"Kyy_fft_real",
-	"Kyz_fft_real",
-	"Kzz_fft_real"},
-	geom_large, 0., 0);
-	
-	MultiFab::Copy(Plt, Kxx_fft_imag, 0, 0, 1, 0);
-	MultiFab::Copy(Plt, Kxy_fft_imag, 0, 1, 1, 0);
-	MultiFab::Copy(Plt, Kxz_fft_imag, 0, 2, 1, 0);
-	MultiFab::Copy(Plt, Kyy_fft_imag, 0, 3, 1, 0);
-	MultiFab::Copy(Plt, Kyz_fft_imag, 0, 4, 1, 0);
-	MultiFab::Copy(Plt, Kzz_fft_imag, 0, 5, 1, 0);
-	
-	
-	WriteSingleLevelPlotfile("DemagTensor_FFT_FFTW_imag", Plt,
-	{"Kxx_fft_imag",
-	"Kxy_fft_imag",
-	"Kxz_fft_imag",
-	"Kyy_fft_imag",
-	"Kyz_fft_imag",
-	"Kzz_fft_imag"},
-	geom_large, 0., 0);
-	
+
     } else {
         ComputeForwardFFT_heffte(Kxx, Kxx_fft_real, Kxx_fft_imag);
         ComputeForwardFFT_heffte(Kxy, Kxy_fft_real, Kxy_fft_imag);
@@ -293,43 +260,7 @@ void Demagnetization::define()
         ComputeForwardFFT_heffte(Kyy, Kyy_fft_real, Kyy_fft_imag);
         ComputeForwardFFT_heffte(Kyz, Kyz_fft_real, Kyz_fft_imag);
         ComputeForwardFFT_heffte(Kzz, Kzz_fft_real, Kzz_fft_imag);
-        
-	// Allocate the plot file for the FFT shrunk by factor of two in x
-        MultiFab Plt_heffte (ba_fft, dm_large, 6, 0);
-
-	MultiFab::Copy(Plt_heffte, Kxx_fft_real, 0, 0, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kxy_fft_real, 0, 1, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kxz_fft_real, 0, 2, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kyy_fft_real, 0, 3, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kyz_fft_real, 0, 4, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kzz_fft_real, 0, 5, 1, 0);
-	
-	WriteSingleLevelPlotfile("DemagTensor_FFT_HEFFTE_real", Plt_heffte,
-	{"Kxx_fft_real",
-	"Kxy_fft_real",
-	"Kxz_fft_real",
-	"Kyy_fft_real",
-	"Kyz_fft_real",
-	"Kzz_fft_real"},
-	geom_fft, 0., 0);
-	
-	MultiFab::Copy(Plt_heffte, Kxx_fft_imag, 0, 0, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kxy_fft_imag, 0, 1, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kxz_fft_imag, 0, 2, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kyy_fft_imag, 0, 3, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kyz_fft_imag, 0, 4, 1, 0);
-	MultiFab::Copy(Plt_heffte, Kzz_fft_imag, 0, 5, 1, 0);
-	
-	
-	WriteSingleLevelPlotfile("DemagTensor_FFT_HEFFTE_imag", Plt_heffte,
-	{"Kxx_fft_imag",
-	"Kxy_fft_imag",
-	"Kxz_fft_imag",
-	"Kyy_fft_imag",
-	"Kyz_fft_imag",
-	"Kzz_fft_imag"},
-	geom_fft, 0., 0);
-    }
+   }
 
 }
 
@@ -364,28 +295,6 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     MultiFab M_dft_imag_y;
     MultiFab M_dft_real_z;
     MultiFab M_dft_imag_z;
-
-    if (FFT_solver == 0) {
-	// Allocate Mfield fft multifabs
-	M_dft_real_x.define(ba_large, dm_large, 1, 0);
-	M_dft_imag_x.define(ba_large, dm_large, 1, 0);
-	M_dft_real_y.define(ba_large, dm_large, 1, 0);
-	M_dft_imag_y.define(ba_large, dm_large, 1, 0);
-	M_dft_real_z.define(ba_large, dm_large, 1, 0);
-	M_dft_imag_z.define(ba_large, dm_large, 1, 0);
-
-    }
-
-    else {
-	M_dft_real_x.define(ba_fft, dm_large, 1, 0);
-	M_dft_imag_x.define(ba_fft, dm_large, 1, 0);
-	M_dft_real_y.define(ba_fft, dm_large, 1, 0);
-	M_dft_imag_y.define(ba_fft, dm_large, 1, 0);
-	M_dft_real_z.define(ba_fft, dm_large, 1, 0);
-	M_dft_imag_z.define(ba_fft, dm_large, 1, 0);
-	
-    }
-
     MultiFab H_dft_real_x;
     MultiFab H_dft_imag_x;
     MultiFab H_dft_real_y;
@@ -396,6 +305,14 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     // Calculate the Mx, My, and Mz fft's at the current time step
     // Each fft will be stored in seperate real and imaginary multifabs
     if (FFT_solver == 0) {
+      	// Allocate Mfield fft multifabs
+	M_dft_real_x.define(ba_large, dm_large, 1, 0);
+	M_dft_imag_x.define(ba_large, dm_large, 1, 0);
+	M_dft_real_y.define(ba_large, dm_large, 1, 0);
+	M_dft_imag_y.define(ba_large, dm_large, 1, 0);
+	M_dft_real_z.define(ba_large, dm_large, 1, 0);
+	M_dft_imag_z.define(ba_large, dm_large, 1, 0);
+	   
         ComputeForwardFFT(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
         ComputeForwardFFT(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
         ComputeForwardFFT(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
@@ -409,26 +326,15 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	H_dft_real_z.define(ba_large, dm_large, 1, 0);
 	H_dft_imag_z.define(ba_large, dm_large, 1, 0);
 
-        MultiFab Plt (ba_large, dm_large, 6, 0);
-	
-	MultiFab::Copy(Plt, M_dft_real_x, 0, 0, 1, 0);
-	MultiFab::Copy(Plt, M_dft_imag_x, 0, 1, 1, 0);
-	MultiFab::Copy(Plt, M_dft_real_y, 0, 2, 1, 0);
-	MultiFab::Copy(Plt, M_dft_imag_y, 0, 3, 1, 0);
-        MultiFab::Copy(Plt, M_dft_real_z, 0, 4, 1, 0);
-        MultiFab::Copy(Plt, M_dft_imag_z, 0, 5, 1, 0);
-	
-	WriteSingleLevelPlotfile("M_dft_fftw", Plt,
-	{"M_dft_real_x",
-	"M_dft_imag_x",
-	"M_dft_real_y",
-	"M_dft_imag_y",
-	"M_dft_real_z",
-	"M_dft_imag_z"},
-	geom_large, 0., 0);
-	
     } else {
-        ComputeForwardFFT_heffte(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
+       	M_dft_real_x.define(ba_fft, dm_large, 1, 0);
+	M_dft_imag_x.define(ba_fft, dm_large, 1, 0);
+	M_dft_real_y.define(ba_fft, dm_large, 1, 0);
+	M_dft_imag_y.define(ba_fft, dm_large, 1, 0);
+	M_dft_real_z.define(ba_fft, dm_large, 1, 0);
+	M_dft_imag_z.define(ba_fft, dm_large, 1, 0);
+	
+	ComputeForwardFFT_heffte(Mfield_padded[0], M_dft_real_x, M_dft_imag_x);
         ComputeForwardFFT_heffte(Mfield_padded[1], M_dft_real_y, M_dft_imag_y);
         ComputeForwardFFT_heffte(Mfield_padded[2], M_dft_real_z, M_dft_imag_z);
     
@@ -439,30 +345,6 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	H_dft_imag_y.define(ba_fft, dm_large, 1, 0);
 	H_dft_real_z.define(ba_fft, dm_large, 1, 0);
 	H_dft_imag_z.define(ba_fft, dm_large, 1, 0);
-    
-   
-        MultiFab Plt_heffte (ba_fft, dm_large, 6, 0);
-	
-	MultiFab::Copy(Plt_heffte, M_dft_real_x, 0, 0, 1, 0);
-	MultiFab::Copy(Plt_heffte, M_dft_imag_x, 0, 1, 1, 0);
-	MultiFab::Copy(Plt_heffte, M_dft_real_y, 0, 2, 1, 0);
-	MultiFab::Copy(Plt_heffte, M_dft_imag_y, 0, 3, 1, 0);
-        MultiFab::Copy(Plt_heffte, M_dft_real_z, 0, 4, 1, 0);
-        MultiFab::Copy(Plt_heffte, M_dft_imag_z, 0, 5, 1, 0);
-	
-	WriteSingleLevelPlotfile("M_dft_fftw", Plt_heffte,
-	{"M_dft_real_x",
-	"M_dft_imag_x",
-	"M_dft_real_y",
-	"M_dft_imag_y",
-	"M_dft_real_z",
-	"M_dft_imag_z"},
-	geom_fft, 0., 0);
-    }
-
-    if (FFT_solver == 0){
-    
-    } else {
     }
 
     for ( MFIter mfi(Kxx_fft_real); mfi.isValid(); ++mfi )
@@ -505,15 +387,6 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	    H_dft_real_x_ptr(i,j,k) =  Mx_real(i,j,k) * Kxx_real(i,j,k) + My_real(i,j,k) * Kxy_real(i,j,k) + Mz_real(i,j,k) * Kxz_real(i,j,k);
 	    H_dft_real_x_ptr(i,j,k) -= Mx_imag(i,j,k) * Kxx_imag(i,j,k) + My_imag(i,j,k) * Kxy_imag(i,j,k) + Mz_imag(i,j,k) * Kxz_imag(i,j,k);
 
-	    /*
-	    if (i==2 && j==2 && k==2) {
-	      Print() << "HACK " << H_dft_real_x_ptr(i,j,k) << std::endl;
-	      Print() << "HACK " << Mx_real(i,j,k) << std::endl;
-	      Print() << "HACK " << My_real(i,j,k) << std::endl;
-	      Print() << "HACK " << Kxy_real(i,j,k) << std::endl;
-	    }
-	    */
-
 	    H_dft_imag_x_ptr(i,j,k) =  Mx_real(i,j,k) * Kxx_imag(i,j,k) + My_real(i,j,k) * Kxy_imag(i,j,k) + Mz_real(i,j,k) * Kxz_imag(i,j,k);
 	    H_dft_imag_x_ptr(i,j,k) += Mx_imag(i,j,k) * Kxx_real(i,j,k) + My_imag(i,j,k) * Kxy_real(i,j,k) + Mz_imag(i,j,k) * Kxz_real(i,j,k);
 	    
@@ -541,37 +414,11 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
         ComputeInverseFFT(Hx_large, H_dft_real_x, H_dft_imag_x);
         ComputeInverseFFT(Hy_large, H_dft_real_y, H_dft_imag_y);
         ComputeInverseFFT(Hz_large, H_dft_real_z, H_dft_imag_z);
-       
-        MultiFab Plt (ba_large, dm_large, 3, 0);
-
-	MultiFab::Copy(Plt, H_dft_real_x, 0, 0, 1, 0);
-	MultiFab::Copy(Plt, H_dft_imag_x, 0, 1, 1, 0);
-	MultiFab::Copy(Plt, H_dft_real_y, 0, 2, 1, 0);
-	
-	WriteSingleLevelPlotfile("H_dft_FFTW", Plt,
-	{"H_dft_real_x,",
-	"H_dft_imag_x,",
-	"H_dft_real_y,"},
-	geom_large, 0., 0);
-	   
-
+      
     } else {
 	ComputeInverseFFT_heffte(Hx_large, H_dft_real_x, H_dft_imag_x);
         ComputeInverseFFT_heffte(Hy_large, H_dft_real_y, H_dft_imag_y);
         ComputeInverseFFT_heffte(Hz_large, H_dft_real_z, H_dft_imag_z);
-
-        MultiFab Plt_heffte (ba_fft, dm_large, 3, 0);
-
-	MultiFab::Copy(Plt_heffte, H_dft_real_x, 0, 0, 1, 0);
-	MultiFab::Copy(Plt_heffte, H_dft_imag_x, 0, 1, 1, 0);
-	MultiFab::Copy(Plt_heffte, H_dft_real_y, 0, 2, 1, 0);
-	
-	WriteSingleLevelPlotfile("H_dft_heffte", Plt_heffte,
-	{"H_dft_real_x",
-	"H_dft_imag_x",
-	"H_dft_real_y"},
-	geom_fft, 0., 0);
-	
     }
 
     // Copying the elements near the 'upper right' of the double-sized demag back to multifab that is the problem size
@@ -896,6 +743,8 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
     // 
     // **********************************
 
+    Box minimalBox = mf_out.boxArray().minimalBox();
+
     // since there is 1 MPI rank per box, here each MPI rank obtains its local box and the associated boxid
     Box local_box;
     int local_boxid;
@@ -950,9 +799,6 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
     // this copies the spectral data into a distributed MultiFab
     for (MFIter mfi(mf_dft_real); mfi.isValid(); ++mfi) {
 
-        // Array4<Real> const& realpart = mf_dft_real.array(mfi);
-        // Array4<Real> const& imagpart = mf_dft_imag.array(mfi);
-
         Array4< const double > realpart = mf_dft_real.array(mfi);
         Array4< const double > imagpart = mf_dft_imag.array(mfi); 
 	
@@ -962,21 +808,17 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-
 	    GpuComplex<Real> copy(realpart(i,j,k),imagpart(i,j,k));
             spectral(i,j,k) = copy;
-	    /*
-            Real re = realpart(i,j,k);             
-	    Real im = imagpart(i,j,k); 
-	   
-	    spectral(i,j,k).real() = re;
-	    spectral(i,j,k).imag() = im;
-	    */
-        });
+	    
+	});
     }
 
     BL_PROFILE("BackwardTransform");
     fft.backward(spectral_data, mf_out[local_boxid].dataPtr());
+
+    // Perform standard scaling after performing FFT
+    mf_out.mult(1./(2*n_cell[0] * 2* n_cell[1] * 2*n_cell[2]));
 
 }
 
