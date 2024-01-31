@@ -285,12 +285,6 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
         Mfield_padded[dir].ParallelCopy(Mfield[dir], 0, 0, 1);
     }
 
-	if (FFT_solver == 0) {
-	VisMF::Write(Mfield_padded[1],"padded_fftw");
-	} else {
-	VisMF::Write(Mfield_padded[1],"padded_heffte");
-	}
-
     MultiFab M_dft_real_x;
     MultiFab M_dft_imag_x;
     MultiFab M_dft_real_y;
@@ -431,22 +425,6 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     ParallelCopy(H_demagfield[0], dest_box, Hx_large, 0, 0, 1, IntVect(0), dtos);
     ParallelCopy(H_demagfield[1], dest_box, Hy_large, 0, 0, 1, IntVect(0), dtos);
     ParallelCopy(H_demagfield[2], dest_box, Hz_large, 0, 0, 1, IntVect(0), dtos);
-    
-    BoxArray ba = H_demagfield[0].boxArray();
-    DistributionMapping dm = H_demagfield[0].DistributionMap();    
-
-    MultiFab Plt_demag(ba_large, dm_large, 3, 0);
-
-    MultiFab::Copy(Plt_demag, Hx_large, 0, 0, 1, 0);
-    MultiFab::Copy(Plt_demag, Hy_large, 0, 1, 1, 0);
-    MultiFab::Copy(Plt_demag, Hz_large, 0, 2, 1, 0);
-    
-    
-    WriteSingleLevelPlotfile("H_demag", Plt_demag,
-    {"Hx",
-    "Hy",
-    "Hz"},
-    geom_large, 0., 0);
     
 }
 
