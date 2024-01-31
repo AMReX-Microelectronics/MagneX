@@ -11,7 +11,6 @@ void Demagnetization::define()
     // timer for profiling
     BL_PROFILE_VAR("Demagnetization::define()",DemagDefine);
 
-
     RealBox real_box_large({AMREX_D_DECL(              prob_lo[0],              prob_lo[1],              prob_lo[2])},
                            {AMREX_D_DECL( 2*prob_hi[0]-prob_lo[0], 2*prob_hi[1]-prob_lo[1], 2*prob_hi[2]-prob_lo[2])});
 
@@ -496,8 +495,10 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     heffte_complex* spectral_data = (heffte_complex*) spectral_field.dataPtr();
 
     // Perform the FFT and store it in 'spectral_data'
-    BL_PROFILE("ForwardTransform");
-    fft.forward(mf_in[local_boxid].dataPtr(), spectral_data);
+    {
+        BL_PROFILE("ForwardTransform_heffte");
+        fft.forward(mf_in[local_boxid].dataPtr(), spectral_data);
+    }
 
     // this copies the spectral data into a distributed MultiFab
     for (MFIter mfi(mf_dft_real); mfi.isValid(); ++mfi) {
@@ -626,22 +627,25 @@ void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
 
     ParallelDescriptor::Barrier();
 
-    // ForwardTransform
-    for (MFIter mfi(mf_in_onegrid); mfi.isValid(); ++mfi) {
-      int i = mfi.LocalIndex();
+    {
+        BL_PROFILE("ForwardTransform");
+        // ForwardTransform
+        for (MFIter mfi(mf_in_onegrid); mfi.isValid(); ++mfi) {
+            int i = mfi.LocalIndex();
 #ifdef AMREX_USE_CUDA
-      cufftSetStream(forward_plan[i], Gpu::gpuStream());
-      cufftResult result = cufftExecD2Z(forward_plan[i],
-                    mf_in_onegrid[mfi].dataPtr(),
-                    reinterpret_cast<FFTcomplex*>
-                    (spectral_field[i]->dataPtr()));
-      if (result != CUFFT_SUCCESS) {
-    AllPrint() << " forward transform using cufftExec failed! Error: "
-              << cufftErrorToString(result) << "\n";
-      }
+            cufftSetStream(forward_plan[i], Gpu::gpuStream());
+            cufftResult result = cufftExecD2Z(forward_plan[i],
+                                              mf_in_onegrid[mfi].dataPtr(),
+                                              reinterpret_cast<FFTcomplex*>
+                                              (spectral_field[i]->dataPtr()));
+            if (result != CUFFT_SUCCESS) {
+                AllPrint() << " forward transform using cufftExec failed! Error: "
+                           << cufftErrorToString(result) << "\n";
+            }
 #else
-      fftw_execute(forward_plan[i]);
+            fftw_execute(forward_plan[i]);
 #endif
+        }
     }
 
     // copy data to a full-sized MultiFab
@@ -794,8 +798,10 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
 	});
     }
 
-    BL_PROFILE("BackwardTransform");
-    fft.backward(spectral_data, mf_out[local_boxid].dataPtr());
+    {
+        BL_PROFILE("BackwardTransform_heffte");
+        fft.backward(spectral_data, mf_out[local_boxid].dataPtr());
+    }
 
     // Perform standard scaling after performing FFT
     mf_out.mult(1./(2*n_cell[0] * 2* n_cell[1] * 2*n_cell[2]));
@@ -895,14 +901,14 @@ void Demagnetization::ComputeInverseFFT(MultiFab&                        mf_out,
 #if (AMREX_SPACEDIM == 2)
       cufftResult result = cufftPlan2d(&bplan, fft_size[1], fft_size[0], CUFFT_Z2D);
       if (result != CUFFT_SUCCESS) {
-    AllPrint() << " cufftplan2d forward failed! Error: "
-              << cufftErrorToString(result) << "\n";
+          AllPrint() << " cufftplan2d forward failed! Error: "
+                     << cufftErrorToString(result) << "\n";
       }
 #elif (AMREX_SPACEDIM == 3)
       cufftResult result = cufftPlan3d(&bplan, fft_size[2], fft_size[1], fft_size[0], CUFFT_Z2D);
       if (result != CUFFT_SUCCESS) {
-    AllPrint() << " cufftplan3d forward failed! Error: "
-              << cufftErrorToString(result) << "\n";
+          AllPrint() << " cufftplan3d forward failed! Error: "
+                     << cufftErrorToString(result) << "\n";
       }
 #endif
 
@@ -925,25 +931,26 @@ void Demagnetization::ComputeInverseFFT(MultiFab&                        mf_out,
 #endif
 
       backward_plan.push_back(bplan);// This adds an instance of bplan to the end of backward_plan
-      }
+    }
 
-    for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
-      int i = mfi.LocalIndex();
-
+    {
+        BL_PROFILE("BackwardTransform");
+        for (MFIter mfi(mf_onegrid_out); mfi.isValid(); ++mfi) {
+            int i = mfi.LocalIndex();
 #ifdef AMREX_USE_CUDA
-      cufftSetStream(backward_plan[i], Gpu::gpuStream());
-      cufftResult result = cufftExecZ2D(backward_plan[i],
-                           reinterpret_cast<FFTcomplex*>
-                           (spectral_field[i]->dataPtr()),
-                           mf_onegrid_out[mfi].dataPtr());
-       if (result != CUFFT_SUCCESS) {
-         AllPrint() << " inverse transform using cufftExec failed! Error: "
-         << cufftErrorToString(result) << "\n";
-       }
+            cufftSetStream(backward_plan[i], Gpu::gpuStream());
+            cufftResult result = cufftExecZ2D(backward_plan[i],
+                                              reinterpret_cast<FFTcomplex*>
+                                              (spectral_field[i]->dataPtr()),
+                                              mf_onegrid_out[mfi].dataPtr());
+            if (result != CUFFT_SUCCESS) {
+                AllPrint() << " inverse transform using cufftExec failed! Error: "
+                           << cufftErrorToString(result) << "\n";
+            }
 #else
-      fftw_execute(backward_plan[i]);
+            fftw_execute(backward_plan[i]);
 #endif
-
+        }
     }
 
       // Standard scaling after fft and inverse fft using FFTW
