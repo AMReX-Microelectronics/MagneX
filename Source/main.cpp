@@ -93,6 +93,8 @@ void main_main ()
         ba.define(domain);
 
         // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+        // create IntVect of max_grid_size
+        IntVect max_grid_size(AMREX_D_DECL(max_grid_size_x,max_grid_size_y,max_grid_size_z));
         ba.maxSize(max_grid_size);
 
         // How Boxes are distrubuted among MPI processes

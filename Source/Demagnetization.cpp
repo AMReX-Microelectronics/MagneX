@@ -33,7 +33,9 @@ void Demagnetization::define()
     ba_large.define(domain_large);
 
     // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-    ba_large.maxSize(2*max_grid_size);
+    // create IntVect of max_grid_size (double the value since this is for the large domain)
+    IntVect max_grid_size(AMREX_D_DECL(2*max_grid_size_x,2*max_grid_size_y,2*max_grid_size_z));
+    ba_large.maxSize(max_grid_size);
 
     // How Boxes are distrubuted among MPI processes
     dm_large.define(ba_large);

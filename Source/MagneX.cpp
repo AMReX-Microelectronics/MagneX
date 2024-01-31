@@ -5,7 +5,9 @@
 // Number of cells in each dimension
 AMREX_GPU_MANAGED amrex::GpuArray<int, 3> MagneX::n_cell;
 
-int MagneX::max_grid_size;
+int MagneX::max_grid_size_x;
+int MagneX::max_grid_size_y;
+int MagneX::max_grid_size_z;
 
 // physical lo/hi coordiates
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_lo;
@@ -90,7 +92,9 @@ void InitializeMagneXNamespace() {
         n_cell[i] = temp_int[i];
     }
 
-    pp.get("max_grid_size",max_grid_size);
+    pp.get("max_grid_size_x",max_grid_size_x);
+    pp.get("max_grid_size_y",max_grid_size_y);
+    pp.get("max_grid_size_z",max_grid_size_z);
 
     amrex::Vector<amrex::Real> temp(AMREX_SPACEDIM);
     pp.getarr("prob_lo",temp);
