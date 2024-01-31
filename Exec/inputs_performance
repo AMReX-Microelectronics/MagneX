@@ -11,7 +11,6 @@ restart = -1
 
 prob_lo = 0. 0. 0.
 prob_hi = 512.e-9 512.e-9 512.e-9
-prob_hi = 256.e-9 256.e-9 256.e-9
 
 mu0 = 1.25663e-6
 
