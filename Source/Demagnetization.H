@@ -29,6 +29,19 @@ class Demagnetization {
     MultiFab Kzz_fft_real;
     MultiFab Kzz_fft_imag;
 
+    // fftw/cufft support
+#ifdef AMREX_USE_CUDA
+    using FFTplan = cufftHandle;
+    using FFTcomplex = cuDoubleComplex;
+#else
+    using FFTplan = fftw_plan;
+    using FFTcomplex = fftw_complex;
+#endif
+    FFTplan fplan;
+    bool forward_plan_created = false;
+    FFTplan bplan;
+    bool backward_plan_created = false;
+    
 public:
 
     Demagnetization();
