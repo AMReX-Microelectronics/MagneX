@@ -591,7 +591,7 @@ void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
                                  The_Device_Arena()));
       spectral_field.back()->setVal<RunOn::Device>(0.0); // touch the memory
 
-      if (!forward_plan_created) {
+      if (!forward_plan_created || FFT_solver==0) {
 
 #ifdef AMREX_USE_CUDA
 
@@ -633,8 +633,6 @@ void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
       forward_plan.push_back(fplan);
 
     }
-
-    ParallelDescriptor::Barrier();
 
     BL_PROFILE_VAR("ForwardTransform",ForwardTransform);
     // ForwardTransform
@@ -722,6 +720,7 @@ void Demagnetization::ComputeForwardFFT(const MultiFab&    mf_in,
 #endif
      }
     */
+
 }
 
 // Inverse FFT for GPUs
