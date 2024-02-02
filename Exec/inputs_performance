@@ -4,7 +4,7 @@ max_grid_size_y = 64
 max_grid_size_z = 64
 
 dt = 1.e-15
-nsteps = 5
+nsteps = 10
 plot_int = -1
 chk_int = -1
 restart = -1
