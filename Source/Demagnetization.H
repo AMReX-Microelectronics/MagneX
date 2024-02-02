@@ -41,7 +41,16 @@ class Demagnetization {
     bool forward_plan_created = false;
     FFTplan bplan;
     bool backward_plan_created = false;
-    
+
+    // heffte support
+#ifdef AMREX_USE_CUDA
+    std::unique_ptr< heffte::fft3d_r2c<heffte::backend::cufft> > fft;
+#elif AMREX_USE_HIP
+    std::unique_ptr< heffte::fft3d_r2c<heffte::backend::rocfft> > fft;
+#else
+    std::unique_ptr< heffte::fft3d_r2c<heffte::backend::fftw> > fft;
+#endif
+
 public:
 
     Demagnetization();

@@ -3,6 +3,8 @@
 #include "CartesianAlgorithm_K.H"
 #include <AMReX_PlotFileUtil.H>
 
+using namespace std;
+
 Demagnetization::Demagnetization() {}
 
 // Compute the Demag tensor in realspace and its FFT
@@ -478,25 +480,29 @@ void Demagnetization::ComputeForwardFFT_heffte(const MultiFab&    mf_in,
     // each MPI rank gets storage for its piece of the fft
     BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
 
+    if (fft == nullptr) {
+    
 #ifdef AMREX_USE_CUDA
-    heffte::fft2d_r2c<heffte::backend::cufft> fft
+        fft = std::make_unique< heffte::fft3d_r2c<heffte::backend::cufft> >
 #elif AMREX_USE_HIP
-    heffte::fft2d_r2c<heffte::backend::rocfft> fft
+        fft = std::make_unique< heffte::fft3d_r2c<heffte::backend::rocfft> >
 #else
-    heffte::fft2d_r2c<heffte::backend::fftw> fft
+        fft = std::make_unique< heffte::fft3d_r2c<heffte::backend::fftw> >
 #endif
-        ({{local_box.smallEnd(0),local_box.smallEnd(1),local_box.smallEnd(2)},
-          {local_box.bigEnd(0)  ,local_box.bigEnd(1)  ,local_box.bigEnd(2)}},
-         {{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
-          {c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}},
+        (heffte::box3d<int>(std::array<int,3>{local_box.smallEnd(0),local_box.smallEnd(1),local_box.smallEnd(2)},
+                            std::array<int,3>{local_box.bigEnd(0)  ,local_box.bigEnd(1)  ,local_box.bigEnd(2)}),
+         heffte::box3d<int>(std::array<int,3>{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
+                            std::array<int,3>{c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}),
          0, ParallelDescriptor::Communicator());
 
+    }
+    
     using heffte_complex = typename heffte::fft_output<Real>::type;
     heffte_complex* spectral_data = (heffte_complex*) spectral_field.dataPtr();
 
     // Perform the FFT and store it in 'spectral_data'
     BL_PROFILE_VAR("ForwardTransform_heffte",ForwardTransform_heffte);
-    fft.forward(mf_in[local_boxid].dataPtr(), spectral_data);
+    fft->forward(mf_in[local_boxid].dataPtr(), spectral_data);
     BL_PROFILE_VAR_STOP(ForwardTransform_heffte);
 
     // this copies the spectral data into a distributed MultiFab
@@ -769,18 +775,22 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
     // each MPI rank gets storage for its piece of the fft
     BaseFab<GpuComplex<Real> > spectral_field(c_local_box, 1, The_Device_Arena());
 
+    if (fft == nullptr) {
+
 #ifdef AMREX_USE_CUDA
-    heffte::fft2d_r2c<heffte::backend::cufft> fft
+        fft = std::make_unique< heffte::fft2d_r2c<heffte::backend::cufft> >
 #elif AMREX_USE_HIP
-    heffte::fft2d_r2c<heffte::backend::rocfft> fft
+        fft = std::make_unique< heffte::fft2d_r2c<heffte::backend::rocfft> >
 #else
-    heffte::fft2d_r2c<heffte::backend::fftw> fft
+        fft = std::make_unique< heffte::fft2d_r2c<heffte::backend::fftw> >
 #endif
-        ({{local_box.smallEnd(0),local_box.smallEnd(1),local_box.smallEnd(2)},
-          {local_box.bigEnd(0)  ,local_box.bigEnd(1)  ,local_box.bigEnd(2)}},
-         {{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
-          {c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}},
-         0, ParallelDescriptor::Communicator());
+            (heffte::box3d<int>(std::array<int,3>{local_box.smallEnd(0),local_box.smallEnd(1),local_box.smallEnd(2)},
+                                std::array<int,3>{local_box.bigEnd(0)  ,local_box.bigEnd(1)  ,local_box.bigEnd(2)}),
+             heffte::box3d<int>(std::array<int,3>{c_local_box.smallEnd(0),c_local_box.smallEnd(1),c_local_box.smallEnd(2)},
+                                std::array<int,3>{c_local_box.bigEnd(0)  ,c_local_box.bigEnd(1)  ,c_local_box.bigEnd(2)}),
+             0, ParallelDescriptor::Communicator());
+        
+    }
 
     using heffte_complex = typename heffte::fft_output<Real>::type;
     heffte_complex* spectral_data = (heffte_complex*) spectral_field.dataPtr();
@@ -804,7 +814,7 @@ void Demagnetization::ComputeInverseFFT_heffte(MultiFab&    mf_out,
     }
 
     BL_PROFILE_VAR("BackwardTransform_heffte",BackwardTransform_heffte);
-    fft.backward(spectral_data, mf_out[local_boxid].dataPtr());
+    fft->backward(spectral_data, mf_out[local_boxid].dataPtr());
     BL_PROFILE_VAR_STOP(BackwardTransform_heffte);
 
     // Perform standard scaling after performing FFT
