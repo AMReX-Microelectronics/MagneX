@@ -1,5 +1,8 @@
 n_cell = 64 64 128
-max_grid_size = 32
+max_grid_size_x = 32
+max_grid_size_y = 32
+max_grid_size_z = 32
+
 dt = 1.0e-14
 nsteps = 4
 plot_int = 1

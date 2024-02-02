@@ -93,6 +93,8 @@ void main_main ()
         ba.define(domain);
 
         // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+        // create IntVect of max_grid_size
+        IntVect max_grid_size(AMREX_D_DECL(max_grid_size_x,max_grid_size_y,max_grid_size_z));
         ba.maxSize(max_grid_size);
 
         // How Boxes are distrubuted among MPI processes
@@ -149,9 +151,8 @@ void main_main ()
 
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
-    if (demag_coupling == 1) amrex::Print() << " FFT_solver = " << FFT_solver << "\n";
+    if (demag_coupling == 1) amrex::Print() << " FFT_solver           = " << FFT_solver << "\n";
     amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
-    amrex::Print() << " FFT_solver           = " << FFT_solver          << "\n";
     amrex::Print() << " M_normalization      = " << M_normalization     << "\n";
     amrex::Print() << " exchange_coupling    = " << exchange_coupling   << "\n";
     amrex::Print() << " DMI_coupling         = " << DMI_coupling        << "\n";

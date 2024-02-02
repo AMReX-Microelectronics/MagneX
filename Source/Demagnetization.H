@@ -13,6 +13,9 @@ class Demagnetization {
     DistributionMapping dm_large;
     Geometry geom_large;
 
+    BoxArray ba_fft;
+    Geometry geom_fft;
+
     MultiFab Kxx_fft_real;
     MultiFab Kxx_fft_imag;
     MultiFab Kxy_fft_real;
@@ -25,6 +28,28 @@ class Demagnetization {
     MultiFab Kyz_fft_imag;
     MultiFab Kzz_fft_real;
     MultiFab Kzz_fft_imag;
+
+    // fftw/cufft support
+#ifdef AMREX_USE_CUDA
+    using FFTplan = cufftHandle;
+    using FFTcomplex = cuDoubleComplex;
+#else
+    using FFTplan = fftw_plan;
+    using FFTcomplex = fftw_complex;
+#endif
+    FFTplan fplan;
+    bool forward_plan_created = false;
+    FFTplan bplan;
+    bool backward_plan_created = false;
+
+    // heffte support
+#ifdef AMREX_USE_CUDA
+    std::unique_ptr< heffte::fft3d_r2c<heffte::backend::cufft> > fft;
+#elif AMREX_USE_HIP
+    std::unique_ptr< heffte::fft3d_r2c<heffte::backend::rocfft> > fft;
+#else
+    std::unique_ptr< heffte::fft3d_r2c<heffte::backend::fftw> > fft;
+#endif
 
 public:
 
@@ -42,6 +67,10 @@ public:
     void ComputeForwardFFT(const MultiFab&    mf_in,
                            MultiFab&          mf_dft_real,
                            MultiFab&          mf_dft_imag);
+
+    void ComputeInverseFFT_heffte(MultiFab&                        mf_out,
+                                  const MultiFab&                  mf_dft_real,
+                                  const MultiFab&                  mf_dft_imag);
 
     void ComputeInverseFFT(MultiFab&                        mf_out,
                            const MultiFab&                  mf_dft_real,
