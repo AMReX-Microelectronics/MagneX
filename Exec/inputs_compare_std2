@@ -1,36 +1,37 @@
-n_cell = 64 64 64
-max_grid_size_x = 64
-max_grid_size_y = 64
-max_grid_size_z = 64
+n_cell = 100 20 2   
+max_grid_size_x = 100
+max_grid_size_y = 20
+max_grid_size_z = 2
 
-dt = 1.e-15
-nsteps = 10
-plot_int = -1
+dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
+nsteps = 100000
+plot_int = 10000
 chk_int = -1
 restart = -1
+diag_type = 4
 
 prob_lo = 0. 0. 0.
-prob_hi = 512.e-9 512.e-9 512.e-9
+prob_hi = 500.e-9 100.e-9 10.e-9
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<512.e-9)*(y>0.)*(y<512.e-9)*(z>0.)*(z<512.e-9)"
+Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9)"
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
-# Field 1:  mu_0 Hx=-24.6 mT, mu_0 Hy= 4.3 mT, mu_0 Hz= 0.0 mT
+# Field Ensemble 1:  mu_0 [Hx= +50mT -> -50mT -> +50mT], mu_0 [Hy= +50mT -> -50mT -> +50mT], mu_0 [Hz= +50mT -> -50mT -> +50mT],
 # which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
-timedependent_Hbias = 0
-Hx_bias_parser(x,y,z,t) = "1.e5"
-Hy_bias_parser(x,y,z,t) = "1.e5"
-Hz_bias_parser(x,y,z,t) = "1.e5"
+timedependent_Hbias = 1
+Hx_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
+Hy_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
+Hz_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
 
-timedependent_alpha = 0
-alpha_parser(x,y,z,t) =    "(x>0.)*(x<512.e-9)*(y>0.)*(y<512.e-9)*(z>0.)*(z<512.e-9) * 0.5"
-Ms_parser(x,y,z) =         "(x>0.)*(x<512.e-9)*(y>0.)*(y<512.e-9)*(z>0.)*(z<512.e-9) * 8.e5"
-gamma_parser(x,y,z) =      "(x>0.)*(x<512.e-9)*(y>0.)*(y<512.e-9)*(z>0.)*(z<512.e-9) * -1.759e11"
-exchange_parser(x,y,z) =   "(x>0.)*(x<512.e-9)*(y>0.)*(y<512.e-9)*(z>0.)*(z<512.e-9) * 1.3e-11"
-anisotropy_parser(x,y,z) = "(x>0.)*(x<512.e-9)*(y>0.)*(y<512.e-9)*(z>0.)*(z<512.e-9) * -139.26"
+timedependent_alpha = 1
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * 0.5"
+Ms_parser(x,y,z) =       " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9)* 1.3e-11"
+anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
 demag_coupling = 1
@@ -38,7 +39,7 @@ FFT_solver = 1
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
 exchange_coupling = 1
 anisotropy_coupling = 0
-anisotropy_axis = 0.0 1.0 0.0
+anisotropy_axis = 1.0 1.0 1.0
 DMI_coupling = 0
 
 # INTEGRATION
