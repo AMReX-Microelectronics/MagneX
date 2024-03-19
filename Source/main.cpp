@@ -55,6 +55,7 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> H_exchangefield;
     Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
     Array<MultiFab, AMREX_SPACEDIM> H_anisotropyfield;
+    Array<MultiFab, AMREX_SPACEDIM> Heff;
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
@@ -122,11 +123,14 @@ void main_main ()
         H_exchangefield[dir].define(ba, dm, 1, 0);
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
+         
+	Heff[dir].define(ba, dm, 1, 1);
 
         // set to zero in case we don't include
         H_exchangefield[dir].setVal(0.);
         H_DMIfield[dir].setVal(0.);
         H_anisotropyfield[dir].setVal(0.);
+        Heff[dir].setVal(0.);
 
         LLG_RHS[dir].define(ba, dm, 1, 0);
         LLG_RHS_pre[dir].define(ba, dm, 1, 0);
@@ -150,6 +154,7 @@ void main_main ()
     MultiFab anisotropy(ba, dm, 1, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
+    amrex::Print() << " precession           = " << precession          << "\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
     if (demag_coupling == 1) amrex::Print() << " FFT_solver           = " << FFT_solver << "\n";
     amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
@@ -466,7 +471,36 @@ void main_main ()
             normalized_Mx_prev = normalized_Mx;
         }
         
-        
+	/*
+        // standard problem 3 diagnostics	
+        if (diag_type == 3) {
+
+	    Calculate_Heff(Heff, H_demagfield, H_anisotropyfield, H_exchangefield, H_biasfield);
+
+	    IntVect location(AMREX_D_DECL(0,0,0));
+
+	    Real magnitude = Coercivity(Mfield, Heff, location);
+
+	        Print() << "Coercivity retrieved at: " << location << "  "
+			<< "... with magnitude = " << magnitude << std::endl;
+
+	}
+        */
+
+	if (diag_type == 2) {
+	
+            Real Heff_x = SumHeff(H_demagfield[0], H_exchangefield[0], H_biasfield[0]);
+            Real Heff_y = SumHeff(H_demagfield[1], H_exchangefield[1], H_biasfield[1]);
+            Real Heff_z = SumHeff(H_demagfield[2], H_exchangefield[2], H_biasfield[2]);
+
+	    Print() << "time = " << time << " "
+                    << "Heff: "
+                    << Heff_x/num_mag << " "
+                    << Heff_y/num_mag << " "
+                    << Heff_z/num_mag << std::endl;
+
+	}
+
         // copy new solution into old solution
         for (int comp = 0; comp < 3; comp++) {
             MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
