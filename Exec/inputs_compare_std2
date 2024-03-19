@@ -1,44 +1,45 @@
-n_cell = 28 28 28
-max_grid_size_x = 28
-max_grid_size_y = 28
-max_grid_size_z = 28
+n_cell = 100 20 2   
+max_grid_size_x = 100
+max_grid_size_y = 20
+max_grid_size_z = 2
 
-dt = 2.5e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 1000000
+dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
+nsteps = 100000
 plot_int = 10000
 chk_int = -1
 restart = -1
 diag_type = 4
 
 prob_lo = 0. 0. 0.
-prob_hi = 8.4e-8 8.4e-8 8.4e-8
+prob_hi = 500.e-9 100.e-9 10.e-9
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8)"
+Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9)"
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
-Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
-Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
-Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+# Field Ensemble 1:  mu_0 [Hx= +50mT -> -50mT -> +50mT], mu_0 [Hy= +50mT -> -50mT -> +50mT], mu_0 [Hz= +50mT -> -50mT -> +50mT],
+# which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
+timedependent_Hbias = 1
+Hx_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
+Hy_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
+Hz_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
 
-# We derive exchange parser from the dimensionless L/l_ex 
-# increasing the domain size L we see a new domain pattern form at a certain threshold
-timedependent_alpha = 0
-alpha_parser(x,y,z,t) =  " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8) * 0.5"
-Ms_parser(x,y,z) =       " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8) * 8.e5"
-gamma_parser(x,y,z) =    " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8) * -1.759e11"
-exchange_parser(x,y,z) = " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8)* 4.0212e-11"
-anisotropy_parser(x,y,z) = " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8)* 40212.16"
+timedependent_alpha = 1
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * 0.5"
+Ms_parser(x,y,z) =       " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9)* 1.3e-11"
+anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
 demag_coupling = 1
-FFT_solver = 0
+FFT_solver = 1
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
 exchange_coupling = 1
-anisotropy_coupling = 1
-anisotropy_axis = 0.0 0.0 1.0
+anisotropy_coupling = 0
+anisotropy_axis = 1.0 1.0 1.0
 DMI_coupling = 0
 
 # INTEGRATION
@@ -46,7 +47,7 @@ DMI_coupling = 0
 TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 5 #amrex/sundials backend integrators
+#TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 # tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
