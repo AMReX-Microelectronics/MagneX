@@ -1,0 +1,42 @@
+SUNDIALS installation guide:
+https://computing.llnl.gov/projects/sundials/faq#inst
+
+Installation
+
+# Download tar file for SUNDIAL version BEFORE v7.0.0 and extract it at the same level as amrex.
+
+# at the same level that amrex is cloned, do:
+
+>> mkdir sundials
+>> cd sundials
+>> mkdir instdir
+>> mkdir builddir
+>> cd build
+
+
+######################
+HOST BUILD
+######################
+
+>> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir \ 
+
+> -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples \
+
+>  ../../sundials-x.y.z # where x.y.z is the version of sundials
+
+>> make -j4
+>> make install
+
+# in your .bashrc or preferred configuration file:
+
+>> export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/pathto/sundials/instdir/lib/
+
+# now you are ready to compile MagneX with:
+
+>> make -j4 USE_SUNDIALS=TRUE USE_TIME_INTEGRATOR=TRUE
+
+# in your inputs file, you will need to have:
+
+integration.type = SUNDIALS
+integration.rk.type = # any number 1-4
+integration.sundials.strategy = ERK # or SSPRK3
