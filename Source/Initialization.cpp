@@ -53,6 +53,8 @@ void InitializeMagneticProperties(MultiFab& alpha,
     anisotropy_parser.registerVariables({"x","y","z"});
     auto anisotropy_p = anisotropy_parser.compile<3>();
 
+    // ADD anis_const parser here!!!
+
     std::string DMI_parser_string;
     pp.get("DMI_parser(x,y,z)",DMI_parser_string);
     Parser DMI_parser(DMI_parser_string);

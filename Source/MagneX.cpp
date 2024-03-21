@@ -59,7 +59,7 @@ int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
 
 // turn off precession term, 1 = no precession
-AMREX_GPU_MANAGED int MagneX::precession;
+int MagneX::precession;
 
 // turn on demagnetization
 AMREX_GPU_MANAGED int MagneX::demag_coupling;
@@ -148,7 +148,8 @@ void InitializeMagneXNamespace() {
     pp.get("timedependent_Hbias",timedependent_Hbias);
     pp.get("timedependent_alpha",timedependent_alpha);
 
-    pp.get("precession",precession);
+    precession = 0;
+    pp.query("precession",precession);
    
     pp.get("demag_coupling",demag_coupling);
 

@@ -108,53 +108,11 @@ Real SumHeff(MultiFab& H_demagfield,
     return sum;
 }
 
-/*
-Real Coercivity(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-	        Array< MultiFab, AMREX_SPACEDIM >& Heff,
-		IntVect& location)
-
-{
-
-	Real magnitude = 0.0;
-
-	for ( MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi )
-        {
-            const Box& bx = mfi.validbox();
-
-	    // Real& magnitude_ptr = magnitude;
-
-	    const Array4<Real const>& Mx_ptr = Mfield[0].array(mfi);
-            const Array4<Real const>& My_ptr = Mfield[1].array(mfi);
-            const Array4<Real const>& Mz_ptr = Mfield[2].array(mfi);
-
-            const Array4<Real const>& Hx_ptr = Heff[0].array(mfi);
-            const Array4<Real const>& Hy_ptr = Heff[1].array(mfi);
-            const Array4<Real const>& Hz_ptr = Heff[2].array(mfi);
-
-            amrex::ParallelFor( bx, [&] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-
-                // Check if the dot product of M and H is zero
-	        // If so, record the point in the field that this occurs, and the magnitude of the field at that point
-	        if(fabs(Mx_ptr(i,j,k)*Hx_ptr(i,j,k) + My_ptr(i,j,k)*Hx_ptr(i,j,k) + Mz_ptr(i,j,k)*Hz_ptr(i,j,k)) <= 1e-5) {
-		    Real temp_magnitude = sqrt((Mx_ptr(i,j,k)*Mx_ptr(i,j,k)) + (My_ptr(i,j,k)*My_ptr(i,j,k)) + (Mz_ptr(i,j,k)*Mz_ptr(i,j,k)));
-
-		    // location = (i,j,k);
-	            magnitude = temp_magnitude;
-	            //indicate that the coercivity exists
-	        }
-    	    });
-         }
-	return magnitude;
-}
-*/
-
 Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_x,
                       MultiFab& Mfield_y,
                       MultiFab& Mfield_z,
-		      MultiFab& anisotropy,
-		      long angle[])
+		      MultiFab& anisotropy)
 {
     // timer for profiling
     // BL_PROFILE_VAR("SumNormalizedM()",SumNormalizedM);
@@ -164,6 +122,9 @@ Real AnisotropyEnergy(MultiFab& Ms,
     ReduceData<Real> reduce_data(reduce_op);
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
+
+    int comp=0;
+    Real K = anisotropy.max(comp);
 
     for (MFIter mfi(Ms,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
@@ -179,7 +140,7 @@ Real AnisotropyEnergy(MultiFab& Ms,
                        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
             if (fab(i,j,k) > 0.) {
-		return {-(anis(i,j,k)) * std::pow((Mx(i,j,k)*angle[0] + My(i,j,k)*angle[1] + Mz(i,j,k)*angle[2]), 2)};
+		return {-(K) * std::pow((Mx(i,j,k)*anisotropy_axis[0] + My(i,j,k)*anisotropy_axis[1] + Mz(i,j,k)*anisotropy_axis[2]), 2)};
             } else {
                 return {0.};
             }

@@ -70,8 +70,7 @@ Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_x,
                       MultiFab& Mfield_y,
                       MultiFab& Mfield_z,
-                      MultiFab& anisotropy,
-                      long angle[]);
+                      MultiFab& anisotropy);
 
 /*
   EffectiveAnisotropyField.cpp
