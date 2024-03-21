@@ -1,7 +1,5 @@
 # AMREX_HOME defines the directory in which we will find all the AMReX code.
 AMREX_HOME ?= ../../amrex
-HEFFTE_HOME ?= ../../heffte/build
-
 
 DEBUG        = FALSE
 USE_MPI      = TRUE
@@ -13,6 +11,12 @@ DIM          = 3
 
 USE_TIME_INTEGRATOR = FALSE
 USE_SUNDIALS = FALSE
+
+ifeq ($(USE_CUDA),TRUE)
+  HEFFTE_HOME ?= ../../heffte/build_cuda
+else ifeq ($(USE_CUDA),FALSE) 
+  HEFFTE_HOME ?= ../../heffte/build
+endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
