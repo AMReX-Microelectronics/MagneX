@@ -230,14 +230,15 @@ void main_main ()
     }
 
 #ifdef AMREX_USE_SUNDIALS
-/*
-    TimeIntegrator<Vector<MultiFab> > integrator(Mfield_old);
-*/
-    amrex::Vector<MultiFab> vMfield_old{AMREX_D_DECL(MultiFab(Mfield_old[0],amrex::make_alias,0,Mfield_old[0].nComp()),
-		                                     MultiFab(Mfield_old[1],amrex::make_alias,0,Mfield_old[1].nComp()),
-						     MultiFab(Mfield_old[2],amrex::make_alias,0,Mfield_old[2].nComp()))};
+    //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
+    //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
+    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
+    amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+    }
     TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old);
-    amrex::Abort("Fix Sundials");
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -407,14 +408,6 @@ void main_main ()
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
 #ifdef AMREX_USE_SUNDIALS
-
-            amrex::Vector<MultiFab> vMfield_old{AMREX_D_DECL(MultiFab(Mfield_old[0],amrex::make_alias,0,Mfield_old[0].nComp()),
-		                                             MultiFab(Mfield_old[1],amrex::make_alias,0,Mfield_old[1].nComp()),
-						             MultiFab(Mfield_old[2],amrex::make_alias,0,Mfield_old[2].nComp()))};
-            amrex::Vector<MultiFab> vMfield{AMREX_D_DECL(MultiFab(Mfield[0],amrex::make_alias,0,Mfield[0].nComp()),
-		                                         MultiFab(Mfield[1],amrex::make_alias,0,Mfield[1].nComp()),
-						         MultiFab(Mfield[2],amrex::make_alias,0,Mfield[2].nComp()))};
-
             // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ) {
                 
@@ -422,7 +415,10 @@ void main_main ()
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     rhs[idim].setVal(0.);
                 } 
- 
+
+	        //alias rhs and old_state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
+		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
+
                 Array<MultiFab, AMREX_SPACEDIM> ar_rhs{AMREX_D_DECL(MultiFab(rhs[0],amrex::make_alias,0,rhs[0].nComp()),
 		                                                    MultiFab(rhs[1],amrex::make_alias,0,rhs[1].nComp()),
 			       			                    MultiFab(rhs[2],amrex::make_alias,0,rhs[2].nComp()))};
@@ -475,12 +471,7 @@ void main_main ()
             integrator.set_post_update(post_update_fun);
                 
             // integrate forward one step from `time` by `dt` to fill S_new
-/*
-            integrator.advance(Mfield_old, Mfield, time, dt);
-*/
-
             integrator.advance(vMfield_old, vMfield, time, dt);
-            //amrex::Abort("Fix Sundials");
 #else
             amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
