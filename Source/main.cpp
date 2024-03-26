@@ -4,7 +4,7 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
-#ifdef USE_TIME_INTEGRATOR
+#ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
 
@@ -229,8 +229,13 @@ void main_main ()
         MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
     }
 
-#ifdef USE_TIME_INTEGRATOR
+#ifdef AMREX_USE_SUNDIALS
+/*
     TimeIntegrator<Vector<MultiFab> > integrator(Mfield_old);
+*/
+    amrex::Vector<MultiFab> FIXME1(AMREX_SPACEDIM);
+    TimeIntegrator<Vector<MultiFab> > integrator(FIXME1);
+    amrex::Abort("Fix Sundials");
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -399,11 +404,12 @@ void main_main ()
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
-#ifdef USE_TIME_INTEGRATOR
+#ifdef AMREX_USE_SUNDIALS
 
             // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ) {
 
+/*                
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     rhs[idim].setVal(0.);
@@ -429,10 +435,13 @@ void main_main ()
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling,
                                 exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0);
+*/
             };
 
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
+/*
+               
                 // Call user function to update state MultiFab, e.g. fill BCs
                 NormalizeM(state, Ms, geom);
                 
@@ -440,8 +449,7 @@ void main_main ()
                     // fill periodic ghost cells
                     state[comp].FillBoundary(geom.periodicity());
                 }
-
-                //post_update(Mfield_old, time, geom);
+*/
             };
 
             // Attach the right hand side and post-update functions
@@ -450,7 +458,15 @@ void main_main ()
             integrator.set_post_update(post_update_fun);
                 
             // integrate forward one step from `time` by `dt` to fill S_new
+/*
             integrator.advance(Mfield_old, Mfield, time, dt);
+*/
+            amrex::Vector<MultiFab> FIXME2(AMREX_SPACEDIM);
+            amrex::Vector<MultiFab> FIXME3(AMREX_SPACEDIM);
+            integrator.advance(FIXME2, FIXME3, time, dt);
+            amrex::Abort("Fix Sundials");
+#else
+            amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
 
         } else {

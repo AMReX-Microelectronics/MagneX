@@ -9,7 +9,6 @@ USE_HIP      = FALSE
 COMP         = gnu
 DIM          = 3
 
-USE_TIME_INTEGRATOR = FALSE
 USE_SUNDIALS = FALSE
 
 ifeq ($(USE_CUDA),TRUE)
@@ -34,19 +33,19 @@ include $(AMREX_HOME)/Src/Boundary/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 ifeq ($(USE_SUNDIALS),TRUE)
-SUNDIALS_ROOT ?= ../../sundials/instdir
-SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
+  SUNDIALS_ROOT = /home/ajnonaka/CCSEPackages/sundials/instdir
+  SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
 
-USE_CVODE_LIBS ?= TRUE
-USE_ARKODE_LIBS ?= TRUE
+  USE_CVODE_LIBS ?= TRUE
+  USE_ARKODE_LIBS ?= TRUE
 
-DEFINES += -DAMREX_USE_SUNDIALS
-INCLUDE_LOCATIONS += $(SUNDIALS_ROOT)/include
-LIBRARY_LOCATIONS += $(SUNDIALS_LIB_DIR)
+  DEFINES += -DAMREX_USE_SUNDIALS
+  INCLUDE_LOCATIONS += $(SUNDIALS_ROOT)/include
+  LIBRARY_LOCATIONS += $(SUNDIALS_LIB_DIR)
 
-LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
-LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
-LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
 endif
 
 ifeq ($(USE_CUDA),TRUE)
