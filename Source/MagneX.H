@@ -62,6 +62,16 @@ long CountMagneticCells(MultiFab& Ms);
 Real SumNormalizedM(MultiFab& Ms,
                     MultiFab& Mfield);
 
+Real SumHeff(MultiFab& H_demagfield,
+             MultiFab& H_exchangefield,
+             MultiFab& H_biasfield);
+
+Real AnisotropyEnergy(MultiFab& Ms,
+                      MultiFab& Mfield_x,
+                      MultiFab& Mfield_y,
+                      MultiFab& Mfield_z,
+                      Real anisotropy);
+
 /*
   EffectiveAnisotropyField.cpp
 */

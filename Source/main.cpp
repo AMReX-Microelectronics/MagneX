@@ -4,9 +4,11 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
-#ifdef USE_TIME_INTEGRATOR
+#ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
+
+#include <cmath>
 
 using namespace amrex;
 using namespace MagneX;
@@ -28,11 +30,14 @@ int main (int argc, char* argv[])
 
 void main_main ()
 {
+  
     // timer for profiling
     BL_PROFILE_VAR("main_main()",main_main);
 
     Real total_step_strt_time = ParallelDescriptor::second();
   
+    std::ofstream outputFile("output.txt", std::ofstream::trunc);
+
     // **********************************
     // READ SIMULATION PARAMETERS
     // **********************************
@@ -42,6 +47,7 @@ void main_main ()
 
     // for std4 diagnostic
     Real normalized_Mx_prev = 0.;
+    Real dot_product_prev = 0.;
     
     // time = starting time in the simulation
     Real time = 0.0;	
@@ -55,6 +61,7 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> H_exchangefield;
     Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
     Array<MultiFab, AMREX_SPACEDIM> H_anisotropyfield;
+    Array<MultiFab, AMREX_SPACEDIM> Heff;
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
@@ -122,11 +129,14 @@ void main_main ()
         H_exchangefield[dir].define(ba, dm, 1, 0);
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
+         
+	Heff[dir].define(ba, dm, 1, 1);
 
         // set to zero in case we don't include
         H_exchangefield[dir].setVal(0.);
         H_DMIfield[dir].setVal(0.);
         H_anisotropyfield[dir].setVal(0.);
+        Heff[dir].setVal(0.);
 
         LLG_RHS[dir].define(ba, dm, 1, 0);
         LLG_RHS_pre[dir].define(ba, dm, 1, 0);
@@ -150,6 +160,7 @@ void main_main ()
     MultiFab anisotropy(ba, dm, 1, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
+    amrex::Print() << " precession           = " << precession          << "\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
     if (demag_coupling == 1) amrex::Print() << " FFT_solver           = " << FFT_solver << "\n";
     amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
@@ -218,8 +229,16 @@ void main_main ()
         MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
     }
 
-#ifdef USE_TIME_INTEGRATOR
-    TimeIntegrator<Vector<MultiFab> > integrator(Mfield_old);
+#ifdef AMREX_USE_SUNDIALS
+    //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
+    //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
+    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
+    amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+    }
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -388,49 +407,62 @@ void main_main ()
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
-#ifdef USE_TIME_INTEGRATOR
-
+#ifdef AMREX_USE_SUNDIALS
             // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ) {
-
+                
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     rhs[idim].setVal(0.);
                 } 
- 
+
+	        //alias rhs and old_state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
+		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
+
+                Array<MultiFab, AMREX_SPACEDIM> ar_rhs{AMREX_D_DECL(MultiFab(rhs[0],amrex::make_alias,0,rhs[0].nComp()),
+		                                                    MultiFab(rhs[1],amrex::make_alias,0,rhs[1].nComp()),
+			       			                    MultiFab(rhs[2],amrex::make_alias,0,rhs[2].nComp()))};
+
+                Array<MultiFab, AMREX_SPACEDIM> ar_old_state{AMREX_D_DECL(MultiFab(old_state[0],amrex::make_alias,0,old_state[0].nComp()),
+		                                                          MultiFab(old_state[1],amrex::make_alias,0,old_state[1].nComp()),
+			       			                          MultiFab(old_state[2],amrex::make_alias,0,old_state[2].nComp()))};
+
     	        // Evolve H_demag
                 if (demag_coupling == 1) {
-                    demag_solver.CalculateH_demag(old_state, H_demagfield);
+                    demag_solver.CalculateH_demag(ar_old_state, H_demagfield);
                 }
 
                 if (exchange_coupling == 1) {
-                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
+                    CalculateH_exchange(ar_old_state, H_exchangefield, Ms, exchange, DMI, geom);
                 }
 
                 if (DMI_coupling == 1) {
-                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
+                    CalculateH_DMI(ar_old_state, H_DMIfield, Ms, exchange, DMI, geom);
                 }
 
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
+                    CalculateH_anisotropy(ar_old_state, H_anisotropyfield, Ms, anisotropy);
                 }
 
+		
                 // Compute f^n = f(M^n, H^n) 
-                Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling,
-                                exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0);
+                Compute_LLG_RHS(ar_rhs, ar_old_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
+               
+                Array<MultiFab, AMREX_SPACEDIM> ar_state{AMREX_D_DECL(MultiFab(state[0],amrex::make_alias,0,state[0].nComp()),
+		                                                      MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
+			       			                      MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
+
                 // Call user function to update state MultiFab, e.g. fill BCs
-                NormalizeM(state, Ms, geom);
+                NormalizeM(ar_state, Ms, geom);
                 
                 for (int comp = 0; comp < 3; comp++) {
                     // fill periodic ghost cells
-                    state[comp].FillBoundary(geom.periodicity());
+                    ar_state[comp].FillBoundary(geom.periodicity());
                 }
-
-                //post_update(Mfield_old, time, geom);
             };
 
             // Attach the right hand side and post-update functions
@@ -439,7 +471,9 @@ void main_main ()
             integrator.set_post_update(post_update_fun);
                 
             // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.advance(Mfield_old, Mfield, time, dt);
+            integrator.advance(vMfield_old, vMfield, time, dt);
+#else
+            amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
 
         } else {
@@ -448,25 +482,62 @@ void main_main ()
 
         // standard problem 4 diagnostics
         bool diag_std4_plot = false;
-        if (diag_type == 4) {
+        if (diag_type == 4 || diag_type == 2 || diag_type == 3) {
+            
+	    // Open a file for writing
             Real normalized_Mx = SumNormalizedM(Ms,Mfield[0]);
             Real normalized_My = SumNormalizedM(Ms,Mfield[1]);
             Real normalized_Mz = SumNormalizedM(Ms,Mfield[2]);
         
-            Print() << "time = " << time << " "
+            if (normalized_Mx_prev > 0 && normalized_Mx <= 0.) {
+                diag_std4_plot = true;
+            }
+
+            normalized_Mx_prev = normalized_Mx;
+  	
+            Real Heff_x = SumHeff(H_demagfield[0], H_exchangefield[0], H_biasfield[0]);
+            Real Heff_y = SumHeff(H_demagfield[1], H_exchangefield[1], H_biasfield[1]);
+            Real Heff_z = SumHeff(H_demagfield[2], H_exchangefield[2], H_biasfield[2]);
+
+	    Real dot_product = (Heff_x*normalized_Mx)/num_mag + (Heff_y*normalized_My)/num_mag + (Heff_z*normalized_Mz)/num_mag;
+	    
+	    outputFile << "time = " << time << " "
                     << "Sum_normalized_M: "
                     << normalized_Mx/num_mag << " "
                     << normalized_My/num_mag << " "
                     << normalized_Mz/num_mag << std::endl;
 
-            if (normalized_Mx_prev > 0 && normalized_Mx <= 0.) {
-                diag_std4_plot = true;
-            }
+             outputFile << "time = " << time << " "
+                    << "Heff: "
+                    << Heff_x/num_mag << " "
+                    << Heff_y/num_mag << " "
+                    << Heff_z/num_mag << std::endl;
             
-            normalized_Mx_prev = normalized_Mx;
+	     outputFile << "time = " << time << " " 
+		    << "dot_product = " << dot_product << std::endl;
+ 
+
+             if (dot_product < 0 && dot_product_prev >= 0.){
+	         Real Heff_magn = sqrt(Heff_x*Heff_x + Heff_y*Heff_y + Heff_z*Heff_z);
+
+		 outputFile << "time = " << time << " "
+                    << "dot_product_zero_magnitude = " << Heff_magn  <<  std::endl;
+	     }	     
+
+	     dot_product_prev = dot_product;
+
+	     // standard problem 3 diagnostics
+            if (diag_type == 3) {
+                int comp=0;
+                Real ani = anisotropy.max(comp);
+
+                Real anis_energy = AnisotropyEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], ani);
+
+                outputFile << "anis_energy: " << anis_energy << std::endl;
+            }
+
         }
-        
-        
+
         // copy new solution into old solution
         for (int comp = 0; comp < 3; comp++) {
             MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
@@ -486,12 +557,7 @@ void main_main ()
                           H_demagfield, geom, time, step);
         }
 
-        // Write a checkpoint file if chk_int > 0
-        if (chk_int > 0 && step%chk_int == 0) {
-            WriteCheckPoint(step,time,Mfield,H_biasfield,H_demagfield);
-        }
-
-        // MultiFab memory usage
+	// MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 
         amrex::Long min_fab_megabytes  = amrex::TotalBytesAllocatedInFabsHWM()/1048576;
@@ -518,4 +584,6 @@ void main_main ()
     ParallelDescriptor::ReduceRealMax(total_step_stop_time);
 
     amrex::Print() << "Total run time " << total_step_stop_time << " seconds\n";
+
+    outputFile.close();
 }

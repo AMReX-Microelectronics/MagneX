@@ -57,7 +57,10 @@ AMREX_GPU_MANAGED amrex::Real MagneX::mu0;
 // whether to call the parser each time step, or only at initialization
 int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
-    
+
+// 0 = no precession; 1 = precession
+int MagneX::precession;
+
 // turn on demagnetization
 AMREX_GPU_MANAGED int MagneX::demag_coupling;
 
@@ -145,6 +148,9 @@ void InitializeMagneXNamespace() {
     pp.get("timedependent_Hbias",timedependent_Hbias);
     pp.get("timedependent_alpha",timedependent_alpha);
 
+    precession = 1;
+    pp.query("precession",precession);
+   
     pp.get("demag_coupling",demag_coupling);
 
     if (demag_coupling == 1) {

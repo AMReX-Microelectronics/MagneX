@@ -14,10 +14,14 @@ static amrex::Real LLG_RHS_x(
     int const i, int const j, int const k) {
 
     amrex::Real mag_gammaL = gamma(i,j,k) / (1._rt + std::pow(alpha(i,j,k), 2._rt));
-    return (mu0 * mag_gammaL) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff
-                              + alpha(i,j,k) / M_magnitude * (My(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff) - Mz(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff)));
+    if (precession == 1){
+        return (mu0 * mag_gammaL) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff
+                                  + alpha(i,j,k) / M_magnitude * (My(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff) - Mz(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff)));
+    
+    } else {
+        return (mu0 * mag_gammaL) * (alpha(i,j,k) / M_magnitude * (My(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff) - Mz(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff)));
+    }
 }
-
 
 /**
  * Compute the y component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
@@ -33,10 +37,15 @@ static amrex::Real LLG_RHS_y(
     int const i, int const j, int const k) {
 
     amrex::Real mag_gammaL = gamma(i,j,k) / (1._rt + std::pow(alpha(i,j,k), 2._rt));
-    return (mu0 * mag_gammaL) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff
-                              + alpha(i,j,k) / M_magnitude * (Mz(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff) - Mx(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff)));
+    
+    if (precession == 1) {
+        return (mu0 * mag_gammaL) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff
+                                  + alpha(i,j,k) / M_magnitude * (Mz(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff) - Mx(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff)));
+    } else {
+        return (mu0 * mag_gammaL) * (alpha(i,j,k) / M_magnitude * (Mz(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff) - Mx(i, j, k) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff))); 
+    } 
+    
 }
-
 
 /**
  * Compute the z component of the RHS of LLG equation given M, alpha, gamma, |M|, and H_eff*/
@@ -52,8 +61,13 @@ static amrex::Real LLG_RHS_z(
     int const i, int const j, int const k) {
 
     amrex::Real mag_gammaL = gamma(i,j,k) / (1._rt + std::pow(alpha(i,j,k), 2._rt));
-    return (mu0 * mag_gammaL) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff
-                              + alpha(i,j,k) / M_magnitude * (Mx(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff) - My(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff)));
+    
+    if (precession == 1) {
+        return (mu0 * mag_gammaL) * (Mx(i, j, k) * Hy_eff - My(i, j, k) * Hx_eff
+                                  + alpha(i,j,k) / M_magnitude * (Mx(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff) - My(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff)));
+    } else { 
+        return (mu0 * mag_gammaL) * (alpha(i,j,k) / M_magnitude * (Mx(i, j, k) * (Mz(i, j, k) * Hx_eff - Mx(i, j, k) * Hz_eff) - My(i, j, k) * (My(i, j, k) * Hz_eff - Mz(i, j, k) * Hy_eff)));    
+    }	   
 }
 
 

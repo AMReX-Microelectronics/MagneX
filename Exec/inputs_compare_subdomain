@@ -4,7 +4,7 @@ max_grid_size_y = 16
 max_grid_size_z = 8
 
 dt = 1.0e-14
-nsteps = 0
+nsteps = 10
 plot_int = 1
 chk_int = -1
 restart = -1
@@ -31,6 +31,7 @@ exchange_parser(x,y,z) =   "(x>-1.5625e-8)*(x<1.5625e-8)*(y>-15.625e-9)*(y<15.62
 anisotropy_parser(x,y,z) = "(x>-1.5625e-8)*(x<1.5625e-8)*(y>-15.625e-9)*(y<15.625e-9)*(z>0.)*(z<3.e-9) * -139.26"
 DMI_parser(x,y,z) = "0.0"
 
+precession = 1
 demag_coupling = 1
 FFT_solver = 0
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case

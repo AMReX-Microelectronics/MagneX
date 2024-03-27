@@ -56,6 +56,9 @@ namespace MagneX {
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
     
+    // turn off precession
+    extern AMREX_GPU_MANAGED int precession;
+    
     // turn on demagnetization
     extern AMREX_GPU_MANAGED int demag_coupling;
 
