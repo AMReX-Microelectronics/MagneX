@@ -4,7 +4,7 @@
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
 
-#ifdef USE_TIME_INTEGRATOR
+#ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
 
@@ -229,8 +229,16 @@ void main_main ()
         MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
     }
 
-#ifdef USE_TIME_INTEGRATOR
-    TimeIntegrator<Vector<MultiFab> > integrator(Mfield_old);
+#ifdef AMREX_USE_SUNDIALS
+    //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
+    //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
+    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
+    amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+    }
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -399,49 +407,62 @@ void main_main ()
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
 
-#ifdef USE_TIME_INTEGRATOR
-
+#ifdef AMREX_USE_SUNDIALS
             // Create a RHS source function we will integrate
             auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ) {
-
+                
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     rhs[idim].setVal(0.);
                 } 
- 
+
+	        //alias rhs and old_state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
+		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
+
+                Array<MultiFab, AMREX_SPACEDIM> ar_rhs{AMREX_D_DECL(MultiFab(rhs[0],amrex::make_alias,0,rhs[0].nComp()),
+		                                                    MultiFab(rhs[1],amrex::make_alias,0,rhs[1].nComp()),
+			       			                    MultiFab(rhs[2],amrex::make_alias,0,rhs[2].nComp()))};
+
+                Array<MultiFab, AMREX_SPACEDIM> ar_old_state{AMREX_D_DECL(MultiFab(old_state[0],amrex::make_alias,0,old_state[0].nComp()),
+		                                                          MultiFab(old_state[1],amrex::make_alias,0,old_state[1].nComp()),
+			       			                          MultiFab(old_state[2],amrex::make_alias,0,old_state[2].nComp()))};
+
     	        // Evolve H_demag
                 if (demag_coupling == 1) {
-                    demag_solver.CalculateH_demag(old_state, H_demagfield);
+                    demag_solver.CalculateH_demag(ar_old_state, H_demagfield);
                 }
 
                 if (exchange_coupling == 1) {
-                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
+                    CalculateH_exchange(ar_old_state, H_exchangefield, Ms, exchange, DMI, geom);
                 }
 
                 if (DMI_coupling == 1) {
-                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
+                    CalculateH_DMI(ar_old_state, H_DMIfield, Ms, exchange, DMI, geom);
                 }
 
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
+                    CalculateH_anisotropy(ar_old_state, H_anisotropyfield, Ms, anisotropy);
                 }
 
+		
                 // Compute f^n = f(M^n, H^n) 
-                Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling,
-                                exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0);
+                Compute_LLG_RHS(ar_rhs, ar_old_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
+               
+                Array<MultiFab, AMREX_SPACEDIM> ar_state{AMREX_D_DECL(MultiFab(state[0],amrex::make_alias,0,state[0].nComp()),
+		                                                      MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
+			       			                      MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
+
                 // Call user function to update state MultiFab, e.g. fill BCs
-                NormalizeM(state, Ms, geom);
+                NormalizeM(ar_state, Ms, geom);
                 
                 for (int comp = 0; comp < 3; comp++) {
                     // fill periodic ghost cells
-                    state[comp].FillBoundary(geom.periodicity());
+                    ar_state[comp].FillBoundary(geom.periodicity());
                 }
-
-                //post_update(Mfield_old, time, geom);
             };
 
             // Attach the right hand side and post-update functions
@@ -450,7 +471,9 @@ void main_main ()
             integrator.set_post_update(post_update_fun);
                 
             // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.advance(Mfield_old, Mfield, time, dt);
+            integrator.advance(vMfield_old, vMfield, time, dt);
+#else
+            amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
 
         } else {

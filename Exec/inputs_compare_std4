@@ -41,6 +41,7 @@ exchange_parser(x,y,z) = " (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9
 anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
+precession = 0
 demag_coupling = 1
 FFT_solver = 1
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
