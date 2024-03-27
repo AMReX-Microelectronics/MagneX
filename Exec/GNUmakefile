@@ -4,12 +4,12 @@ AMREX_HOME ?= ../../amrex
 DEBUG        = FALSE
 USE_MPI      = TRUE
 USE_OMP      = FALSE
-USE_CUDA     = FALSE
+USE_CUDA     = TRUE
 USE_HIP      = FALSE
 COMP         = gnu
 DIM          = 3
 
-USE_SUNDIALS = FALSE
+USE_SUNDIALS = TRUE
 
 ifeq ($(USE_CUDA),TRUE)
   HEFFTE_HOME ?= ../../heffte/build_cuda
@@ -28,12 +28,8 @@ INCLUDE_LOCATIONS += ../Source
 
 libraries += -lheffte
 
-include $(AMREX_HOME)/Src/Base/Make.package
-include $(AMREX_HOME)/Src/Boundary/Make.package 
-include $(AMREX_HOME)/Tools/GNUMake/Make.rules
-
 ifeq ($(USE_SUNDIALS),TRUE)
-  SUNDIALS_ROOT = /home/ajnonaka/CCSEPackages/sundials/instdir
+  SUNDIALS_ROOT ?= $(TOP)../../sundials-6.7.0/instdir_cuda
   SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
 
   USE_CVODE_LIBS ?= TRUE
@@ -46,6 +42,11 @@ ifeq ($(USE_SUNDIALS),TRUE)
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
+  
+  ifeq ($(USE_CUDA),TRUE)
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
+  endif
+
 endif
 
 ifeq ($(USE_CUDA),TRUE)
@@ -58,4 +59,8 @@ else ifeq ($(USE_HIP),TRUE)
 else
   libraries += -lfftw3_mpi -lfftw3f -lfftw3
 endif
+
+include $(AMREX_HOME)/Src/Base/Make.package
+include $(AMREX_HOME)/Src/Boundary/Make.package 
+include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
