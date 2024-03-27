@@ -517,7 +517,7 @@ void main_main ()
 		    << "dot_product = " << dot_product << std::endl;
  
 
-             if (dot_product > 0 && dot_product_prev <= 0.){
+             if (dot_product < 0 && dot_product_prev >= 0.){
 	         Real Heff_magn = sqrt(Heff_x*Heff_x + Heff_y*Heff_y + Heff_z*Heff_z);
 
 		 outputFile << "time = " << time << " "
@@ -525,6 +525,16 @@ void main_main ()
 	     }	     
 
 	     dot_product_prev = dot_product;
+
+	     // standard problem 3 diagnostics
+            if (diag_type == 3) {
+                int comp=0;
+                Real ani = anisotropy.max(comp);
+
+                Real anis_energy = AnisotropyEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], ani);
+
+                outputFile << "anis_energy: " << anis_energy << std::endl;
+            }
 
         }
 
@@ -547,18 +557,7 @@ void main_main ()
                           H_demagfield, geom, time, step);
         }
 
-        // Write a checkpoint file if chk_int > 0
-        if (chk_int > 0 && step%chk_int == 0) {
-            WriteCheckPoint(step,time,Mfield,H_biasfield,H_demagfield);
-	    // standard problem 3 diagnostics	
-	    if (diag_type == 3) {
-	        Real anis_energy = AnisotropyEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], anisotropy);
-                
-	        outputFile << "anis_energy: " << anis_energy << std::endl;	
-	    }
-        }
-
-        // MultiFab memory usage
+	// MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 
         amrex::Long min_fab_megabytes  = amrex::TotalBytesAllocatedInFabsHWM()/1048576;
