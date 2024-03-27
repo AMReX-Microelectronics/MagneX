@@ -3,7 +3,9 @@ https://computing.llnl.gov/projects/sundials/faq#inst
 
 Installation
 
-# Download tar file for SUNDIAL version BEFORE v7.0.0 and extract it at the same level as amrex.
+# Download tar file for SUNDIALS version BEFORE v7.0.0 and extract it at the same level as amrex:
+
+>> tar -xzf sundials-x.y.z.tar
 
 # at the same level that amrex is cloned, do:
 
@@ -11,7 +13,7 @@ Installation
 >> cd sundials
 >> mkdir instdir
 >> mkdir builddir
->> cd build
+>> cd builddir
 
 
 ######################
@@ -22,7 +24,7 @@ HOST BUILD
 
 > -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples \
 
->  ../../sundials-x.y.z # where x.y.z is the version of sundials
+>  ../../sundials-x.y.z
 
 >> make -j4
 >> make install
@@ -37,6 +39,7 @@ HOST BUILD
 
 # in your inputs file, you will need to have:
 
+TimeIntegratorOption = 4
 integration.type = SUNDIALS
 integration.rk.type = # any number 1-4
 integration.sundials.strategy = ERK # or SSPRK3
