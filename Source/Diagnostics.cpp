@@ -112,7 +112,7 @@ Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_x,
                       MultiFab& Mfield_y,
                       MultiFab& Mfield_z,
-		      MultiFab& anisotropy)
+		      Real anisotropy)
 {
     // timer for profiling
     // BL_PROFILE_VAR("SumNormalizedM()",SumNormalizedM);
@@ -123,9 +123,6 @@ Real AnisotropyEnergy(MultiFab& Ms,
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
-    int comp=0;
-    Real K = anisotropy.max(comp);
-
     for (MFIter mfi(Ms,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         const Box& bx = mfi.tilebox();
@@ -134,13 +131,12 @@ Real AnisotropyEnergy(MultiFab& Ms,
         auto const& Mx = Mfield_x.array(mfi);
         auto const& My = Mfield_y.array(mfi);
         auto const& Mz = Mfield_z.array(mfi);
-        auto const& anis = anisotropy.array(mfi);
 
         reduce_op.eval(bx, reduce_data,
                        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
             if (fab(i,j,k) > 0.) {
-		return {-(K) * std::pow((Mx(i,j,k)*anisotropy_axis[0] + My(i,j,k)*anisotropy_axis[1] + Mz(i,j,k)*anisotropy_axis[2]), 2)};
+		return {-(anisotropy) * std::pow((Mx(i,j,k)*anisotropy_axis[0] + My(i,j,k)*anisotropy_axis[1] + Mz(i,j,k)*anisotropy_axis[2]), 2)};
             } else {
                 return {0.};
             }
