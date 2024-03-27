@@ -4,7 +4,7 @@ max_grid_size_y = 42
 max_grid_size_z = 1
 
 dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 10
+nsteps = 400000
 plot_int = 10000
 chk_int = -1
 restart = -1
