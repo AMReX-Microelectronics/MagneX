@@ -1,4 +1,9 @@
 namespace MagneX {
+    
+    // //ML variable
+    // extern std::string ml_model_name;
+    // extern std::string x_normalizer_name;
+    // extern std::string y_normalizer_name;
 
     // Number of cells in each dimension
     extern AMREX_GPU_MANAGED amrex::GpuArray<int, 3> n_cell;

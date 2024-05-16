@@ -9,6 +9,10 @@ int MagneX::max_grid_size_x;
 int MagneX::max_grid_size_y;
 int MagneX::max_grid_size_z;
 
+// std::string MagneX::ml_model_name;
+// std::string MagneX::x_normalizer_name;
+// std::string MagneX::y_normalizer_name;
+
 // physical lo/hi coordiates
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_lo;
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_hi;
@@ -156,7 +160,19 @@ void InitializeMagneXNamespace() {
     if (demag_coupling == 1) {
         pp.get("FFT_solver",FFT_solver);
     }
-        
+    
+
+    // ML model data input
+    // pp.query("ml_model_name", ml_model_name);
+
+    // pp.query("x_nomrmalizer", x_normalizer_name);
+    
+    // pp.query("y_normalizer", y_normalizer_name);
+    // std::cout<<ml_model_name<<endl;
+    // ML model data input
+
+
+
     pp.get("M_normalization", M_normalization);
     pp.get("exchange_coupling", exchange_coupling);
     pp.get("DMI_coupling", DMI_coupling);

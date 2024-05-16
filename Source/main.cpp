@@ -1,13 +1,12 @@
 #include "MagneX.H"
 #include "Demagnetization.H"
-
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
-
+#include <AMReX_ParmParse.H>
 #ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
-
+#include <torch/script.h>
 using namespace amrex;
 using namespace MagneX;
 
@@ -64,6 +63,9 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
+    torch::jit::script::Module ml_module;
+    torch::jit::script::Module x_norm_module;
+    torch::jit::script::Module y_norm_module;
 
     // Initialize variable for reaching equilibrium before evolving Hbias
     Real normalized_Mx;
@@ -96,6 +98,44 @@ void main_main ()
     }
     
     // **********************************
+    // // LOAD PYTORCH MODEL
+
+    BL_PROFILE_VAR("LoadPytorch",LoadPytorch);
+
+    // Load pytorch module via torch script
+
+
+    std::string ml_model_name;
+    std::string x_normalizer_name;
+    std::string y_normalizer_name;
+
+    ParmParse pp_ml;
+    pp_ml.query("ml_model_name", ml_model_name);
+    pp_ml.query("x_normalizer_name", x_normalizer_name);
+    pp_ml.query("y_normalizer_name", y_normalizer_name);
+
+    amrex::Print()<<"\n"<<ml_model_name<<"\n";
+    amrex::Print()<<x_normalizer_name<<"\n";
+    amrex::Print()<<y_normalizer_name<<"\n";
+
+
+    try {
+        // Deserialize the ScriptModule from a file using torch::jit::load().
+        ml_module = torch::jit::load(ml_model_name, torch::kCUDA);
+        x_norm_module = torch::jit::load(x_normalizer_name, torch::kCUDA);
+        y_norm_module = torch::jit::load(y_normalizer_name, torch::kCUDA);
+    }
+    catch (const c10::Error& e) {
+        amrex::Abort("Error loading the model\n");
+    }
+
+    Print() << "Model loaded.\n";
+
+
+
+
+
+    // **********************************
     // SIMULATION SETUP
 
     // make BoxArray and Geometry
@@ -124,7 +164,7 @@ void main_main ()
     }
 
     // This defines the physical box in each direction.
-    RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
+    RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])}, 
                      {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});
 
     // periodic in x and y directions
@@ -175,6 +215,8 @@ void main_main ()
     MultiFab anisotropy(ba, dm, 1, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
+    amrex::Print() << " ba           = " << ba          << "\n";
+    amrex::Print() << " dm           = " << dm          << "\n";
     amrex::Print() << " precession           = " << precession          << "\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
     if (demag_coupling == 1) amrex::Print() << " FFT_solver           = " << FFT_solver << "\n";
@@ -211,8 +253,11 @@ void main_main ()
         InitializeFields(Mfield, geom);
 
         if (demag_coupling == 1) {
+
             demag_solver.CalculateH_demag(Mfield, H_demagfield);
-	}
+            // CalculateH_demag_ML(Mfield, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
+        
+        }       
         
         if (exchange_coupling == 1) {
             CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
@@ -275,7 +320,25 @@ void main_main ()
             
     	    // Evolve H_demag
             if (demag_coupling == 1) {
-                demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                std::string fname_before = "M_old_before" + std::to_string(step) + "before";
+                std::string fname_after = "M_old_after" + std::to_string(step) + "after";
+
+                if (step < 2) {
+                    outputMFAscii(Mfield_old, fname_before);
+                    demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                    outputMFAscii(Mfield_old, fname_after);
+                } else {
+                    amrex::Print()<<"\n"<<ml_model_name<<"\n";
+                    // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, H_demagfield);
+                    demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                }
+                if ( (plot_int > 0 && step%plot_int == 0 && step >= 200000)) {
+                    WritePlotfile(Ms, Mfield_old, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+                          H_demagfield, geom, time, step);
+                }
+                // amrex::Print()<<"\n"<<ml_model_name<<"\n";
+                // // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
             }
 
             if (exchange_coupling == 1) {
@@ -392,7 +455,9 @@ void main_main ()
         
                 // Poisson solve and H_demag computation with Mfield
                 if (demag_coupling == 1) { 
+                    amrex::Print()<<"\n"<<"function visited" << std::endl;
                     demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                    // CalculateH_demag_ML(Mfield, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
                 }
     
                 if (exchange_coupling == 1) {
@@ -444,7 +509,9 @@ void main_main ()
 
     	        // Evolve H_demag
                 if (demag_coupling == 1) {
+                    amrex::Print() << "this ar_old_state is used" << "\n";
                     demag_solver.CalculateH_demag(ar_old_state, H_demagfield);
+                    // CalculateH_demag_ML(ar_old_state, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
                 }
 
                 if (exchange_coupling == 1) {
@@ -551,6 +618,11 @@ void main_main ()
             }
 
         }
+        // Write a plotfile of the data if plot_int > 0
+        // if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
+        //     WritePlotfile(Ms, Mfield_old, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+        //                   H_demagfield, geom, time, step);
+        // }
 
         // copy new solution into old solution
         for (int comp = 0; comp < 3; comp++) {
@@ -565,11 +637,11 @@ void main_main ()
 
         amrex::Print() << "Advanced step " << step << " in " << step_stop_time << " seconds\n";
 
-        // Write a plotfile of the data if plot_int > 0
-        if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
-            WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, geom, time, step);
-        }
+        // // Write a plotfile of the data if plot_int > 0
+        // if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
+        //     WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+        //                   H_demagfield, geom, time, step);
+        // }
 
         /*
 	
@@ -582,7 +654,9 @@ void main_main ()
         {
 
 	    if (demag_coupling == 1) {
+        amrex::Print() << "this Mfield_old 3 is used" << "\n";    
 		demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+        // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
 	    }
 
 	    if (exchange_coupling == 1) {
@@ -633,7 +707,9 @@ void main_main ()
 		    }
 
 		    if (demag_coupling == 1) {
+                amrex::Print() << "this Mfield_old 4 is used" << "\n";  
 			demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+            // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
 		    }
 
 		    if (exchange_coupling == 1) {

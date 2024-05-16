@@ -12,9 +12,35 @@ DIM          = 3
 USE_SUNDIALS = FALSE
 
 ifeq ($(USE_CUDA),TRUE)
-  HEFFTE_HOME ?= ../../heffte/build_cuda
+  HEFFTE_HOME ?= ../../heffte/build
 else ifeq ($(USE_CUDA),FALSE) 
   HEFFTE_HOME ?= ../../heffte/build
+endif
+
+
+# Pytorch directories 
+ifeq ($(USE_CUDA),TRUE)
+  PYTORCH_ROOT := ../libtorch_cuda
+else
+  PYTORCH_ROOT := ../libtorch_cpu
+endif
+TORCH_LIBPATH = $(PYTORCH_ROOT)/lib
+
+ifeq ($(USE_CUDA),TRUE)
+  TORCH_LIBS = -ltorch -ltorch_cpu -lc10 -lc10_cuda -lcuda 
+else
+  TORCH_LIBS = -ltorch -ltorch_cpu -lc10
+endif
+
+INCLUDE_LOCATIONS += $(PYTORCH_ROOT)/include \
+                     $(PYTORCH_ROOT)/include/torch/csrc/api/include
+LIBRARY_LOCATIONS += $(TORCH_LIBPATH)
+
+DEFINES += -D_GLIBCXX_USE_CXX11_ABI=1
+ifeq ($(USE_CUDA),TRUE)
+  LDFLAGS += -Xlinker "--no-as-needed,-rpath $(TORCH_LIBPATH) $(TORCH_LIBS)"
+else
+  LDFLAGS += -Wl,--no-as-needed,-rpath=$(TORCH_LIBPATH) $(TORCH_LIBS)
 endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
@@ -46,6 +72,7 @@ ifeq ($(USE_SUNDIALS),TRUE)
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_core
   
   ifeq ($(USE_CUDA),TRUE)
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
@@ -67,4 +94,3 @@ endif
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
-
