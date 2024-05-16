@@ -86,7 +86,10 @@ static amrex::Real LaplacianDx_Mag (
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dx = 1./dx[0];
-    if ( Ms_hi_x == 0.) {
+
+    if ( Ms_hi_x == 0. && Ms_lo_x == 0.) {
+        return (BC_hi_x - BC_lo_x);
+    } else if ( Ms_hi_x == 0.) {
         return inv_dx*(BC_hi_x - DownwardDx(F, i, j, k, dx));
     } else if ( Ms_lo_x == 0.){
         return inv_dx*(UpwardDx(F, i, j, k, dx) - BC_lo_x);
@@ -106,7 +109,10 @@ static amrex::Real LaplacianDy_Mag (
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dy = 1./dx[1];
-    if ( Ms_hi_y == 0.) {
+
+    if ( Ms_hi_y == 0. && Ms_lo_y == 0.) {
+        return (BC_hi_y - BC_lo_y);
+    } else if ( Ms_hi_y == 0.) {
         return inv_dy*(BC_hi_y - DownwardDy(F, i, j, k, dx));
     } else if ( Ms_lo_y == 0.){
         return inv_dy*(UpwardDy(F, i, j, k, dx) - BC_lo_y);
@@ -126,8 +132,10 @@ static amrex::Real LaplacianDz_Mag (
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dz = 1./dx[2];
-    
-    if ( Ms_hi_z == 0.) {
+
+    if ( Ms_hi_z == 0. && Ms_lo_z == 0.) {
+        return (BC_hi_z - BC_lo_z);
+    } else if ( Ms_hi_z == 0.) {
         return inv_dz*(BC_hi_z - DownwardDz(F, i, j, k, dx));
     } else if ( Ms_lo_z == 0.){
         return inv_dz*(UpwardDz(F, i, j, k, dx) - BC_lo_z);
@@ -192,7 +200,9 @@ static amrex::Real DMDx_Mag (
     amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-    if ( Ms_hi_x == 0.) {
+    if (Ms_lo_x == 0. && Ms_hi_x == 0.) {
+        return 0.5 * (BC_lo_x + BC_hi_x);
+    } else if ( Ms_hi_x == 0.) {
         return 0.5 *(BC_hi_x + DownwardDx(F, i, j, k, dx));
     } else if ( Ms_lo_x == 0.){
         return 0.5 *(UpwardDx(F, i, j, k, dx) + BC_lo_x);
@@ -210,7 +220,9 @@ static amrex::Real DMDy_Mag (
     amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real const BC_lo_y, amrex::Real const BC_hi_y,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-    if ( Ms_hi_y == 0.) {
+    if (Ms_lo_y == 0. && Ms_hi_y == 0.) {
+        return 0.5 * (BC_lo_y + BC_hi_y);
+    } else if ( Ms_hi_y == 0.) {
         return 0.5 *(BC_hi_y + DownwardDy(F, i, j, k, dx));
     } else if ( Ms_lo_y == 0.){
         return 0.5 *(UpwardDy(F, i, j, k, dx) + BC_lo_y);
@@ -229,7 +241,9 @@ static amrex::Real DMDz_Mag (
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real const BC_lo_z, amrex::Real const BC_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
-    if ( Ms_hi_z == 0.) {
+    if (Ms_lo_z == 0. && Ms_hi_z == 0.) {
+        return 0.5 * (BC_lo_z + BC_hi_z);
+    } else if ( Ms_hi_z == 0.) {
         return 0.5 *(BC_hi_z + DownwardDz(F, i, j, k, dx));
     } else if ( Ms_lo_z == 0.){
         return 0.5 *(UpwardDz(F, i, j, k, dx) + BC_lo_z);

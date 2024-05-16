@@ -49,7 +49,7 @@ TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 3 #2nd order artemis way
 #TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-# tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
 
 ## amrex/sundials backend integrators

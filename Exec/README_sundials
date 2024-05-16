@@ -20,7 +20,7 @@ https://computing.llnl.gov/projects/sundials/sundials-software
 HOST BUILD 
 ######################
 
->> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples ../../sundials-x.y.z
+>> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples -DENABLE_MPI=ON ../../sundials-x.y.z
 
 ######################
 NVIDIA/CUDA BUILD
@@ -31,7 +31,7 @@ NVIDIA/CUDA BUILD
 >> mkdir instdir_cuda
 >> cd builddir
 
->> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir_cuda -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir_cuda/examples -DENABLE_CUDA=ON ../../sundials-x.y.z
+>> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir_cuda -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir_cuda/examples -DENABLE_CUDA=ON -DENABLE_MPI=ON ../../sundials-x.y.z
 
 ######################
 

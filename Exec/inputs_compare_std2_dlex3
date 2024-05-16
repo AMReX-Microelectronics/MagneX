@@ -1,40 +1,44 @@
-n_cell = 100 20 2   
-max_grid_size_x = 100
-max_grid_size_y = 20
-max_grid_size_z = 2
+###
+n_cell = 50 10 1
+max_grid_size_x = 50
+max_grid_size_y = 10
+max_grid_size_z = 1
 
-dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 100000
-plot_int = 10000
+nsteps = 100000000
+plot_int = -1
 chk_int = -1
 restart = -1
-diag_type = 4
+diag_type = 2
+Hbias_sweep = 1
 
 prob_lo = 0. 0. 0.
-prob_hi = 500.e-9 100.e-9 10.e-9
+
+# d/l_ex = 3
+prob_hi = 75.e-9 15.e-9 1.5e-9
+dt = 2.5e-13
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9)"
-My_parser(x,y,z) = "0."
-Mz_parser(x,y,z) = "0."
+Mx_parser(x,y,z) = "8.e5/sqrt(1.5) * (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9)"
+My_parser(x,y,z) = "8.e5/sqrt(1.5) * (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9)"
+Mz_parser(x,y,z) = "8.e5/sqrt(1.5) * (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9)"
 
-# Field Ensemble 1:  mu_0 [Hx= +50mT -> -50mT -> +50mT], mu_0 [Hy= +50mT -> -50mT -> +50mT], mu_0 [Hz= +50mT -> -50mT -> +50mT],
-# which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
-timedependent_Hbias = 1
-Hx_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
-Hy_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
-Hz_bias_parser(x,y,z,t) = "(t<=3.e-11)*(3.e-11-t)*1.e16"
+# Field Ensemble for hysteresis:  [Hx/Ms= +.08 -> -.08 -> +.08], [Hy/Ms= +.08 -> -.08 -> +.08], mu_0 [Hz/Ms= +.08 -> -.08 -> +.08]
+# which is a field directed about 57 degrees offset from each coordinate axis
+timedependent_Hbias = 0
+Hx_bias_parser(x,y,z,t) = "1.54e4"
+Hy_bias_parser(x,y,z,t) = "1.54e4"
+Hz_bias_parser(x,y,z,t) = "1.54e4"
 
-timedependent_alpha = 1
-alpha_parser(x,y,z,t) =  " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * 0.5"
-Ms_parser(x,y,z) =       " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * 8.e5"
-gamma_parser(x,y,z) =    " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9) * -1.759e11"
-exchange_parser(x,y,z) = " (x>0.)*(x<500.e-9)*(y>0.)*(y<100.e-9)*(z>0.)*(z<10.e-9)* 1.3e-11"
+timedependent_alpha = 0
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9) * 0.5"
+Ms_parser(x,y,z) =       " (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<75.e-9)*(y>0.)*(y<15.e-9)*(z>0.)*(z<1.5e-9)* 1.005154e-11"
 anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
-precession = 1
+precession = 0
 demag_coupling = 1
 FFT_solver = 1
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
@@ -43,14 +47,23 @@ anisotropy_coupling = 0
 anisotropy_axis = 1.0 1.0 1.0
 DMI_coupling = 0
 
+# tolerance for equilibrium in M when Hbias_sweep = 1
+equilibrium_tolerance = 1.e-9
+
+# hysteresis increment for H_bias
+increment_size = 1280
+
+# number of increments ONE WAY: Must = 2*(Hx_bias/increment_size)
+nsteps_hysteresis = 100
+
 # INTEGRATION
 
-TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-# tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
 
 ## amrex/sundials backend integrators
@@ -70,7 +83,7 @@ integration.type = RungeKutta
 ### 2 = Trapezoid Method
 ### 3 = SSPRK3 Method
 ### 4 = RK4 Method
-integration.rk.type = 3
+integration.rk.type = 4
 
 ## If using a user-specified Butcher Tableau, then
 ## set nodes, weights, and table entries here:
@@ -114,4 +127,3 @@ integration.sundials.erk.method = SSPRK3
 integration.sundials.mri.implicit_inner = false
 integration.sundials.mri.outer_method = KnothWolke3
 integration.sundials.mri.inner_method = Trapezoid
-

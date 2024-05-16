@@ -60,6 +60,28 @@ void InitializeMagneticProperties(MultiFab& alpha,
     Parser DMI_parser(DMI_parser_string);
     DMI_parser.registerVariables({"x","y","z"});
     auto DMI_p = DMI_parser.compile<3>();
+
+    for (MFIter mfi(Ms); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.growntilebox(1);
+
+        const Array4<Real>& alpha_arr = alpha.array(mfi);
+        const Array4<Real>& gamma_arr = gamma.array(mfi);
+        const Array4<Real>& Ms_arr = Ms.array(mfi);
+        const Array4<Real>& exchange_arr = exchange.array(mfi);
+        const Array4<Real>& DMI_arr = DMI.array(mfi);
+        const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
+
+        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
+            Real x = prob_lo[0] + (i+0.5) * dx[0];
+            Real y = prob_lo[1] + (j+0.5) * dx[1];
+            Real z = prob_lo[2] + (k+0.5) * dx[2];
+
+            Ms_arr(i,j,k) = Ms_p(x,y,z);
+
+        });
+    }
     
     // loop over boxes
     for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
@@ -81,15 +103,12 @@ void InitializeMagneticProperties(MultiFab& alpha,
 
             alpha_arr(i,j,k) = alpha_p(x,y,z,time);
             gamma_arr(i,j,k) = gamma_p(x,y,z);
-            Ms_arr(i,j,k) = Ms_p(x,y,z);
             exchange_arr(i,j,k) = exchange_p(x,y,z);
             DMI_arr(i,j,k) = DMI_p(x,y,z);
             anisotropy_arr(i,j,k) = anisotropy_p(x,y,z);
 
         }); 
     }
-    // fill periodic ghost cells for Ms. Used to calculate Ms_lo(hi)_x(y,z) for exchange field calculation
-    Ms.FillBoundary(geom.periodicity());
 
 }
 

@@ -265,6 +265,40 @@ void Demagnetization::define()
         ComputeForwardFFT_heffte(Kzz, Kzz_fft_real, Kzz_fft_imag);
    }
 
+    /*
+    MultiFab::Copy(Plt, Kxx_fft_real, 0, 0, 1, 0);
+    MultiFab::Copy(Plt, Kxy_fft_real, 0, 1, 1, 0);
+    MultiFab::Copy(Plt, Kxz_fft_real, 0, 2, 1, 0);
+    MultiFab::Copy(Plt, Kyy_fft_real, 0, 3, 1, 0);
+    MultiFab::Copy(Plt, Kyz_fft_real, 0, 4, 1, 0);
+    MultiFab::Copy(Plt, Kzz_fft_real, 0, 5, 1, 0);
+
+    WriteSingleLevelPlotfile("DemagTensor_realfft", Plt,
+                             {"Kxx",
+                              "Kxy",
+                              "Kxz",
+                              "Kyy",
+                              "Kyz",
+                              "Kzz"},
+                             geom_large, 0., 0);
+
+    MultiFab::Copy(Plt, Kxx_fft_imag, 0, 0, 1, 0);
+    MultiFab::Copy(Plt, Kxy_fft_imag, 0, 1, 1, 0);
+    MultiFab::Copy(Plt, Kxz_fft_imag, 0, 2, 1, 0);
+    MultiFab::Copy(Plt, Kyy_fft_imag, 0, 3, 1, 0);
+    MultiFab::Copy(Plt, Kyz_fft_imag, 0, 4, 1, 0);
+    MultiFab::Copy(Plt, Kzz_fft_imag, 0, 5, 1, 0);
+
+    WriteSingleLevelPlotfile("DemagTensor_imagfft", Plt,
+                             {"Kxx",
+                              "Kxy",
+                              "Kxz",
+                              "Kyy",
+                              "Kyz",
+                              "Kzz"},
+                             geom_large, 0., 0);
+    */
+
 }
 
 // Convolve the convolution magnetization and the demag tensor by taking the dot product of their FFTs.

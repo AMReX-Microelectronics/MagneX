@@ -1,36 +1,43 @@
-n_cell = 28 28 28
-max_grid_size_x = 28
-max_grid_size_y = 28
-max_grid_size_z = 28
+###
+n_cell = 30 30 30          
+max_grid_size_x = 30
+max_grid_size_y = 30
+max_grid_size_z = 30
 
-dt = 2.5e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 1000000
-plot_int = 10000
+dt = 1.e-14 #MATLAB code uses 5.e-6 nanoseconds
+nsteps = 100000
+steady_stop = 1
+plot_int = 1000
 chk_int = -1
 restart = -1
-diag_type = 4
+diag_type = 3
 
 prob_lo = 0. 0. 0.
-prob_hi = 8.4e-8 8.4e-8 8.4e-8
+prob_hi = 42.e-9 42.e-9 42.e-9
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8)"
+# Initialization for "flower" state
+#Mx_parser(x,y,z) = "8.e5/sqrt(3) * (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9)"
+#My_parser(x,y,z) = "8.e5/sqrt(3) * (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9)"
+#Mz_parser(x,y,z) = "8.e5/sqrt(3) * (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9)"
+
+# Initialization for "vortex" state
+Mx_parser(x,y,z) = "0."
 My_parser(x,y,z) = "0."
-Mz_parser(x,y,z) = "0."
+Mz_parser(x,y,z) = "(8.e5 * (x>0.)*(x<21.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9)) - (8.e5 * (x>=21.e-9)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9))"
 
-Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
-Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
-Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+timedependent_Hbias = 0
+Hx_bias_parser(x,y,z,t) = "0."
+Hy_bias_parser(x,y,z,t) = "0."
+Hz_bias_parser(x,y,z,t) = "0."
 
-# We derive exchange parser from the dimensionless L/l_ex 
-# increasing the domain size L we see a new domain pattern form at a certain threshold
 timedependent_alpha = 0
-alpha_parser(x,y,z,t) =  " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8) * 0.5"
-Ms_parser(x,y,z) =       " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8) * 8.e5"
-gamma_parser(x,y,z) =    " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8) * -1.759e11"
-exchange_parser(x,y,z) = " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8)* 4.0212e-11"
-anisotropy_parser(x,y,z) = " (x>0.)*(x<8.4e-8)*(y>0.)*(y<8.4e-8)*(z>0.)*(z<8.4e-8)* 40212.16"
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9) * 0.3"
+Ms_parser(x,y,z) =       " (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9)* 1.e-11"
+anisotropy_parser(x,y,z) = " (x>0.)*(x<42.e-9)*(y>0.)*(y<42.e-9)*(z>0.)*(z<42.e-9)* 3.9788736e4"
 DMI_parser(x,y,z) = "0."
 
 precession = 1 
@@ -44,13 +51,13 @@ DMI_coupling = 0
 
 # INTEGRATION
 
-TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 5 #amrex/sundials backend integrators
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-# tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
-iterative_tolerance = 1.e-9
+# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+iterative_tolerance = 1.e-6
 
 ## amrex/sundials backend integrators
 ## *** Selecting the integrator backend ***
@@ -69,7 +76,7 @@ integration.type = RungeKutta
 ### 2 = Trapezoid Method
 ### 3 = SSPRK3 Method
 ### 4 = RK4 Method
-integration.rk.type = 3
+integration.rk.type = 4
 
 ## If using a user-specified Butcher Tableau, then
 ## set nodes, weights, and table entries here:

@@ -35,7 +35,7 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                         // H_anisotropy 
                         amrex::Real M_dot_anisotropy_axis = 0.0;
                         M_dot_anisotropy_axis = Mx(i, j, k) * anisotropy_axis[0] + My(i, j, k) * anisotropy_axis[1] + Mz(i, j, k) * anisotropy_axis[2];
-                        amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
+                        amrex::Real const H_anisotropy_coeff = 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
                         Hx_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
                         Hy_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
                         Hz_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];

@@ -20,16 +20,31 @@ AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_hi;
 // total steps in simulation
 int MagneX::nsteps;
 
+// maximum simulation time
+amrex::Real MagneX::stop_time;
+
+// number of increments on Hbias before reversing sign of increment
+int MagneX::nsteps_hysteresis;
+
+// flag to end simulation if steady-state reached, steady_state = 1 will end LLG evolution
+int MagneX::steady_stop;
+
 // 1 = first order forward Euler
 // 2 = iterative predictor-corrector
 // 3 = iterative direct solver
 // 4 = AMReX and SUNDIALS integrators
 int MagneX::TimeIntegratorOption;
 
-// tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+// tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 // for TimeIntegrationOption=2, iterative_tolerance=0. means force 2 iterations
 // for TimeIntegrationOption=3, iterative_tolerance=0. means force 1 iteration
 amrex::Real MagneX::iterative_tolerance;
+
+// tolerance threshold for equilibrium in M 
+amrex::Real MagneX::equilibrium_tolerance;
+
+// increment size for Hbias  
+AMREX_GPU_MANAGED amrex::Real MagneX::increment_size;
 
 // time step
 amrex::Real MagneX::dt;
@@ -53,7 +68,12 @@ int MagneX::restart;
 
 // what type of extra diagnostics?
 // 4 = standard problem 4
+// 3 = standard problem 3
+// 2 = standard problem 2
 int MagneX::diag_type;
+
+// Would you like to equilibriate M before evolving Hbias?
+int MagneX::Hbias_sweep;
 
 // permeability
 AMREX_GPU_MANAGED amrex::Real MagneX::mu0;
@@ -113,7 +133,23 @@ void InitializeMagneXNamespace() {
         prob_hi[i] = temp[i];
     }
 
-    pp.get("nsteps",nsteps);
+    nsteps = 1000000000;
+    pp.query("nsteps",nsteps);
+
+    stop_time = 1.e9;
+    pp.query("stop_time",stop_time);
+
+    nsteps_hysteresis = 1000000000;
+    pp.query("nsteps_hysteresis",nsteps_hysteresis);
+
+    steady_stop = 0;
+    pp.query("steady_stop",steady_stop);
+
+    equilibrium_tolerance = 1.e-6;
+    pp.query("equilibrium_tolerance",equilibrium_tolerance);
+
+    increment_size = 1.e-5;
+    pp.query("increment_size",increment_size);
 
     pp.get("TimeIntegratorOption",TimeIntegratorOption);
 
@@ -146,6 +182,9 @@ void InitializeMagneXNamespace() {
 
     diag_type = -1;
     pp.query("diag_type",diag_type);
+
+    Hbias_sweep = 0;
+    pp.query("Hbias_sweep", Hbias_sweep);
 	
     pp.get("mu0",mu0);
 

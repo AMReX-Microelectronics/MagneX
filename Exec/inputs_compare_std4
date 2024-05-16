@@ -1,21 +1,42 @@
-n_cell = 166 42 1
-max_grid_size_x = 166
-max_grid_size_y = 42
+##############
+# 3.125nm case
+##############
+n_cell = 160 40 1
+max_grid_size_x = 160
+max_grid_size_y = 40
 max_grid_size_z = 1
+dt = 5.e-15  # forward Euler (685s), 1.e-14 unstable
+dt = 2.5e-13 # Predictor-corrector (70s), 5.e-13 unstable
+dt = 1.e-13 # trapezoidal (63s), 2.5e-13 unstable
+dt = 2.5e-13 # SSPRK3 (36s), 5.e-13 unstable
+dt = 5.e-13 # RK4 (24s), 1.e-12 unstable
 
-dt = 5.e-15  # MATLAB code uses 5.e-6 nanoseconds
-nsteps = 400000
+##############
+# 1.5625nm case
+##############
+#n_cell = 320 80 2
+#max_grid_size_x = 320
+#max_grid_size_y = 80
+#max_grid_size_z = 2
+#dt = 1.e-15 # forward Euler (11528s) 2.5e-15 unstable
+#dt = 5.e-14 # Predictor-corrector (1132s) 1.e-13 unstable
+#dt = 1.e-14 # trapezoidal (2229s) 2.5e-14 unstable
+#dt = 5.e-14 # SSPRK3 (665s) 1.e-13 unstable
+#dt = 1.e-13 # RK4 (438s) 2.5e-13 unstable
+
+stop_time = 4.e-9
+
 plot_int = 10000
 chk_int = -1
 restart = -1
 diag_type = 4
 
 prob_lo = 0. 0. 0.
-prob_hi = 498.e-9 126.e-9 3.e-9
+prob_hi = 500.e-9 125.e-9 3.125e-9
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)"
+Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9)"
 My_parser(x,y,z) = "0."
 Mz_parser(x,y,z) = "0."
 
@@ -34,10 +55,10 @@ Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*
 #Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
 timedependent_alpha = 1
-alpha_parser(x,y,z,t) =  " (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9) * (0.5*(t<=1.e-9) + 0.02*(t>1.e-9))"
-Ms_parser(x,y,z) =       " (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9) * 8.e5"
-gamma_parser(x,y,z) =    " (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9) * -1.759e11"
-exchange_parser(x,y,z) = " (x>0.)*(x<498.e-9)*(y>0.)*(y<126.e-9)*(z>0.)*(z<3.e-9)* 1.3e-11"
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * (0.5*(t<=1.e-9) + 0.02*(t>1.e-9))"
+Ms_parser(x,y,z) =       " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9)* 1.3e-11"
 anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
@@ -52,12 +73,12 @@ DMI_coupling = 0
 
 # INTEGRATION
 
-TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-# tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
 
 ## amrex/sundials backend integrators
@@ -77,7 +98,7 @@ integration.type = RungeKutta
 ### 2 = Trapezoid Method
 ### 3 = SSPRK3 Method
 ### 4 = RK4 Method
-integration.rk.type = 3
+integration.rk.type = 4
 
 ## If using a user-specified Butcher Tableau, then
 ## set nodes, weights, and table entries here:
