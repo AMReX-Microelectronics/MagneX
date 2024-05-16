@@ -6,13 +6,8 @@
 #ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
-<<<<<<< HEAD
 #include <torch/script.h>
-=======
-
 #include <cmath>
-
->>>>>>> development
 using namespace amrex;
 using namespace MagneX;
 
