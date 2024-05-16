@@ -83,7 +83,7 @@ int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
 
 // 0 = no precession; 1 = precession
-int MagneX::precession;
+AMREX_GPU_MANAGED int MagneX::precession;
 
 // turn on demagnetization
 AMREX_GPU_MANAGED int MagneX::demag_coupling;
