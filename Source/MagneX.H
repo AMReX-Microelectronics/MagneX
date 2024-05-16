@@ -191,4 +191,4 @@ void CalculateH_demag_ML(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                          
 
 
-void outputMFAscii(Array< MultiFab, AMREX_SPACEDIM> &   Mfield, std::string filename);
+// void outputMFAscii(Array< MultiFab, AMREX_SPACEDIM> &   Mfield, std::string filename);

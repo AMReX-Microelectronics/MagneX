@@ -406,9 +406,9 @@ void main_main ()
                 std::string fname_after = "M_old_after" + std::to_string(step) + "after";
 
                 if (step < 2) {
-                    outputMFAscii(Mfield_old, fname_before);
+                    // outputMFAscii(Mfield_old, fname_before);
                     demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
-                    outputMFAscii(Mfield_old, fname_after);
+                    // outputMFAscii(Mfield_old, fname_after);
                 } else {
                     amrex::Print()<<"\n"<<ml_model_name<<"\n";
                     // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, H_demagfield);
@@ -593,12 +593,9 @@ void main_main ()
 
     	        // Evolve H_demag
                 if (demag_coupling == 1) {
-<<<<<<< HEAD
                     amrex::Print() << "this ar_old_state is used" << "\n";
                     demag_solver.CalculateH_demag(ar_old_state, H_demagfield);
                     // CalculateH_demag_ML(ar_old_state, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
-=======
-                    demag_solver.CalculateH_demag(ar_state, H_demagfield);
                 }
 
                 if (using_MRI) {
@@ -652,7 +649,6 @@ void main_main ()
                     for (int d=0; d<AMREX_SPACEDIM; ++d) {
                         H_demagfield[d].setVal(0.);
                     }
->>>>>>> development
                 }
 
                 if (exchange_coupling == 1) {
@@ -829,7 +825,6 @@ void main_main ()
 
         amrex::Print() << "Advanced step " << step << " in " << step_stop_time << " seconds; time = " << time << "\n";
 
-<<<<<<< HEAD
         // // Write a plotfile of the data if plot_int > 0
         // if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
         //     WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
@@ -843,92 +838,12 @@ void main_main ()
 	
 	*/
 
-        if(Hbias_sweep == 1)
-        {
-
-	    if (demag_coupling == 1) {
-        amrex::Print() << "this Mfield_old 3 is used" << "\n";    
-		demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
-        // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
-	    }
-
-	    if (exchange_coupling == 1) {
-		CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, geom);
-	    }
-
-	    if (DMI_coupling == 1) {
-		CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, geom);
-	    }
-
-	    if (anisotropy_coupling == 1) {
-		CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy);
-	    }
-
-           // iterate to compute M^{n+1} until equilibirum reached.
-           while(err > equilibrium_tolerance){
-	
-		    // Evolve M with simple Forward Euler
-		    // Compute f^n = f(M^n, H^n)
-		    Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
-				    Ms, gamma);
-
-		    // M^{n+1} = M^n + dt * f^n
-		    for (int i = 0; i < 3; i++) {
-			MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 1, 0);
-		    }
-
-		    NormalizeM(Mfield, Ms, geom);
-
-		    normalized_Mx = SumNormalizedM(Ms,Mfield[0])/num_mag;
-                    normalized_My = SumNormalizedM(Ms,Mfield[1])/num_mag;
-                    normalized_Mz = SumNormalizedM(Ms,Mfield[2])/num_mag;
-
-		    outputFile << "time = " << time << " "
-		               << "equilibirate_Sum_normalized_M: "
-		               << normalized_Mx << " "
-		               << normalized_My << " "
-		               << normalized_Mz << std::endl;
-
-                    M_magnitude = sqrt(normalized_Mx*normalized_Mx + normalized_My*normalized_My + normalized_Mz*normalized_Mz);
-                   
-                    err = amrex::Math::abs(M_magnitude_old - M_magnitude);
-
-                    M_magnitude_old = M_magnitude;
-
-		    if (timedependent_alpha) {
-	                ComputeAlpha(alpha,geom,time);
-		    }
-
-		    if (demag_coupling == 1) {
-                amrex::Print() << "this Mfield_old 4 is used" << "\n";  
-			demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
-            // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
-		    }
-
-		    if (exchange_coupling == 1) {
-			CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, geom);
-		    }
-
-		    if (DMI_coupling == 1) {
-			CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, geom);
-		    }
-
-		    if (anisotropy_coupling == 1) {
-			CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy);
-		    }
-            }
-        }
-
-        err = equilibrium_tolerance + 1.;
-
-=======
         // Write a plotfile of the data if plot_int > 0
         if ( (plot_int > 0 && step%plot_int == 0) || (plot_int > 0 && time > stop_time) || diag_std4_plot) {
             WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
                           H_demagfield, geom, time, step);
         }
 
->>>>>>> development
 	// MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 

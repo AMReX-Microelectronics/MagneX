@@ -16,6 +16,6 @@ CEXE_headers += Demagnetization.H
 CEXE_headers += MagneX.H
 CEXE_headers += MagneX_namespace.H
 CEXE_sources += Demag_ml.cpp
-CEXE_sources += outputMFAscii.cpp
+
 
 
