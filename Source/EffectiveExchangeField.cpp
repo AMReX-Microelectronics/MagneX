@@ -81,13 +81,13 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                             dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k) ; // lower x BC: dMx/dx = 1/xi*Mz
                             dMxdx_BC_hi_x = -1.0/xi_DMI*Mz(i,j,k) ; // higher x BC: dMx/dx = -1/xi*Mz
 
-                            dMydy_BC_lo_y = -1.0/xi_DMI*Mz(i,j,k) ; // lower y BC: dMy/dy = 1/xi*Mz
-                            dMydy_BC_hi_y = -1.0/xi_DMI*Mz(i,j,k) ; // higher y BC: dMy/dy = -1/xi*Mz
+                            dMydy_BC_lo_y = 0.;//-1.0/xi_DMI*Mz(i,j,k) ; // lower y BC: dMy/dy = 1/xi*Mz
+                            dMydy_BC_hi_y = 0.;//-1.0/xi_DMI*Mz(i,j,k) ; // higher y BC: dMy/dy = -1/xi*Mz
 
                             dMzdx_BC_lo_x =  1.0/xi_DMI*Mx(i,j,k);  // lower x BC: dMz/dx = -1/xi*Mx
                             dMzdx_BC_hi_x =  1.0/xi_DMI*Mx(i,j,k);  // higher x BC: dMz/dx = 1/xi*Mx
-                            dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k);  // lower y BC: dMz/dy = -1/xi*My
-                            dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k);  // higher y BC: dMz/dy = 1/xi*My
+                            dMzdy_BC_lo_y =  0.;//1.0/xi_DMI*My(i,j,k);  // lower y BC: dMz/dy = -1/xi*My
+                            dMzdy_BC_hi_y =  0.;//1.0/xi_DMI*My(i,j,k);  // higher y BC: dMz/dy = 1/xi*My
                         }
                         
                         Hx_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, 

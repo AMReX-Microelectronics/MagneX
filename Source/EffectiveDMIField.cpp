@@ -56,14 +56,14 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                         amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*Mx(i,j,k); // higher x BC: dMz/dx = 1/xi*Mx 
                         Hx_DMI(i,j,k) = H_DMI_coeff * DMDx_Mag(Mz, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd); // z component at x nodality
 
-                        amrex::Real dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k); // lower y BC: dMz/dy = -1/xi*My
-                        amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k); // higher y BC: dMz/dy = 1/xi*My
+                        amrex::Real dMzdy_BC_lo_y =  0.;//1.0/xi_DMI*My(i,j,k); // lower y BC: dMz/dy = -1/xi*My
+                        amrex::Real dMzdy_BC_hi_y =  0.;//1.0/xi_DMI*My(i,j,k); // higher y BC: dMz/dy = 1/xi*My
                         Hy_DMI(i,j,k) = H_DMI_coeff * DMDy_Mag(Mz, Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd); // z component at x nodality
 
                         amrex::Real dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k);  // lower x BC: dMx/dx = 1/xi*Mz
                         amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*Mz(i,j,k); // higher x BC: dMx/dx = -1/xi*Mz
-                        amrex::Real dMydy_BC_lo_y = -1.0/xi_DMI*Mz(i,j,k); // lower y BC: dMy/dy = 1/xi*Mz
-                        amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*Mz(i,j,k); // higher y BC: dMy/dy = -1/xi*Mz
+                        amrex::Real dMydy_BC_lo_y = 0.;//-1.0/xi_DMI*Mz(i,j,k); // lower y BC: dMy/dy = 1/xi*Mz
+                        amrex::Real dMydy_BC_hi_y = 0.;//-1.0/xi_DMI*Mz(i,j,k); // higher y BC: dMy/dy = -1/xi*Mz
                         Hz_DMI(i,j,k) = H_DMI_coeff * (-DMDx_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd) // x component at x nodality
                                                         -DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd)); // y component at x nodality;
 
