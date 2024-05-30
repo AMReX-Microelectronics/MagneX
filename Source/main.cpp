@@ -181,7 +181,13 @@ void main_main ()
     MultiFab exchange(ba, dm, 1, 0);
     MultiFab DMI(ba, dm, 1, 0);
     MultiFab anisotropy(ba, dm, 1, 0);
- 
+
+    MultiFab theta;
+    if (diag_type == 5) {
+        theta.define(ba, dm, 1, 0);
+        theta.setVal(0.);
+    }
+    
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " precession           = " << precession          << "\n";
     amrex::Print() << " demag_coupling       = " << demag_coupling      << "\n";
@@ -250,8 +256,13 @@ void main_main ()
             plt_step = restart;
         }
 
+        // DMI Diagnostics
+        if (diag_type == 5) {
+            ComputeTheta(Ms, Mfield[0], Mfield[1], Mfield[2], theta);
+        }
+        
         WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                      H_demagfield, geom, time, plt_step);
+                      H_demagfield, theta, geom, time, plt_step);
     }
 
     // copy new solution into old solution
@@ -724,8 +735,7 @@ void main_main ()
 		 	   << "anis_energy = "<< anis_energy << " "
 			   << "total_energy = "<< total_energy <<  std::endl;
 
-	     }
-
+            }
         }
 
         // copy new solution into old solution
@@ -743,8 +753,14 @@ void main_main ()
 
         // Write a plotfile of the data if plot_int > 0
         if ( (plot_int > 0 && step%plot_int == 0) || (plot_int > 0 && time > stop_time) || diag_std4_plot) {
+
+            // DMI Diagnostics
+            if (diag_type == 5) {
+                ComputeTheta(Ms, Mfield[0], Mfield[1], Mfield[2], theta);
+            }
+            
             WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, geom, time, step);
+                          H_demagfield, theta, geom, time, step);
         }
 
 	// MultiFab memory usage

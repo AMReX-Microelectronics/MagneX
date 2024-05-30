@@ -83,6 +83,13 @@ Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_y,
                       MultiFab& Mfield_z,
                       Real anis);
+
+void ComputeTheta(MultiFab& Ms,
+                  MultiFab& Mfield_x,
+                  MultiFab& Mfield_y,
+                  MultiFab& Mfield_z,
+                  MultiFab& theta);
+
 /*
   EffectiveAnisotropyField.cpp
 */
@@ -177,6 +184,7 @@ void WritePlotfile(MultiFab& Ms,
                    Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                   MultiFab& theta,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step);

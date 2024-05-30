@@ -308,3 +308,44 @@ Real AnisotropyEnergy(MultiFab& Ms,
 
     return sum * (anis);
 }
+
+void ComputeTheta(MultiFab& Ms,
+                  MultiFab& Mfield_x,
+                  MultiFab& Mfield_y,
+                  MultiFab& Mfield_z,
+                  MultiFab& theta)
+{
+    for (MFIter mfi(Ms,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+
+        const Box& bx = mfi.tilebox();
+
+        auto const& Ms_arr = Ms.array(mfi);
+        auto const& Mx = Mfield_x.array(mfi);
+        auto const& My = Mfield_y.array(mfi);
+        auto const& Mz = Mfield_z.array(mfi);
+        auto const& theta_arr = theta.array(mfi);
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+
+            if (Mx(i,j,k) >= 0. && Mz(i,j,k) > 0) {
+                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k));
+            } else if (Mx(i,j,k) >= 0. && Mz(i,j,k) < 0) {
+                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + M_PI;
+            } else if (Mx(i,j,k) < 0. && Mz(i,j,k) < 0) {
+                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + M_PI;
+            } else if (Mx(i,j,k) < 0. && Mz(i,j,k) > 0) {
+                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + 2.*M_PI;
+            }
+
+            if (Mz(i,j,k) == 0.) {
+                if (Mx(i,j,k) >= 0.) {
+                    theta_arr(i,j,k) = 0.;
+                }
+                else {
+                    theta_arr(i,j,k) = M_PI;
+                }
+            }
+
+        });
+    }
+}
