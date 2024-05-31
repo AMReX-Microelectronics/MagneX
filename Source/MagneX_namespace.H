@@ -40,7 +40,6 @@ namespace MagneX {
 
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
-    extern int timedependent_DMI;
 
     extern int Hbias_sweep;
 
@@ -56,6 +55,7 @@ namespace MagneX {
     extern AMREX_GPU_MANAGED int precession;
     extern AMREX_GPU_MANAGED int exchange_coupling;
     extern AMREX_GPU_MANAGED int DMI_coupling;
+    extern int timedependent_DMI;
     extern AMREX_GPU_MANAGED int anisotropy_coupling;
     extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
     extern AMREX_GPU_MANAGED int demag_coupling;

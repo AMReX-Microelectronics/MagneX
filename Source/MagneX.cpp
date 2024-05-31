@@ -67,9 +67,8 @@ int MagneX::restart;
 int MagneX::diag_type;
 
 // whether to call the parser each time step, or only at initialization
-int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
-int MagneX::timedependent_DMI;
+int MagneX::timedependent_Hbias;
 
 ////////////////////////////////
 // parameters for Hbias sweeping
@@ -102,6 +101,7 @@ AMREX_GPU_MANAGED int MagneX::exchange_coupling;
 
 // 0 = disable DMI; 1 = enable DMI
 AMREX_GPU_MANAGED int MagneX::DMI_coupling;
+int MagneX::timedependent_DMI;
 
 // 0 = disable anisotropy; 1 = enable anisotropy
 // anisotropy_axis only required for anistropy_coupling=1
@@ -189,9 +189,6 @@ void InitializeMagneXNamespace() {
 
     pp.get("timedependent_Hbias",timedependent_Hbias);
     pp.get("timedependent_alpha",timedependent_alpha);
-    if (DMI_coupling) {
-        pp.get("timedependent_DMI",timedependent_DMI);
-    }
 
     Hbias_sweep = 0;
     pp.query("Hbias_sweep", Hbias_sweep);
@@ -211,6 +208,9 @@ void InitializeMagneXNamespace() {
 
     pp.get("exchange_coupling", exchange_coupling);
     pp.get("DMI_coupling", DMI_coupling);
+    if (DMI_coupling) {
+        pp.get("timedependent_DMI",timedependent_DMI);
+    }
 
     pp.get("anisotropy_coupling", anisotropy_coupling);
     if (anisotropy_coupling) {

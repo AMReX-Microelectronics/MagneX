@@ -15,6 +15,7 @@ demag_coupling = 0
 M_normalization = 1
 exchange_coupling = 1
 DMI_coupling = 1
+timedependent_DMI = 1
 anisotropy_coupling = 1
 
 diag_type = 5
