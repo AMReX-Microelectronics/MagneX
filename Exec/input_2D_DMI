@@ -29,7 +29,7 @@ exchange_parser(x,y,z) = " 16.0e-12*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) 
 #DMI_parser(x,y,z,t) = " -4.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 
 # use for 3pi
-DMI_parser(x,y,z,t) = " (-5.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)) * (t<6.25e-10) + (-4.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)) * (t>6.25e-10)" # unit is J/m^2
+DMI_parser(x,y,z,t) = " (-5.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)) * (t<6.25e-10) + (-4.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)) * (t>=6.25e-10)" # unit is J/m^2
 
 anisotropy_parser(x,y,z) = " 510.0e3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^3
 anisotropy_axis = 0.0 0.0 1.0
