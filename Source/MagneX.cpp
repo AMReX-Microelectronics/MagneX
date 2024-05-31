@@ -69,6 +69,7 @@ int MagneX::diag_type;
 // whether to call the parser each time step, or only at initialization
 int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
+int MagneX::timedependent_DMI;
 
 ////////////////////////////////
 // parameters for Hbias sweeping
@@ -188,6 +189,9 @@ void InitializeMagneXNamespace() {
 
     pp.get("timedependent_Hbias",timedependent_Hbias);
     pp.get("timedependent_alpha",timedependent_alpha);
+    if (DMI_coupling) {
+        pp.get("timedependent_DMI",timedependent_DMI);
+    }
 
     Hbias_sweep = 0;
     pp.query("Hbias_sweep", Hbias_sweep);

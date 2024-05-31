@@ -6,7 +6,6 @@
 void InitializeMagneticProperties(MultiFab& Ms,
                                   MultiFab& gamma,
                                   MultiFab& exchange,
-                                  MultiFab& DMI,
                                   MultiFab& anisotropy,
                                   const Geometry& geom,
                                   const Real& time)
@@ -87,31 +86,6 @@ void InitializeMagneticProperties(MultiFab& Ms,
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
 
                 exchange_arr(i,j,k) = exchange_p(x,y,z);
-
-            }); 
-        }
-    }
-
-    if (DMI_coupling == 1) {
-        std::string DMI_parser_string;
-        pp.get("DMI_parser(x,y,z)",DMI_parser_string);
-        Parser DMI_parser(DMI_parser_string);
-        DMI_parser.registerVariables({"x","y","z"});
-        auto DMI_p = DMI_parser.compile<3>();
-    
-        for (MFIter mfi(DMI); mfi.isValid(); ++mfi)
-        {
-            const Box& bx = mfi.validbox(); // no ghost cells
-
-            const Array4<Real>& DMI_arr = DMI.array(mfi);
-
-            amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-            {
-                Real x = prob_lo[0] + (i+0.5) * dx[0];
-                Real y = prob_lo[1] + (j+0.5) * dx[1];
-                Real z = prob_lo[2] + (k+0.5) * dx[2];
-
-                DMI_arr(i,j,k) = DMI_p(x,y,z);
 
             }); 
         }
@@ -286,4 +260,40 @@ void ComputeAlpha(MultiFab&  alpha,
 
         }); 
     }
+}
+
+void ComputeDMICoeff(MultiFab& DMI,
+                     const Geometry& geom,
+                     const Real& time)
+{
+    // extract dx from the geometry object
+    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+
+    ParmParse pp;
+
+    if (DMI_coupling == 1) {
+        std::string DMI_parser_string;
+        pp.get("DMI_parser(x,y,z,t)",DMI_parser_string);
+        Parser DMI_parser(DMI_parser_string);
+        DMI_parser.registerVariables({"x","y","z","t"});
+        auto DMI_p = DMI_parser.compile<3>();
+    
+        for (MFIter mfi(DMI); mfi.isValid(); ++mfi)
+        {
+            const Box& bx = mfi.validbox(); // no ghost cells
+
+            const Array4<Real>& DMI_arr = DMI.array(mfi);
+
+            amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+                Real x = prob_lo[0] + (i+0.5) * dx[0];
+                Real y = prob_lo[1] + (j+0.5) * dx[1];
+                Real z = prob_lo[2] + (k+0.5) * dx[2];
+
+                DMI_arr(i,j,k) = DMI_p(x,y,z);
+
+            }); 
+        }
+    }
+
 }

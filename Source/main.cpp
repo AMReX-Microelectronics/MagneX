@@ -214,9 +214,10 @@ void main_main ()
     }
 
     // read in Ms, gamma, exchange, DMI, anisotropy, alpha, and Hbias from parser
-    InitializeMagneticProperties(Ms, gamma, exchange, DMI, anisotropy, geom, time);
+    InitializeMagneticProperties(Ms, gamma, exchange, anisotropy, geom, time);
     ComputeAlpha(alpha,geom,time);
     ComputeHbias(H_biasfield, time, geom);
+    ComputeDMICoeff(DMI,geom,time);
 
     // Extract maximum anisotropy and exchange constants
     // FIMXE; used for Diagnostics, can pass in full MultiFab instead
@@ -347,6 +348,10 @@ void main_main ()
             ComputeAlpha(alpha,geom,time);
         }
 
+        if (timedependent_DMI) {
+            ComputeDMICoeff(DMI,geom,time);
+        }            
+
         // compute old-time LLG_RHS
         if (TimeIntegratorOption == 1 ||
             TimeIntegratorOption == 2 ||
@@ -407,6 +412,10 @@ void main_main ()
             if (timedependent_alpha) {
                 ComputeAlpha(alpha,geom,time+dt);
             }
+
+            if (timedependent_DMI) {
+                ComputeDMICoeff(DMI,geom,time);
+            }          
 
             int iter = 1;
 

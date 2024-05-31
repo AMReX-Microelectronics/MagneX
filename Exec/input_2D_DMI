@@ -24,7 +24,13 @@ alpha_parser(x,y,z,t) =  " 0.05*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z
 Ms_parser(x,y,z) =       " 1.1e6*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is Ampere/m
 gamma_parser(x,y,z) =    " -1.759e11*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)"
 exchange_parser(x,y,z) = " 16.0e-12*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m
-DMI_parser(x,y,z) = " -4.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
+
+# use for 0, pi, and 2pi
+#DMI_parser(x,y,z,t) = " -4.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
+
+# use for 3pi
+DMI_parser(x,y,z,t) = " (-5.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)) * (t<6.25e-10) + (-4.5e-3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)) * (t>6.25e-10)" # unit is J/m^2
+
 anisotropy_parser(x,y,z) = " 510.0e3*(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^3
 anisotropy_axis = 0.0 0.0 1.0
 
@@ -32,9 +38,9 @@ anisotropy_axis = 0.0 0.0 1.0
 # skyrmion initialization: sin(pi * sqrt(x*x + y*y) / 50.0e-9)
 # 2pi state initialization: sin(2*pi * sqrt(x*x + y*y) / 50.0e-9)
 # 3pi state initialization: sin(3*pi * sqrt(x*x + y*y) / 50.0e-9)
-Mx_parser(x,y,z) = "1.1e6 * sin(2*3.141592654 * sqrt(x*x + y*y) / 50.0e-9) * x/sqrt(x*x + y*y) *(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)"
-My_parser(x,y,z) = "1.1e6 * sin(2*3.141592654 * sqrt(x*x + y*y) / 50.0e-9) * y/sqrt(x*x + y*y) *(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)"
-Mz_parser(x,y,z) = "1.1e6 * cos(2*3.141592654 * sqrt(x*x + y*y) / 50.0e-9) *(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # for the skyrmion state
+Mx_parser(x,y,z) = "1.1e6 * sin(3*3.141592654 * sqrt(x*x + y*y) / 50.0e-9) * x/sqrt(x*x + y*y) *(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)"
+My_parser(x,y,z) = "1.1e6 * sin(3*3.141592654 * sqrt(x*x + y*y) / 50.0e-9) * y/sqrt(x*x + y*y) *(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)"
+Mz_parser(x,y,z) = "1.1e6 * cos(3*3.141592654 * sqrt(x*x + y*y) / 50.0e-9) *(sqrt(x*x + y*y) <= 50.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # for the skyrmion state
 
 timedependent_Hbias = 0
 Hx_bias_parser(x,y,z,t) = "0.0"

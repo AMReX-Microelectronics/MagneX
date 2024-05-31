@@ -40,6 +40,7 @@ namespace MagneX {
 
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
+    extern int timedependent_DMI;
 
     extern int Hbias_sweep;
 

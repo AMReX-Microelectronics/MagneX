@@ -149,7 +149,6 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 void InitializeMagneticProperties(MultiFab& Ms, 
                                   MultiFab& gamma,
                                   MultiFab& exchange,
-                                  MultiFab& DMI,
                                   MultiFab& anisotropy,
                                   const Geometry& geom,
                                   const Real& time);
@@ -164,6 +163,10 @@ void ComputeHbias(Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
 void ComputeAlpha(MultiFab&  alpha,
                   const Geometry& geom,
                   const Real& time);
+
+void ComputeDMICoeff(MultiFab&  DMI,
+                     const Geometry& geom,
+                     const Real& time);
 
 /*
   NormalizeM.cpp
