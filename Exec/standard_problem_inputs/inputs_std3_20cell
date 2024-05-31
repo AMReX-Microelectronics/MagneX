@@ -37,7 +37,6 @@ Ms_parser(x,y,z) =       " (x>0.)*(x<41.9480e-9)*(y>0.)*(y<41.9480e-9)*(z>0.)*(z
 gamma_parser(x,y,z) =    " (x>0.)*(x<41.9480e-9)*(y>0.)*(y<41.9480e-9)*(z>0.)*(z<41.9480e-9) * -1.759e11"
 exchange_parser(x,y,z) = " (x>0.)*(x<41.9480e-9)*(y>0.)*(y<41.9480e-9)*(z>0.)*(z<41.9480e-9)* 1.005304e-11"
 anisotropy_parser(x,y,z) = " (x>0.)*(x<41.9480e-9)*(y>0.)*(y<41.9480e-9)*(z>0.)*(z<41.9480e-9)* 4.021216e4"
-DMI_parser(x,y,z) = "0."
 
 precession = 1 
 demag_coupling = 1
