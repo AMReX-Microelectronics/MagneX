@@ -276,7 +276,7 @@ void ComputeDMICoeff(MultiFab& DMI,
         pp.get("DMI_parser(x,y,z,t)",DMI_parser_string);
         Parser DMI_parser(DMI_parser_string);
         DMI_parser.registerVariables({"x","y","z","t"});
-        auto DMI_p = DMI_parser.compile<3>();
+        auto DMI_p = DMI_parser.compile<4>();
     
         for (MFIter mfi(DMI); mfi.isValid(); ++mfi)
         {
@@ -290,7 +290,7 @@ void ComputeDMICoeff(MultiFab& DMI,
                 Real y = prob_lo[1] + (j+0.5) * dx[1];
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
 
-                DMI_arr(i,j,k) = DMI_p(x,y,z);
+                DMI_arr(i,j,k) = DMI_p(x,y,z,time);
 
             }); 
         }
