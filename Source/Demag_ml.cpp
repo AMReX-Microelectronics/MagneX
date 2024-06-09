@@ -2,7 +2,7 @@
 #include <torch/script.h>
 using namespace amrex;
 
-void CalculateH_demag_ML(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+void CalculateH_demag_ML(const Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                         torch::jit::script::Module& x_norm_module,
                         torch::jit::script::Module& ml_module,
                         torch::jit::script::Module& y_norm_module,
@@ -12,22 +12,17 @@ void CalculateH_demag_ML(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     // timer for profiling
     BL_PROFILE_VAR("CalculateH_demag_ML()",CalculateH_demag_ML);
     auto dtype0 = torch::kFloat64;
-    std::string plotfilename = std::to_string(ParallelDescriptor::MyProc()) + "_sample_output";
-    std::ofstream ofs(plotfilename, std::ofstream::out);
-    // amrex::Print()<<"\n"<<"AMREX_SPACEDIM " << AMREX_SPACEDIM << "\n";
-    // for (MFIter mfi(output); mfi.isValid(); ++mfi) {
-    //     ofs<<std::setprecision(16)<< (output[mfi])<<std::endl;                                              
-    // }
-    // ofs.close();
+    // std::string plotfilename = std::to_string(ParallelDescriptor::MyProc()) + "_sample_output";
+    // std::ofstream ofs(plotfilename, std::ofstream::out);
 
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
                     
                     const Box& bx = mfi.validbox();
-                    const Array4<Real>& Mx = Mfield[0].array(mfi);
-                    const Array4<Real>& My = Mfield[1].array(mfi); 
-                    const Array4<Real>& Mz = Mfield[2].array(mfi); 
+                    const auto& Mx = Mfield[0].const_array(mfi);
+                    const auto& My = Mfield[1].const_array(mfi); 
+                    const auto& Mz = Mfield[2].const_array(mfi); 
                     // ofs<<std::setprecision(16)<< Mfield[0][mfi] <<std::endl;   
-                    ofs<<std::setprecision(16)<< Mfield[2][mfi] <<std::endl;   
+                    // ofs<<std::setprecision(16)<< Mfield[2][mfi] <<std::endl;   
 
                     const Array4<Real>& Hx_demag = H_demagfield[0].array(mfi);   
                     const Array4<Real>& Hy_demag = H_demagfield[1].array(mfi);   
@@ -55,10 +50,11 @@ void CalculateH_demag_ML(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                     {
                         int ii = i - bx_lo[0];
                         int jj = j - bx_lo[1];
-                        int index = jj*nbox[0] + ii;
-                    #if AMREX_SPACEDIM == 3
+                    #if AMREX_SPACEDIM == 2
+			            int index = jj + ii*nbox[1];
+		            #else
                         int kk = k - bx_lo[2];
-                        index += kk*nbox[0]*nbox[1];
+			            int index = kk + jj*nbox[2] + ii*nbox[2]*nbox[1];
                     #endif
                         // array order is row-based [index][comp]
                         auxPtr_Mx[index] = Mx(i, j, k);
@@ -111,7 +107,7 @@ void CalculateH_demag_ML(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 
                     // amrex::Print()<<"\n"<<"reshaped_Mx: " << reshaped_Mx << "\n";    
                     // amrex::Print()<<"\n"<<"reshaped_My: " << reshaped_My << "\n";    
-                    amrex::Print()<<"\n"<<"reshaped_Mz: " << reshaped_Mz << "\n";    
+                    // amrex::Print()<<"\n"<<"reshaped_Mz: " << reshaped_Mz << "\n";    
 
 
 
@@ -153,7 +149,7 @@ void CalculateH_demag_ML(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                     denorm_torch_Hy = denorm_torch_Hy.transpose(0, 1).flatten();
                     denorm_torch_Hz = denorm_torch_Hz.transpose(0, 1).flatten();
 
-                    // amrex::Print()<<"\n"<<"output torch Hx denorm reshape: " << denorm_torch_Hx << "\n";
+                    // amrex::Print()<<"\n"<<"output torch Hz denorm reshape: " << denorm_torch_Hz << "\n";
 
                     #ifdef AMREX_USE_CUDA
                         auto denorm_torch_Hx_acc = denorm_torch_Hx.packed_accessor64<Real,1>();
@@ -167,20 +163,36 @@ void CalculateH_demag_ML(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                     // amrex::Print()<<"\n"<<"denorm_torch_Hx_acc: " << denorm_torch_Hx_acc[0][0] << "\n";
 
                     // copy tensor to output multifab
+                    // amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+                    // {
+                    //     int ii = i - bx_lo[0];
+                    //     int jj = j - bx_lo[1];
+                    // #if AMREX_SPACEDIM == 2
+			        //     int index = jj + ii*nbox[1];
+		            // #else
+                    //     int kk = k - bx_lo[2];
+			        //     int index = kk + jj*nbox[2] + ii*nbox[2]*nbox[1];
+                    // #endif
+                    //     Hx_demag(i, j, k) = denorm_torch_Hx_acc[index];
+                    //     // printf("i=%d, j=%d, k=%d, ii=%d, jj=%d, bx_low_0=%d, bx_low_1=%d,nbox_0=%d, idx=%d, Hx_demag value is:%g\n", i, j, k, ii, jj, bx_lo[0], bx_lo[1], bx_lo[2], index, denorm_torch_Hx_acc[index]);
+                    //     Hy_demag(i, j, k) = denorm_torch_Hy_acc[index];
+                    //     Hz_demag(i, j, k) = denorm_torch_Hz_acc[index];
+                    //     printf("i=%d, j=%d, k=%d, ii=%d, jj=%d, bx_low_0=%d, bx_low_1=%d,nbox_0=%d, idx=%d, Hx_demag value is:%g\n", i, j, k, ii, jj, bx_lo[0], bx_lo[1], bx_lo[2], index, denorm_torch_Hz_acc[index]);
+                    //     // ofs<<std::setprecision(16)<< H_demagfield[2][mfi] <<std::endl;
+                    //     // ofs<<std::setprecision(16)<< H_demagfield[0][mfi] <<std::endl;      
+                        
+                    // });
                     amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                     {
                         int ii = i - bx_lo[0];
                         int jj = j - bx_lo[1];
-                        int index = jj*nbox[0] + ii;
-                        #if AMREX_SPACEDIM == 3
-                            int kk = k - bx_lo[2];
-                            index += kk*nbox[0]*nbox[1];
-                        #endif
+			            int index = ii + jj*nbox[0];
+
                         Hx_demag(i, j, k) = denorm_torch_Hx_acc[index];
-                        // printf("i=%d, j=%d, k=%d, ii=%d, jj=%d, bx_low_0=%d, bx_low_1=%d,nbox_0=%d, idx=%d, Hx_demag value is:%g\n", i, j, k, ii, jj, bx_lo[0], bx_lo[1], bx_lo[2], index, denorm_torch_Hx_acc[index]);
                         Hy_demag(i, j, k) = denorm_torch_Hy_acc[index];
                         Hz_demag(i, j, k) = denorm_torch_Hz_acc[index];
-                        // ofs<<std::setprecision(16)<< H_demagfield[0][mfi] <<std::endl;
+                        // printf("i=%d, j=%d, k=%d, ii=%d, jj=%d, bx_low_0=%d, bx_low_1=%d,nbox_0=%d, idx=%d, Hx_demag value is:%g\n", i, j, k, ii, jj, bx_lo[0], bx_lo[1], bx_lo[2], index, denorm_torch_Hz_acc[index]);
+                        // ofs<<std::setprecision(16)<< H_demagfield[2][mfi] <<std::endl;
                         // ofs<<std::setprecision(16)<< H_demagfield[0][mfi] <<std::endl;      
                         
                     });

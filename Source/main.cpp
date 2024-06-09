@@ -405,14 +405,14 @@ void main_main ()
                 std::string fname_before = "M_old_before" + std::to_string(step) + "before";
                 std::string fname_after = "M_old_after" + std::to_string(step) + "after";
 
-                if (step < 2) {
+                if (step < 200002) {
                     // outputMFAscii(Mfield_old, fname_before);
                     demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
                     // outputMFAscii(Mfield_old, fname_after);
                 } else {
                     amrex::Print()<<"\n"<<ml_model_name<<"\n";
-                    // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, H_demagfield);
-                    demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                    CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, H_demagfield);
+                    // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
                 }
                 if ( (plot_int > 0 && step%plot_int == 0 && step >= 200000)) {
                     WritePlotfile(Ms, Mfield_old, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
@@ -840,8 +840,8 @@ void main_main ()
 
         // Write a plotfile of the data if plot_int > 0
         if ( (plot_int > 0 && step%plot_int == 0) || (plot_int > 0 && time > stop_time) || diag_std4_plot) {
-            WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, geom, time, step);
+            // WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+            //               H_demagfield, geom, time, step);
         }
 
 	// MultiFab memory usage

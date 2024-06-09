@@ -1,6 +1,6 @@
-ml_model_name = "traced_sample_model_time_int1_new.pt"
-x_normalizer_name = "x_normalizer_time_int1_new.pt"
-y_normalizer_name = "y_normalizer_time_int1_new.pt"
+ml_model_name = "traced_sample_model_time_int1_new_total.pt"
+x_normalizer_name = "x_normalizer_time_int1_new_total.pt"
+y_normalizer_name = "y_normalizer_time_int1_new_total.pt"
 
 n_cell = 166 42 1
 max_grid_size_x = 166
@@ -9,8 +9,8 @@ max_grid_size_z = 1
 
 #dt = 5.e-14  # MATLAB code uses 5.e-6 nanoseconds
 dt = 5.e-15  # forward Euler (685s), 1.e-14 unstable
-nsteps = 10
-plot_int = 1
+nsteps = 400000
+plot_int = 10000
 chk_int = -1
 restart = -1
 diag_type = 4
@@ -32,8 +32,8 @@ Mz_parser(x,y,z) = "0."
 # Field 1:  mu_0 Hx=-24.6 mT, mu_0 Hy= 4.3 mT, mu_0 Hz= 0.0 mT
 # which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
 timedependent_Hbias = 1
-Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>1.e-9)*14052"
-Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>1.e-9)*14052"
+Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*1000"
+Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*13422"
 Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
 # Field 2:  mu_0 Hx=-35.5 mT, mu_0 Hy=-6.3 mT, mu_0 Hz= 0.0 mT
