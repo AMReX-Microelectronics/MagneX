@@ -46,10 +46,10 @@ ifeq ($(USE_SUNDIALS),TRUE)
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
-  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_core  # for newer versions of sundials
-  
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_core
+
   ifeq ($(USE_CUDA),TRUE)
-  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
+    LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
   endif
 
 endif
