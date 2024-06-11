@@ -34,7 +34,11 @@ ifeq ($(USE_SUNDIALS),TRUE)
   else
     SUNDIALS_ROOT ?= $(TOP)../../sundials/instdir
   endif
-  SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
+  ifeq ($(NERSC_HOST),perlmutter)
+    SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib64
+  else
+    SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
+  endif
 
   USE_CVODE_LIBS ?= TRUE
   USE_ARKODE_LIBS ?= TRUE
