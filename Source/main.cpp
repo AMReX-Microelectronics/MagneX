@@ -279,13 +279,11 @@ void main_main ()
     
     //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
     //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
-    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
     amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
         vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
     }
-    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old, time);
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield, time);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -625,7 +623,7 @@ void main_main ()
             integrator.set_time_step(dt);
 
             // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.evolve(vMfield_old, time);
+            integrator.evolve(vMfield, time);
 
             
 #else
@@ -746,10 +744,12 @@ void main_main ()
             }
         }
 
+#ifndef AMREX_USE_SUNDIALS
         // copy new solution into old solution
         for (int comp = 0; comp < 3; comp++) {
             MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
         }
+#endif
 
         // update time
         time = time + dt;
