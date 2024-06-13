@@ -13,6 +13,7 @@ USE_OMP   = FALSE
 ###################################################
 
 EBASE = DMI_diagnostic
+#EBASE = DMI_crossing
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
