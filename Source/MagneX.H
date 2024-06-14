@@ -26,15 +26,11 @@ void InitializeMagneXNamespace();
 
 void WriteCheckPoint(int step,
                      const amrex::Real time,
-                     Array< MultiFab, AMREX_SPACEDIM>& Mfield,
-                     Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
-		     Array< MultiFab, AMREX_SPACEDIM>& H_demagfield);
+                     Array< MultiFab, AMREX_SPACEDIM>& Mfield);
 
 void ReadCheckPoint(int& restart,
 		    amrex::Real& time,
 		    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
-		    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
 		    BoxArray& ba,
 		    DistributionMapping& dm);
 

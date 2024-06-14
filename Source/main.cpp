@@ -96,7 +96,7 @@ void main_main ()
 
         // read in Mfield, H_biasfield, and ba
         // create a DistributionMapping dm
-        ReadCheckPoint(restart,time,Mfield,H_biasfield,H_demagfield,ba,dm);
+        ReadCheckPoint(restart,time,Mfield,ba,dm);
       
     }
     
@@ -146,9 +146,11 @@ void main_main ()
         Mfield_prev_iter[dir].define(ba, dm, 1, 1);
         Mfield_error[dir].define(ba, dm, 1, 0);
 
+        H_biasfield[dir].define(ba, dm, 1, 0);
         H_exchangefield[dir].define(ba, dm, 1, 0);
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
+        H_demagfield[dir].define(ba, dm, 1, 0);
          
 	Heff[dir].define(ba, dm, 1, 1);
 
@@ -167,8 +169,6 @@ void main_main ()
         for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
             //Cell-centered fields
             Mfield[dir].define(ba, dm, 1, 1);
-            H_biasfield[dir].define(ba, dm, 1, 0);
-            H_demagfield[dir].define(ba, dm, 1, 0);
         }
     }
 
@@ -231,38 +231,34 @@ void main_main ()
         // read in M from parser
         InitializeFields(Mfield, geom);
 
-        if (demag_coupling == 1) {
-            demag_solver.CalculateH_demag(Mfield, H_demagfield);
-	}
+        // Write a plotfile of the initial data if plot_int > 0
+        if (plot_int > 0)
+        {
+
+            if (demag_coupling == 1) {
+                demag_solver.CalculateH_demag(Mfield, H_demagfield);
+            }
         
-        if (exchange_coupling == 1) {
-            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
-        }
+            if (exchange_coupling == 1) {
+                CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
+            }
 
-        if (DMI_coupling == 1) {
-            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
-        }
+            if (DMI_coupling == 1) {
+                CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
+            }
 
-        if (anisotropy_coupling == 1) {
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
-        }
-    }
-
-    // Write a plotfile of the initial data if plot_int > 0
-    if (plot_int > 0)
-    {
-        int plt_step = 0;
-        if (restart > 0) {
-            plt_step = restart;
-        }
-
-        // DMI Diagnostics
-        if (diag_type == 5) {
-            ComputeTheta(Ms, Mfield[0], Mfield[1], Mfield[2], theta);
-        }
+            if (anisotropy_coupling == 1) {
+                CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
+            }
         
-        WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                      H_demagfield, theta, geom, time, plt_step);
+            // DMI Diagnostics
+            if (diag_type == 5) {
+                ComputeTheta(Ms, Mfield[0], Mfield[1], Mfield[2], theta);
+            }
+        
+            WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+                          H_demagfield, theta, geom, time, 0);
+        }
     }
 
     // copy new solution into old solution
@@ -763,7 +759,11 @@ void main_main ()
                           H_demagfield, theta, geom, time, step);
         }
 
-	// MultiFab memory usage
+        if (chk_int > 0 && step%chk_int == 0) {
+            WriteCheckPoint(step,time,Mfield);
+        }
+
+        // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 
         amrex::Long min_fab_megabytes  = amrex::TotalBytesAllocatedInFabsHWM()/1048576;
