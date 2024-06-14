@@ -5,6 +5,7 @@ max_grid_size_z = 4
 dt = 2.5e-14
 nsteps = 100000
 plot_int = 1000
+chk_int = 100000
 
 prob_lo = -100.0e-9 -100.0e-9 -1.0e-9
 prob_hi =  100.0e-9  100.0e-9  1.0e-9
