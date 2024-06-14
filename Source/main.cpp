@@ -90,7 +90,7 @@ void main_main ()
     int start_step = 1;
     Real time = 0.0;
 
-    if (restart > 0) {
+    if (restart >= 0) {
 
         start_step = restart+1;
 
