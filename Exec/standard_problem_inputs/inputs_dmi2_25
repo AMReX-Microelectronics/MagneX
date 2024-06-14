@@ -34,9 +34,9 @@ DMI_parser(x,y,z) = "       -1.25e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9)
 #DMI_parser(x,y,z) = "        -2.5e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -3.0e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "       -3.25e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "       -3.375-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
+#DMI_parser(x,y,z) = "      -3.375e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -3.5e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "       -3.625-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
+#DMI_parser(x,y,z) = "      -3.625e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "       -3.75e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -4.0e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "       -4.25e-3*(sqrt(x*x + y*y) <= 25.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
