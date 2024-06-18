@@ -281,9 +281,13 @@ void main_main ()
     //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
     amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield[idim].nComp());
     }
-    TimeIntegrator<Vector<MultiFab> > integrator(vMfield, time);
+    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+    }
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old, time);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -510,7 +514,7 @@ void main_main ()
                     rhs[idim].setVal(0.);
                 } 
 
-	        //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
+                //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
 
                 Array<MultiFab, AMREX_SPACEDIM> ar_rhs{AMREX_D_DECL(MultiFab(rhs[0],amrex::make_alias,0,rhs[0].nComp()),
@@ -610,11 +614,9 @@ void main_main ()
 
             // Attach the right hand side and post-update functions
             // to the integrator
-//            integrator.set_pre_rhs_action(pre_update_fun);
             integrator.set_rhs(rhs_fun);
             integrator.set_post_step_action(post_update_fun);
 //            integrator.set_fast_rhs(rhs_fast_fun);
-
 
             // This sets the ratio of slow timestep size to fast timestep size as an integer,
             // or equivalently, the number of fast timesteps per slow timestep.
@@ -623,7 +625,8 @@ void main_main ()
             integrator.set_time_step(dt);
 
             // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.evolve(vMfield, time);
+//            integrator.evolve(vMfield, time);
+            integrator.advance(vMfield_old, vMfield, time, dt);
 
             
 #else
