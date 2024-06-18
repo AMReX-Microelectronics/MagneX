@@ -625,7 +625,6 @@ void main_main ()
             integrator.set_time_step(dt);
 
             // integrate forward one step from `time` by `dt` to fill S_new
-//            integrator.evolve(vMfield, time);
             integrator.advance(vMfield_old, vMfield, time, dt);
 
             
@@ -747,12 +746,10 @@ void main_main ()
             }
         }
 
-#ifndef AMREX_USE_SUNDIALS
         // copy new solution into old solution
         for (int comp = 0; comp < 3; comp++) {
             MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, 1);
         }
-#endif
 
         // update time
         time = time + dt;
