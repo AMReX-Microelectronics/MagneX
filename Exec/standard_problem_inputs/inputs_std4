@@ -24,9 +24,9 @@ dt = 5.e-15  # forward Euler (685s), 1.e-14 unstable
 #dt = 5.e-14 # SSPRK3 (665s) 1.e-13 unstable
 #dt = 1.e-13 # RK4 (438s) 2.5e-13 unstable
 
-stop_time = 5.e-13
+stop_time = 4.e-9
 
-plot_int = 100
+plot_int = 10000
 chk_int = -1
 restart = -1
 diag_type = 4
