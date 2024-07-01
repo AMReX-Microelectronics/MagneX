@@ -6,10 +6,10 @@ max_grid_size_x = 160
 max_grid_size_y = 40
 max_grid_size_z = 1
 dt = 5.e-15  # forward Euler (685s), 1.e-14 unstable
-dt = 2.5e-13 # Predictor-corrector (70s), 5.e-13 unstable
-dt = 1.e-13 # trapezoidal (63s), 2.5e-13 unstable
-dt = 2.5e-13 # SSPRK3 (36s), 5.e-13 unstable
-dt = 5.e-13 # RK4 (24s), 1.e-12 unstable
+#dt = 2.5e-13 # Predictor-corrector (70s), 5.e-13 unstable
+#dt = 1.e-13 # trapezoidal (63s), 2.5e-13 unstable
+#dt = 2.5e-13 # SSPRK3 (36s), 5.e-13 unstable
+#dt = 5.e-13 # RK4 (24s), 1.e-12 unstable
 
 ##############
 # 1.5625nm case
@@ -73,10 +73,10 @@ DMI_coupling = 0
 
 # INTEGRATION
 
-#TimeIntegratorOption = 1 #Forward Euler
+TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-TimeIntegratorOption = 4 #amrex/sundials backend integrators
+#TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 # tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
@@ -98,7 +98,7 @@ integration.type = RungeKutta
 ### 2 = Trapezoid Method
 ### 3 = SSPRK3 Method
 ### 4 = RK4 Method
-integration.rk.type = 4
+integration.rk.type = 1
 
 ## If using a user-specified Butcher Tableau, then
 ## set nodes, weights, and table entries here:

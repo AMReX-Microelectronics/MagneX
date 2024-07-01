@@ -39,16 +39,7 @@ void main_main ()
     // **********************************
     // READ SIMULATION PARAMETERS
     // **********************************
-    InitializeMagneXNamespace();
-
-    int start_step = 1;
-
-    // for std4 diagnostic
-    Real normalized_Mx_prev = 0.;
-    Real dot_product_prev = 0.;
-    
-    // time = starting time in the simulation
-    Real time = 0.0;	
+    InitializeMagneXNamespace();	
 
     Array<MultiFab, AMREX_SPACEDIM> Mfield;
     Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
@@ -73,45 +64,40 @@ void main_main ()
     Real normalized_My;
     Real normalized_Mz;
 
+    // for Hbias sweep equilibration
     Real normalized_Mx_old = 0.;
     Real normalized_My_old = 0.;
     Real normalized_Mz_old = 0.;
 
-    // Initialize err to some arbitrary value greater then tol
-    Real err = equilibrium_tolerance + 1.0;
-    Real err_x = equilibrium_tolerance + 1.0;
-    Real err_y = equilibrium_tolerance + 1.0;
-    Real err_z = equilibrium_tolerance + 1.0;
+    // for std2 diagnostic
+    Real M_dot_111_prev = 0.;
 
+    // for std4 diagnostic
+    Real normalized_Mx_prev = 0.;
+
+    // indicate whether we need to increment Hbias this time step
     int increment_Hbias = 0;
-
-    Real Hbias_magn;
-    Real M;
-    Real M_old = 0.;
     
     // Changes to +1 when we want to reverse Hbias trend
-    int sign = -1;
+    int increment_direction = -1;
 
     // Count how many times we have incremented Hbias
     int increment_count = 0;
 
-    Real total_energy;
-    Real demag_energy;
-    Real exchange_energy;
-    Real anis_energy;
-
-    int steady = 0;
-
     BoxArray ba;
     DistributionMapping dm;
     
-    if (restart > 0) {
+    // start_step and time will be overridden if restarting from a checkpoint file
+    int start_step = 1;
+    Real time = 0.0;
+
+    if (restart >= 0) {
 
         start_step = restart+1;
 
         // read in Mfield, H_biasfield, and ba
         // create a DistributionMapping dm
-        ReadCheckPoint(restart,time,Mfield,H_biasfield,H_demagfield,ba,dm);
+        ReadCheckPoint(restart,time,Mfield,ba,dm);
       
     }
     
@@ -199,9 +185,11 @@ void main_main ()
         Mfield_prev_iter[dir].define(ba, dm, 1, 1);
         Mfield_error[dir].define(ba, dm, 1, 0);
 
+        H_biasfield[dir].define(ba, dm, 1, 0);
         H_exchangefield[dir].define(ba, dm, 1, 0);
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
+        H_demagfield[dir].define(ba, dm, 1, 0);
          
 	Heff[dir].define(ba, dm, 1, 1);
 
@@ -220,8 +208,6 @@ void main_main ()
         for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
             //Cell-centered fields
             Mfield[dir].define(ba, dm, 1, 1);
-            H_biasfield[dir].define(ba, dm, 1, 0);
-            H_demagfield[dir].define(ba, dm, 1, 0);
         }
     }
 
@@ -234,7 +220,13 @@ void main_main ()
     MultiFab exchange(ba, dm, 1, 0);
     MultiFab DMI(ba, dm, 1, 0);
     MultiFab anisotropy(ba, dm, 1, 0);
- 
+
+    MultiFab theta;
+    if (diag_type == 5) {
+        theta.define(ba, dm, 1, 0);
+        theta.setVal(0.);
+    }
+    
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " ba           = " << ba          << "\n";
     amrex::Print() << " dm           = " << dm          << "\n";
@@ -262,55 +254,53 @@ void main_main ()
         demag_solver.define();       
     }
 
-    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy, geom, time);
+    // read in Ms, gamma, exchange, DMI, anisotropy, alpha, and Hbias from parser
+    InitializeMagneticProperties(Ms, gamma, exchange, DMI, anisotropy, geom, time);
+    ComputeAlpha(alpha,geom,time);
     ComputeHbias(H_biasfield, time, geom);
 
-    // Extract anisotropy and exchange constants
-    int comp=0;
-    Real ani = anisotropy.max(comp);
-    comp=0;
-    Real exch = exchange.max(comp);
-
-    // Magnetostatic energy density in SI
-    Real Km =.5*mu0*(std::pow(8.e5,2));
+    // Extract maximum anisotropy and exchange constants
+    // FIMXE; used for Diagnostics, can pass in full MultiFab instead
+    Real ani_max = anisotropy.max(0);
+    Real exch_max = exchange.max(0);
 
     // count how many magnetic cells are in the domain
     long num_mag = CountMagneticCells(Ms);
     
     if (restart == -1) {      
-        //Initialize fields
+
+        // read in M from parser
         InitializeFields(Mfield, geom);
 
-        if (demag_coupling == 1) {
+        // Write a plotfile of the initial data if plot_int > 0
+        if (plot_int > 0)
+        {
 
-            demag_solver.CalculateH_demag(Mfield, H_demagfield);
-            // CalculateH_demag_ML(Mfield, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
+            if (demag_coupling == 1) {
+                demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                // CalculateH_demag_ML(Mfield, x_norm_module, ml_module, y_norm_module, tensoropt, H_demagfield);
+            }
         
-        }       
+            if (exchange_coupling == 1) {
+                CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
+            }
+
+            if (DMI_coupling == 1) {
+                CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
+            }
+
+            if (anisotropy_coupling == 1) {
+                CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
+            }
         
-        if (exchange_coupling == 1) {
-            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, geom);
+            // DMI Diagnostics
+            if (diag_type == 5) {
+                ComputeTheta(Ms, Mfield[0], Mfield[1], Mfield[2], theta);
+            }
+        
+            WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+                          H_demagfield, theta, geom, time, 0);
         }
-
-        if (DMI_coupling == 1) {
-            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, geom);
-        }
-
-        if (anisotropy_coupling == 1) {
-            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
-        }
-    }
-
-    // Write a plotfile of the initial data if plot_int > 0
-    if (plot_int > 0)
-    {
-        int plt_step = 0;
-        if (restart > 0) {
-            plt_step = restart;
-        }
-
-        WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                      H_demagfield, geom, time, plt_step);
     }
 
     // copy new solution into old solution
@@ -327,13 +317,15 @@ void main_main ()
     
     //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
     //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
-    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
     amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
-        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+        vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield[idim].nComp());
     }
-    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old);
+    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
+    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
+    }
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old, time);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -348,7 +340,7 @@ void main_main ()
 	if ((Hbias_sweep == 1) && (increment_Hbias == 1)) {
            
 	   if (increment_count == nsteps_hysteresis) {
-	       sign *= -1;
+	       increment_direction *= -1;
                outputFile << "time = " << time << " "
                     << "Reverse_Hbias_evolution "
                     << normalized_Mx/num_mag << " "
@@ -372,9 +364,9 @@ void main_main ()
 
 	       amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
 	       {
-	           Hx_bias(i,j,k) += sign*increment_size;
-	           Hy_bias(i,j,k) += sign*increment_size;
-	           Hz_bias(i,j,k) += sign*increment_size;
+	           Hx_bias(i,j,k) += increment_direction*increment_size;
+	           Hy_bias(i,j,k) += increment_direction*increment_size;
+	           Hz_bias(i,j,k) += increment_direction*increment_size;
 		});
 	    }
 
@@ -416,7 +408,7 @@ void main_main ()
                 }
                 if ( (plot_int > 0 && step%plot_int == 0 && step >= 200000)) {
                     WritePlotfile(Ms, Mfield_old, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, geom, time, step);
+                                  H_demagfield, theta, geom, time, step);
                 }
                 // amrex::Print()<<"\n"<<ml_model_name<<"\n";
                 // // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
@@ -580,7 +572,7 @@ void main_main ()
                     rhs[idim].setVal(0.);
                 } 
 
-	        //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
+                //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
 
                 Array<MultiFab, AMREX_SPACEDIM> ar_rhs{AMREX_D_DECL(MultiFab(rhs[0],amrex::make_alias,0,rhs[0].nComp()),
@@ -625,6 +617,7 @@ void main_main ()
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
+#if 0
             // Create a fast RHS source function we will integrate
             auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& stage_data, const Vector<MultiFab>& state, const Real ) {
                 
@@ -666,6 +659,7 @@ void main_main ()
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
+#endif
 
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
@@ -681,15 +675,19 @@ void main_main ()
             // Attach the right hand side and post-update functions
             // to the integrator
             integrator.set_rhs(rhs_fun);
-            integrator.set_fast_rhs(rhs_fast_fun);
-            integrator.set_post_update(post_update_fun);
+            integrator.set_post_step_action(post_update_fun);
+//            integrator.set_fast_rhs(rhs_fast_fun);
 
             // This sets the ratio of slow timestep size to fast timestep size as an integer,
             // or equivalently, the number of fast timesteps per slow timestep.
-            integrator.set_slow_fast_timestep_ratio(10);
-                
+//            integrator.set_slow_fast_timestep_ratio(10);
+
+            integrator.set_time_step(dt);
+
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.advance(vMfield_old, vMfield, time, dt);
+
+            
 #else
             amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
@@ -700,7 +698,7 @@ void main_main ()
 
         // standard problem diagnostics
         bool diag_std4_plot = false;
-        if (diag_type == 4 || diag_type == 2 || diag_type == 3) {
+        if (diag_type == 2 || diag_type == 3 || diag_type == 4) {
             
             normalized_Mx = SumNormalizedM(Ms,Mfield[0]);
             normalized_My = SumNormalizedM(Ms,Mfield[1]);
@@ -710,10 +708,9 @@ void main_main ()
                 if (normalized_Mx_prev > 0 && normalized_Mx <= 0.) {
                     diag_std4_plot = true;
                 }
+                normalized_Mx_prev = normalized_Mx;
             }
 
-            normalized_Mx_prev = normalized_Mx;
-  	
 	    outputFile << "time = " << time << " "
                     << "Sum_normalized_M: "
                     << normalized_Mx/num_mag << " "
@@ -722,11 +719,11 @@ void main_main ()
 
             // Check if field is equilibirated
 	    // If so, we will increment Hbias 
-            if ((Hbias_sweep == 1 || steady_stop == 1) && (step > 1)) {
+            if (Hbias_sweep == 1 && step > 1) {
 	    
-	        err_x = amrex::Math::abs((normalized_Mx/num_mag) - normalized_Mx_old);
-	        err_y = amrex::Math::abs((normalized_My/num_mag) - normalized_My_old);
-	        err_z = amrex::Math::abs((normalized_Mz/num_mag) - normalized_Mz_old);
+	        Real err_x = amrex::Math::abs((normalized_Mx/num_mag) - normalized_Mx_old);
+	        Real err_y = amrex::Math::abs((normalized_My/num_mag) - normalized_My_old);
+	        Real err_z = amrex::Math::abs((normalized_Mz/num_mag) - normalized_Mz_old);
                  
 		outputFile << "time = " << time << " "
                     << "error: "
@@ -743,9 +740,7 @@ void main_main ()
 	            if (Hbias_sweep == 1) {
 		        increment_Hbias = 1;
 		    }
-		    if (steady_stop == 1 && step >= 1000) {
-		        steady = 1;
-		    }
+
                     // Reset the error
 	            normalized_Mx_old = 0.;
 		    normalized_My_old = 0.;
@@ -759,17 +754,15 @@ void main_main ()
                 Real Hbias_x = SumHbias(H_biasfield[0],Ms)/num_mag;
                 Real Hbias_y = SumHbias(H_biasfield[1],Ms)/num_mag;
                 Real Hbias_z = SumHbias(H_biasfield[2],Ms)/num_mag;
-                Hbias_magn = sqrt(Hbias_x*Hbias_x + Hbias_y*Hbias_y + Hbias_z*Hbias_z);
+                Real Hbias_magn = sqrt(Hbias_x*Hbias_x + Hbias_y*Hbias_y + Hbias_z*Hbias_z);
                 if (Hbias_x < 0) Hbias_magn *= -1.;
 
-                M = (normalized_Mx/num_mag) + (normalized_My/num_mag) + (normalized_Mz/num_mag);
+                Real M_dot_111 = (normalized_Mx/num_mag) + (normalized_My/num_mag) + (normalized_Mz/num_mag);
 
-                if ( (M_old > 0 && M <= 0.) || (M_old < 0 && M >= 0.) ) {
+                if ( (M_dot_111_prev > 0 && M_dot_111 <= 0.) || (M_dot_111_prev < 0 && M_dot_111 >= 0.) ) {
 	            outputFile << "time = " << time << " "
                                << "Coercivity = " << Hbias_magn <<  std::endl;
                 }
-
-                M_old = M;
 
                 if (increment_Hbias == 1 && (increment_count == nsteps_hysteresis/2 || increment_count == 3*nsteps_hysteresis/2) ) {
 	            outputFile << "time = " << time << " "
@@ -780,22 +773,29 @@ void main_main ()
 	        if (increment_Hbias == 1) {
 	            outputFile << "time = " << time << " "
                                << "Hbias = " << Hbias_magn << " "
-                               << "M/Ms = " << M <<  std::endl;
+                               << "M/Ms = " << M_dot_111 <<  std::endl;
 	        }
+
+                M_dot_111_prev = M_dot_111;
             }		
 
 	    // standard problem 3 diagnostics
             if (diag_type == 3) {
 
-    		demag_energy = DemagEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], H_demagfield[0], H_demagfield[1], H_demagfield[2]);
-                exchange_energy = ExchangeEnergy(Mfield, Ms, geom, exch);		
-		anis_energy = AnisotropyEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], ani);
+    		Real demag_energy = DemagEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], H_demagfield[0], H_demagfield[1], H_demagfield[2]);
+                Real exchange_energy = ExchangeEnergy(Mfield, Ms, geom, exch_max);		
+		Real anis_energy = AnisotropyEnergy(Ms, Mfield[0], Mfield[1], Mfield[2], ani_max);
+
+                Real Ms_max = Ms.max(0);
+                
+                // Magnetostatic energy density in SI
+                Real Km =.5*mu0*(std::pow(Ms_max,2));
 
                 demag_energy /= Km*num_mag;
 		exchange_energy /= Km*num_mag;
 		anis_energy /= Km*num_mag;
 		
-		total_energy = anis_energy + exchange_energy + demag_energy;
+		Real total_energy = anis_energy + exchange_energy + demag_energy;
 	    
 	        outputFile << "time = " << time << " "
                            << "demag_energy = "<< demag_energy << " " 
@@ -803,8 +803,7 @@ void main_main ()
 		 	   << "anis_energy = "<< anis_energy << " "
 			   << "total_energy = "<< total_energy <<  std::endl;
 
-	     }
-
+            }
         }
         // Write a plotfile of the data if plot_int > 0
         // if ( (plot_int > 0 && step%plot_int == 0) || diag_std4_plot) {
@@ -840,11 +839,20 @@ void main_main ()
 
         // Write a plotfile of the data if plot_int > 0
         if ( (plot_int > 0 && step%plot_int == 0) || (plot_int > 0 && time > stop_time) || diag_std4_plot) {
-            // WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-            //               H_demagfield, geom, time, step);
+            // DMI Diagnostics
+            if (diag_type == 5) {
+                ComputeTheta(Ms, Mfield[0], Mfield[1], Mfield[2], theta);
+            }
+            
+            WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
+                          H_demagfield, theta, geom, time, step);
         }
 
-	// MultiFab memory usage
+        if (chk_int > 0 && step%chk_int == 0) {
+            WriteCheckPoint(step,time,Mfield);
+        }
+
+        // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
 
         amrex::Long min_fab_megabytes  = amrex::TotalBytesAllocatedInFabsHWM()/1048576;
@@ -869,11 +877,6 @@ void main_main ()
         if (increment_Hbias == 1 && increment_count == 2*nsteps_hysteresis) {
             break;
         }
-
-	// If we have reached a steady-state and have steady_stop == 1, we end simulation 
-	if (steady_stop == 1 && steady == 1) {
-	    break;
-	}
 
         if (time > stop_time) {
             amrex::Print() << "Stop time reached\n";

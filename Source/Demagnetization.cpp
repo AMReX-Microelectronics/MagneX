@@ -232,21 +232,23 @@ void Demagnetization::define()
         });
     }
 
-    MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
-    MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
-    MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
-    MultiFab::Copy(Plt, Kyy, 0, 3, 1, 0);
-    MultiFab::Copy(Plt, Kyz, 0, 4, 1, 0);
-    MultiFab::Copy(Plt, Kzz, 0, 5, 1, 0);
+    if (plot_int > 0) {
+        MultiFab::Copy(Plt, Kxx, 0, 0, 1, 0);
+        MultiFab::Copy(Plt, Kxy, 0, 1, 1, 0);
+        MultiFab::Copy(Plt, Kxz, 0, 2, 1, 0);
+        MultiFab::Copy(Plt, Kyy, 0, 3, 1, 0);
+        MultiFab::Copy(Plt, Kyz, 0, 4, 1, 0);
+        MultiFab::Copy(Plt, Kzz, 0, 5, 1, 0);
 
-    WriteSingleLevelPlotfile("DemagTensor", Plt,
-                             {"Kxx",
-                              "Kxy",
-                              "Kxz",
-                              "Kyy",
-                              "Kyz",
-                              "Kzz"},
-                             geom_large, 0., 0);
+        WriteSingleLevelPlotfile("DemagTensor", Plt,
+                                 {"Kxx",
+                                  "Kxy",
+                                  "Kxz",
+                                  "Kyy",
+                                  "Kyz",
+                                  "Kzz"},
+                                 geom_large, 0., 0);
+    }
 
     if (FFT_solver == 0) {
         ComputeForwardFFT(Kxx, Kxx_fft_real, Kxx_fft_imag);
@@ -266,37 +268,39 @@ void Demagnetization::define()
    }
 
     /*
-    MultiFab::Copy(Plt, Kxx_fft_real, 0, 0, 1, 0);
-    MultiFab::Copy(Plt, Kxy_fft_real, 0, 1, 1, 0);
-    MultiFab::Copy(Plt, Kxz_fft_real, 0, 2, 1, 0);
-    MultiFab::Copy(Plt, Kyy_fft_real, 0, 3, 1, 0);
-    MultiFab::Copy(Plt, Kyz_fft_real, 0, 4, 1, 0);
-    MultiFab::Copy(Plt, Kzz_fft_real, 0, 5, 1, 0);
+    if (plot_int > 0) {
+        MultiFab::Copy(Plt, Kxx_fft_real, 0, 0, 1, 0);
+        MultiFab::Copy(Plt, Kxy_fft_real, 0, 1, 1, 0);
+        MultiFab::Copy(Plt, Kxz_fft_real, 0, 2, 1, 0);
+        MultiFab::Copy(Plt, Kyy_fft_real, 0, 3, 1, 0);
+        MultiFab::Copy(Plt, Kyz_fft_real, 0, 4, 1, 0);
+        MultiFab::Copy(Plt, Kzz_fft_real, 0, 5, 1, 0);
 
-    WriteSingleLevelPlotfile("DemagTensor_realfft", Plt,
-                             {"Kxx",
-                              "Kxy",
-                              "Kxz",
-                              "Kyy",
-                              "Kyz",
-                              "Kzz"},
-                             geom_large, 0., 0);
+        WriteSingleLevelPlotfile("DemagTensor_realfft", Plt,
+                                 {"Kxx",
+                                  "Kxy",
+                                  "Kxz",
+                                  "Kyy",
+                                  "Kyz",
+                                  "Kzz"},
+                                 geom_large, 0., 0);
 
-    MultiFab::Copy(Plt, Kxx_fft_imag, 0, 0, 1, 0);
-    MultiFab::Copy(Plt, Kxy_fft_imag, 0, 1, 1, 0);
-    MultiFab::Copy(Plt, Kxz_fft_imag, 0, 2, 1, 0);
-    MultiFab::Copy(Plt, Kyy_fft_imag, 0, 3, 1, 0);
-    MultiFab::Copy(Plt, Kyz_fft_imag, 0, 4, 1, 0);
-    MultiFab::Copy(Plt, Kzz_fft_imag, 0, 5, 1, 0);
+        MultiFab::Copy(Plt, Kxx_fft_imag, 0, 0, 1, 0);
+        MultiFab::Copy(Plt, Kxy_fft_imag, 0, 1, 1, 0);
+        MultiFab::Copy(Plt, Kxz_fft_imag, 0, 2, 1, 0);
+        MultiFab::Copy(Plt, Kyy_fft_imag, 0, 3, 1, 0);
+        MultiFab::Copy(Plt, Kyz_fft_imag, 0, 4, 1, 0);
+        MultiFab::Copy(Plt, Kzz_fft_imag, 0, 5, 1, 0);
 
-    WriteSingleLevelPlotfile("DemagTensor_imagfft", Plt,
-                             {"Kxx",
-                              "Kxy",
-                              "Kxz",
-                              "Kyy",
-                              "Kyz",
-                              "Kzz"},
-                             geom_large, 0., 0);
+        WriteSingleLevelPlotfile("DemagTensor_imagfft", Plt,
+                                 {"Kxx",
+                                  "Kxy",
+                                  "Kxz",
+                                  "Kyy",
+                                  "Kyz",
+                                  "Kzz"},
+                                 geom_large, 0., 0);
+    }
     */
 
 }

@@ -9,6 +9,7 @@ void WritePlotfile(MultiFab& Ms,
                    Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                   MultiFab& theta,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step)
@@ -69,6 +70,11 @@ void WritePlotfile(MultiFab& Ms,
         var_names.push_back("Hz_demagfield");
     }
 
+    if (diag_type == 5) {
+        nvar++;
+        var_names.push_back("theta");
+    }
+    
     MultiFab Plt(ba, dm, nvar, 0);
 
     int counter = 0;
@@ -103,6 +109,9 @@ void WritePlotfile(MultiFab& Ms,
         MultiFab::Copy(Plt, H_demagfield[0], 0, counter++, 1, 0);
         MultiFab::Copy(Plt, H_demagfield[1], 0, counter++, 1, 0);
         MultiFab::Copy(Plt, H_demagfield[2], 0, counter++, 1, 0);
+    }
+    if (diag_type == 5) {
+        MultiFab::Copy(Plt, theta, 0, counter++, 1, 0);
     }
 
     WriteSingleLevelPlotfile(pltfile, Plt, var_names, geom, time, plt_step);

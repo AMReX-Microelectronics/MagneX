@@ -3,7 +3,8 @@ https://computing.llnl.gov/projects/sundials/faq#inst
 
 Installation
 
-# Download sundials-x.y.z.tar.gz file for SUNDIALS version BEFORE v7.0.0 and extract it at the same level as amrex.
+# Download sundials-x.y.z.tar.gz file for SUNDIALS and extract it at the same level as amrex.
+# Update 6/11/24 - v7.0.0. tested
 https://computing.llnl.gov/projects/sundials/sundials-software
 
 >> tar -xzvf sundials-x.y.z.tar.gz # where x.y.z is the version of sundials
@@ -12,13 +13,14 @@ https://computing.llnl.gov/projects/sundials/sundials-software
 
 >> mkdir sundials
 >> cd sundials
->> mkdir instdir
->> mkdir builddir
->> cd builddir
 
 ######################
 HOST BUILD 
 ######################
+
+>> mkdir instdir
+>> mkdir builddir
+>> cd builddir
 
 >> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples -DENABLE_MPI=ON ../../sundials-x.y.z
 
@@ -29,7 +31,8 @@ NVIDIA/CUDA BUILD
 # Navigate back to the 'sundials' directory and do:
 
 >> mkdir instdir_cuda
->> cd builddir
+>> mkdir builddir_cuda
+>> cd builddir_cuda
 
 >> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir_cuda -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir_cuda/examples -DENABLE_CUDA=ON -DENABLE_MPI=ON ../../sundials-x.y.z
 
@@ -38,11 +41,13 @@ NVIDIA/CUDA BUILD
 >> make -j4
 >> make install
 
-# in your .bashrc or preferred configuration file:
+# in your .bashrc or preferred configuration file, add the following (and then "source ~/.bashrc")
+
+# If you have a CPU build:
 
 >> export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/pathto/sundials/instdir/lib/
 
-# and IF you have a NVIDIA/CUDA BUILD
+# If you have a NVIDIA/CUDA build:
 
 >> export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/pathto/sundials/instdir_cuda/lib/
 
