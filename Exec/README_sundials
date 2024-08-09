@@ -3,13 +3,19 @@ https://computing.llnl.gov/projects/sundials/faq#inst
 
 Installation
 
-# Download sundials-x.y.z.tar.gz file for SUNDIALS and extract it at the same level as amrex.
-# Update 6/11/24 - v7.0.0. tested
-https://computing.llnl.gov/projects/sundials/sundials-software
-
+# You need SUNDIALS v7.1.1 or later.
+# Check https://computing.llnl.gov/projects/sundials/sundials-software to see if it's available for download.
+# If so, download sundials-x.y.z.tar.gz and extract it at the same level as amrex using
 >> tar -xzvf sundials-x.y.z.tar.gz # where x.y.z is the version of sundials
+>> mv sundials-x.y.z sundials-src
 
-# at the same level that amrex is cloned, do:
+# If v7.1.1. is not available on the website, clone the git repo directly and use the latest version
+# At the same level that amrex is cloned, do:
+
+>> git clone https://github.com/LLNL/sundials.git
+>> mv sundials sundials-src
+
+# Next
 
 >> mkdir sundials
 >> cd sundials
@@ -22,7 +28,7 @@ HOST BUILD
 >> mkdir builddir
 >> cd builddir
 
->> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples -DENABLE_MPI=ON ../../sundials-x.y.z
+>> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir/examples -DENABLE_MPI=ON ../../sundials-src
 
 ######################
 NVIDIA/CUDA BUILD
@@ -34,7 +40,7 @@ NVIDIA/CUDA BUILD
 >> mkdir builddir_cuda
 >> cd builddir_cuda
 
->> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir_cuda -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir_cuda/examples -DENABLE_CUDA=ON -DENABLE_MPI=ON ../../sundials-x.y.z
+>> cmake -DCMAKE_INSTALL_PREFIX=/pathto/sundials/instdir_cuda -DEXAMPLES_INSTALL_PATH=/pathto/sundials/instdir_cuda/examples -DENABLE_CUDA=ON -DENABLE_MPI=ON ../../sundials-src
 
 ######################
 
@@ -59,16 +65,14 @@ NVIDIA/CUDA BUILD
 
 TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-## *** Selecting the integrator backend ***
-## integration.type can take on the following string or int values:
-## (without the quotation marks)
-## "ForwardEuler" or "0" = Native Forward Euler Integrator
-## "RungeKutta" or "1"   = Native Explicit Runge Kutta
-## "SUNDIALS" or "2"     = SUNDIALS ARKODE Integrator
-## for example:
-integration.type = <pick an option>
+# INTEGRATION
+## integration.type can take on the following values:
+## 0 or "ForwardEuler" => Native AMReX Forward Euler integrator
+## 1 or "RungeKutta"   => Native AMReX Explicit Runge Kutta controlled by integration.rk.type
+## 2 or "SUNDIALS"     => SUNDIALS backend controlled by integration.sundials.strategy
+integration.type = SUNDIALS
 
-## *** Parameters Needed For Native Explicit Runge-Kutta ***
+## Native AMReX Explicit Runge-Kutta parameters
 #
 ## integration.rk.type can take the following values:
 ### 0 = User-specified Butcher Tableau
@@ -76,7 +80,15 @@ integration.type = <pick an option>
 ### 2 = Trapezoid Method
 ### 3 = SSPRK3 Method
 ### 4 = RK4 Method
-integration.rk.type = <pick an option>
+integration.rk.type = 1
 
-integration.sundials.strategy = ERK
-#integration.sundials.erk.method = SSPRK3
+# Set the SUNDIALS method type:
+# ERK      = Explicit Runge-Kutta method
+# DIRK     = Diagonally Implicit Runge-Kutta method
+#
+# Optionally select a specific SUNDIALS method by name, see the SUNDIALS
+# documentation for the supported method names
+
+# Use forward Euler (fixed step sizes only)
+integration.sundials.type = ERK
+integration.sundials.method = ARKODE_FORWARD_EULER_1_1
