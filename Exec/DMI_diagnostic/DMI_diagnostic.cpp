@@ -102,15 +102,8 @@ main (int   argc,
         // read in plotfile to MultiFab
         VisMF::Read(mf, iFile_lev);
 
-        if (lev == 0) {
-            ncomp = mf.nComp();
-            Print() << "Number of components in the plotfile = " << ncomp << std::endl;
-            Print() << "Nodality of plotfile = " << mf.ixType().toIntVect() << std::endl;
-        }
-
         // get boxArray to compute number of grid points at the level
         BoxArray ba = mf.boxArray();
-        Print() << "Number of grid points at level " << lev << " = " << ba.numPts() << std::endl;
 
         for ( MFIter mfi(mf,false); mfi.isValid(); ++mfi ) {
 
