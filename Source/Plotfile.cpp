@@ -70,7 +70,7 @@ void WritePlotfile(MultiFab& Ms,
         var_names.push_back("Hz_demagfield");
     }
 
-    if (diag_type == 5) {
+    if (diag_type == 5 && plot_theta) {
         nvar++;
         var_names.push_back("theta");
     }
@@ -110,7 +110,7 @@ void WritePlotfile(MultiFab& Ms,
         MultiFab::Copy(Plt, H_demagfield[1], 0, counter++, 1, 0);
         MultiFab::Copy(Plt, H_demagfield[2], 0, counter++, 1, 0);
     }
-    if (diag_type == 5) {
+    if (diag_type == 5 && plot_theta) {
         MultiFab::Copy(Plt, theta, 0, counter++, 1, 0);
     }
 

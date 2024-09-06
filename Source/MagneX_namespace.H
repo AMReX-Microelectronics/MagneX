@@ -31,6 +31,7 @@ namespace MagneX {
     extern int plot_DMI;
     extern int plot_anisotropy;
     extern int plot_demag;
+    extern int plot_theta;
 
     extern int chk_int;
 

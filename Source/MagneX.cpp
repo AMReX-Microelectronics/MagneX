@@ -53,6 +53,7 @@ int MagneX::plot_exchange;
 int MagneX::plot_DMI;
 int MagneX::plot_anisotropy;
 int MagneX::plot_demag;
+int MagneX::plot_theta;
 
 // how often to write a checkpoint
 int MagneX::chk_int;
@@ -176,6 +177,8 @@ void InitializeMagneXNamespace() {
     pp.query("plot_anisotropy",plot_anisotropy);
     plot_demag = 1;
     pp.query("plot_demag",plot_demag);
+    plot_theta = 1;
+    pp.query("plot_theta",plot_theta);
 
     chk_int= -1;
     pp.query("chk_int",chk_int);
