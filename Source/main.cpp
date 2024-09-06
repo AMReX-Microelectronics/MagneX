@@ -274,16 +274,12 @@ void main_main ()
     int using_MRI = theStrategy == "MRI" ? 1 : 0;
     
     //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
-    //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
+    //This is needed for sundials inetgrator ==> integrator.evolve
     amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield[idim].nComp());
     }
-    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
-    }
-    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old, time);
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield, time);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -553,9 +549,8 @@ void main_main ()
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
-#if 0
             // Create a fast RHS source function we will integrate
-            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& stage_data, const Vector<MultiFab>& state, const Real ) {
+            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real ) {
                 
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -595,7 +590,6 @@ void main_main ()
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
-#endif
 
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
@@ -608,20 +602,18 @@ void main_main ()
                 NormalizeM(ar_state, Ms, geom);
             };
 
-            // Attach the right hand side and post-update functions
-            // to the integrator
+            // Attach the right hand side and post-update functions to the integrator
             integrator.set_rhs(rhs_fun);
             integrator.set_post_step_action(post_update_fun);
-//            integrator.set_fast_rhs(rhs_fast_fun);
-
-            // This sets the ratio of slow timestep size to fast timestep size as an integer,
-            // or equivalently, the number of fast timesteps per slow timestep.
-//            integrator.set_slow_fast_timestep_ratio(10);
-
             integrator.set_time_step(dt);
 
+            if (using_MRI) {
+                integrator.set_fast_rhs(rhs_fast_fun);
+                integrator.set_fast_time_step(0.1*dt);
+            }
+
             // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.advance(vMfield_old, vMfield, time, dt);
+            integrator.evolve(vMfield, time);
 
             
 #else
