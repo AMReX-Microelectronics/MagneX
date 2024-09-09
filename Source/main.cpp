@@ -268,11 +268,14 @@ void main_main ()
 
 #ifdef AMREX_USE_SUNDIALS
 
-    std::string theStrategy;
+    std::string theType;
     amrex::ParmParse pp("integration.sundials");
-    pp.get("strategy", theStrategy);
-    int using_MRI = theStrategy == "MRI" ? 1 : 0;
-    
+    pp.get("type", theType);
+    int using_MRI = 0;
+    if (theType == "EX-MRI" || theType == "IM-MRI" || theType == "IMEX-MRI") {
+        using_MRI = 1;
+    }
+
     //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
     //This is needed for sundials inetgrator ==> integrator.evolve
     amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
@@ -500,7 +503,7 @@ void main_main ()
 	    // Create a RHS source function we will integrate
             // for MRI this represents the slow processes
             auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real ) {
-                
+
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     rhs[idim].setVal(0.);
@@ -551,7 +554,7 @@ void main_main ()
 
             // Create a fast RHS source function we will integrate
             auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real ) {
-                
+
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
                     rhs[idim].setVal(0.);
