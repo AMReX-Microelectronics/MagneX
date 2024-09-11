@@ -502,7 +502,11 @@ void main_main ()
 #ifdef AMREX_USE_SUNDIALS
 	    // Create a RHS source function we will integrate
             // for MRI this represents the slow processes
-            auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real ) {
+            auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in ) {
+
+                if (step <= 10) {
+                    Print() << "Calling rhs_fun at time = " << time_in << "\n";
+                }
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -532,6 +536,7 @@ void main_main ()
                         H_exchangefield[d].setVal(0.);
                         H_DMIfield[d].setVal(0.);
                         H_anisotropyfield[d].setVal(0.);
+                        H_biasfield[d].setVal(0.);
                     }
                 } else {
 
@@ -546,6 +551,8 @@ void main_main ()
                     if (anisotropy_coupling == 1) {
                         CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
                     }
+
+                    ComputeHbias(H_biasfield, time_in, geom);
                 }
 
                 // Compute f^n = f(M^n, H^n) 
@@ -553,7 +560,11 @@ void main_main ()
             };
 
             // Create a fast RHS source function we will integrate
-            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real ) {
+            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in ) {
+
+                if (step <= 10) {
+                    Print() << "Calling rhs_fast_fun at time = " << time_in << "\n";
+                }
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -589,14 +600,20 @@ void main_main ()
                 if (anisotropy_coupling == 1) {
                     CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
                 }
+
+                ComputeHbias(H_biasfield, time_in, geom);
 		
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
             // Create a function to call after updating a state
-            auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
-               
+            auto post_update_fun = [&](Vector<MultiFab>& state, const Real& time_in ) {
+
+                if (step <= 10) {
+                    Print() << "Calling post_update_fun at time = " << time_in << "\n";
+                }
+
                 Array<MultiFab, AMREX_SPACEDIM> ar_state{AMREX_D_DECL(MultiFab(state[0],amrex::make_alias,0,state[0].nComp()),
 		                                                      MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
 			       			                      MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
