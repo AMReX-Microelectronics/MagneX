@@ -20,7 +20,13 @@ namespace MagneX {
     extern amrex::Real dt;
 
     extern int TimeIntegratorOption;
+
     extern amrex::Real fast_dt_ratio;
+    extern int fast_H_bias;
+    extern int fast_exchange;
+    extern int fast_DMI;
+    extern int fast_anisotropy;
+    extern int fast_demag;
 
     extern amrex::Real iterative_tolerance;
 

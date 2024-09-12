@@ -36,8 +36,15 @@ amrex::Real MagneX::dt;
 // 4 = AMReX and SUNDIALS integrators
 int MagneX::TimeIntegratorOption;
 
-// for MRI options, the time scale factor for the fast rhs
+// for MRI options, the time scale factor for the fast rhs (with respect to overall coarse time step)
 amrex::Real MagneX::fast_dt_ratio;
+
+// for MRI, specify what goes into the fast partition
+int MagneX:: fast_H_bias;
+int MagneX:: fast_exchange;
+int MagneX:: fast_DMI;
+int MagneX:: fast_anisotropy;
+int MagneX:: fast_demag;
 
 // for TimeIntegrationOption 2 and 3 options only
 // tolerance threshold (L_inf change between iterations) required for completing time step
@@ -161,8 +168,20 @@ void InitializeMagneXNamespace() {
     pp.get("dt",dt);
 
     pp.get("TimeIntegratorOption",TimeIntegratorOption);
+
     fast_dt_ratio = 0.1;
     pp.query("fast_dt_ratio",fast_dt_ratio);
+
+    fast_H_bias = 0;
+    fast_exchange = 0;
+    fast_anisotropy = 0;
+    fast_demag = 0;
+    fast_exchange = 0;
+    pp.query("fast_H_bias",fast_H_bias);
+    pp.query("fast_exchange",fast_exchange);
+    pp.query("fast_anisotropy",fast_anisotropy);
+    pp.query("fast_demag",fast_demag);
+    pp.query("fast_exchange",fast_exchange);
 
     iterative_tolerance = 1.e-9;
     pp.query("iterative_tolerance",iterative_tolerance);
