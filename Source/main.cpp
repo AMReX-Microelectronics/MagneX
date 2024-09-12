@@ -640,8 +640,8 @@ void main_main ()
                 //integrator.set_post_fast_step_action(post_update_fun);
             }
 
-            // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.evolve(vMfield, time);
+            // integrate forward one step to "time + dt" to fill S_new
+            integrator.evolve(vMfield, time+dt);
 
 #else
             amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
