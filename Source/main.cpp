@@ -502,7 +502,7 @@ void main_main ()
 #ifdef AMREX_USE_SUNDIALS
 	    // Create a RHS source function we will integrate
             // for MRI this represents the slow processes
-            auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in ) {
+            auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
 
                 if (step <= 10) {
                     Print() << "Calling rhs_fun at time = " << time_in << "\n";
@@ -560,7 +560,7 @@ void main_main ()
             };
 
             // Create a fast RHS source function we will integrate
-            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in ) {
+            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
 
                 if (step <= 10) {
                     Print() << "Calling rhs_fast_fun at time = " << time_in << "\n";
@@ -608,7 +608,7 @@ void main_main ()
             };
 
             // Create a function to call after updating a state
-            auto post_update_fun = [&](Vector<MultiFab>& state, const Real& time_in ) {
+            auto post_update_fun = [&](Vector<MultiFab>& state, const Real& time_in) {
 
                 if (step <= 10) {
                     Print() << "Calling post_update_fun at time = " << time_in << "\n";
@@ -622,20 +622,27 @@ void main_main ()
                 NormalizeM(ar_state, Ms, geom);
             };
 
-            // Attach the right hand side and post-update functions to the integrator
-            integrator.set_rhs(rhs_fun);
-            integrator.set_post_step_action(post_update_fun);
+            // attach the right hand side, time step, and post-update functions to the integrator
+
             integrator.set_time_step(dt);
+            integrator.set_rhs(rhs_fun);
+            // not sure if we want this
+            //integrator.set_post_stage_action(post_update_fun);
+            integrator.set_post_step_action(post_update_fun);
+
 
             if (using_MRI) {
-                integrator.set_fast_rhs(rhs_fast_fun);
                 integrator.set_fast_time_step(fast_dt_ratio*dt);
+                integrator.set_fast_rhs(rhs_fast_fun);
+                // not sure if we want this
+                //integrator.set_post_fast_stage_action(post_update_fun);
+                // not sure if we want this
+                //integrator.set_post_fast_step_action(post_update_fun);
             }
 
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.evolve(vMfield, time);
 
-            
 #else
             amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
