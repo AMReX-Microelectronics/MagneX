@@ -629,7 +629,7 @@ void main_main ()
 
             if (using_MRI) {
                 integrator.set_fast_rhs(rhs_fast_fun);
-                integrator.set_fast_time_step(0.1*dt);
+                integrator.set_fast_time_step(fast_dt_ratio*dt);
             }
 
             // integrate forward one step from `time` by `dt` to fill S_new

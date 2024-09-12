@@ -20,6 +20,7 @@ namespace MagneX {
     extern amrex::Real dt;
 
     extern int TimeIntegratorOption;
+    extern amrex::Real fast_dt_ratio;
 
     extern amrex::Real iterative_tolerance;
 

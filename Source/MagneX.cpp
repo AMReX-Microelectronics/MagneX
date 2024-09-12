@@ -36,6 +36,9 @@ amrex::Real MagneX::dt;
 // 4 = AMReX and SUNDIALS integrators
 int MagneX::TimeIntegratorOption;
 
+// for MRI options, the time scale factor for the fast rhs
+amrex::Real MagneX::fast_dt_ratio;
+
 // for TimeIntegrationOption 2 and 3 options only
 // tolerance threshold (L_inf change between iterations) required for completing time step
 // special cases:
@@ -158,6 +161,8 @@ void InitializeMagneXNamespace() {
     pp.get("dt",dt);
 
     pp.get("TimeIntegratorOption",TimeIntegratorOption);
+    fast_dt_ratio = 0.1;
+    pp.query("fast_dt_ratio",fast_dt_ratio);
 
     iterative_tolerance = 1.e-9;
     pp.query("iterative_tolerance",iterative_tolerance);
