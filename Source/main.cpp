@@ -151,13 +151,13 @@ void main_main ()
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
         H_demagfield[dir].define(ba, dm, 1, 0);
-         
 	Heff[dir].define(ba, dm, 1, 1);
 
         // set to zero in case we don't include
         H_exchangefield[dir].setVal(0.);
         H_DMIfield[dir].setVal(0.);
         H_anisotropyfield[dir].setVal(0.);
+        H_demagfield[dir].setVal(0.);
         Heff[dir].setVal(0.);
 
         LLG_RHS[dir].define(ba, dm, 1, 0);
@@ -203,7 +203,6 @@ void main_main ()
         LLG_RHS[idim].setVal(0.);
         LLG_RHS_pre[idim].setVal(0.);
         LLG_RHS_avg[idim].setVal(0.);
-        H_demagfield[idim].setVal(0.);
     }
 
     // Create a zero-padded Magnetization field for the convolution method
@@ -524,35 +523,57 @@ void main_main ()
                                                                       MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
                                                                       MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
 
-    	        // Evolve H_demag
-                if (demag_coupling == 1) {
-                    demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                // H_bias
+                if (using_MRI==0 || fast_H_bias==0) {
+                    ComputeHbias(H_biasfield, time_in, geom);
+                } else {
+                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                        H_biasfield[idim].setVal(0.);
+                    }
                 }
 
-                if (using_MRI) {
-
-                    // using MRI, set these processes to zero
-                    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-                        H_exchangefield[d].setVal(0.);
-                        H_DMIfield[d].setVal(0.);
-                        H_anisotropyfield[d].setVal(0.);
-                        H_biasfield[d].setVal(0.);
-                    }
-                } else {
-
-                    if (exchange_coupling == 1) {
+                // exchange
+                if (exchange_coupling == 1) {
+                    if (using_MRI==0 || fast_exchange==0) {
                         CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_exchangefield[idim].setVal(0.);
+                        }
                     }
+                }
 
-                    if (DMI_coupling == 1) {
+                // DMI
+                if (DMI_coupling == 1) {
+                    if (using_MRI==0 || fast_DMI==0) {
                         CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_DMIfield[idim].setVal(0.);
+                        }
                     }
+                }
 
-                    if (anisotropy_coupling == 1) {
+                // anisotropy
+                if (anisotropy_coupling == 1) {
+                    if (using_MRI==0 || fast_anisotropy==0) {
                         CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_anisotropyfield[idim].setVal(.0);
+                        }
                     }
+                }
 
-                    ComputeHbias(H_biasfield, time_in, geom);
+                // H_demag
+                if (demag_coupling == 1) {
+                    if (using_MRI==0 || fast_demag==0) {
+                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_demagfield[idim].setVal(0.);
+                        }
+                    }
                 }
 
                 // Compute f^n = f(M^n, H^n) 
@@ -582,27 +603,59 @@ void main_main ()
                                                                       MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
                                                                       MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
 
-    	        // fast RHS does not have demag
-                if (demag_coupling == 1) {
-                    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-                        H_demagfield[d].setVal(0.);
+                // H_bias
+                if (fast_H_bias==1) {
+                    ComputeHbias(H_biasfield, time_in, geom);
+                } else {
+                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                        H_biasfield[idim].setVal(0.);
+                    }
+                }
+                // exchange
+
+                if (exchange_coupling == 1) {
+                    if (fast_exchange==1) {
+                        CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_exchangefield[idim].setVal(0.);
+                        }
                     }
                 }
 
-                if (exchange_coupling == 1) {
-                    CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
-                }
-
+                // DMI
                 if (DMI_coupling == 1) {
-                    CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
+                    if (fast_DMI==1) {
+                        CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_DMIfield[idim].setVal(0.);
+                        }
+                    }
                 }
 
+                // anisotropy
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
+                    if (fast_anisotropy==1) {
+                        CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_anisotropyfield[idim].setVal(.0);
+                        }
+                    }
                 }
 
-                ComputeHbias(H_biasfield, time_in, geom);
-		
+                // H_demag
+                if (demag_coupling == 1) {
+                    if (fast_demag==1) {
+                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_demagfield[idim].setVal(0.);
+                        }
+                    }
+                }
+
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
@@ -640,8 +693,8 @@ void main_main ()
                 //integrator.set_post_fast_step_action(post_update_fun);
             }
 
-            // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.evolve(vMfield, time);
+            // integrate forward one step to "time + dt" to fill S_new
+            integrator.evolve(vMfield, time+dt);
 
 #else
             amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
