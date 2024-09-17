@@ -174,14 +174,14 @@ void InitializeMagneXNamespace() {
 
     fast_H_bias = 0;
     fast_exchange = 0;
+    fast_DMI = 0;
     fast_anisotropy = 0;
     fast_demag = 0;
-    fast_exchange = 0;
     pp.query("fast_H_bias",fast_H_bias);
     pp.query("fast_exchange",fast_exchange);
+    pp.query("fast_DMI",fast_DMI);
     pp.query("fast_anisotropy",fast_anisotropy);
     pp.query("fast_demag",fast_demag);
-    pp.query("fast_exchange",fast_exchange);
 
     iterative_tolerance = 1.e-9;
     pp.query("iterative_tolerance",iterative_tolerance);

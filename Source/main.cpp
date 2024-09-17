@@ -267,12 +267,25 @@ void main_main ()
 
 #ifdef AMREX_USE_SUNDIALS
 
-    std::string theType;
-    amrex::ParmParse pp("integration.sundials");
-    pp.get("type", theType);
     int using_MRI = 0;
-    if (theType == "EX-MRI" || theType == "IM-MRI" || theType == "IMEX-MRI") {
-        using_MRI = 1;
+    if (TimeIntegratorOption == 4) {
+
+        std::string theType1;
+        {
+            amrex::ParmParse pp("integration");
+            pp.get("type", theType1);
+        }
+        std::string theType2;
+        {
+            amrex::ParmParse pp("integration.sundials");
+            pp.get("type", theType2);
+        }
+
+        if (theType1 == "SUNDIALS") {
+            if (theType2 == "EX-MRI" || theType2 == "IM-MRI" || theType2 == "IMEX-MRI") {
+                using_MRI = 1;
+            }
+        }
     }
 
     //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
@@ -503,9 +516,7 @@ void main_main ()
             // for MRI this represents the slow processes
             auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
 
-                if (step <= 10) {
-                    Print() << "Calling rhs_fun at time = " << time_in << "\n";
-                }
+                Print() << "Calling rhs_fun at time = " << time_in << "\n";
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -583,9 +594,7 @@ void main_main ()
             // Create a fast RHS source function we will integrate
             auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
 
-                if (step <= 10) {
-                    Print() << "Calling rhs_fast_fun at time = " << time_in << "\n";
-                }
+                Print() << "Calling rhs_fast_fun at time = " << time_in << "\n";
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
@@ -663,9 +672,7 @@ void main_main ()
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real& time_in) {
 
-                if (step <= 10) {
-                    Print() << "Calling post_update_fun at time = " << time_in << "\n";
-                }
+                Print() << "Calling post_update_fun at time = " << time_in << "\n";
 
                 Array<MultiFab, AMREX_SPACEDIM> ar_state{AMREX_D_DECL(MultiFab(state[0],amrex::make_alias,0,state[0].nComp()),
 		                                                      MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
