@@ -516,12 +516,11 @@ void main_main ()
             // for MRI this represents the slow processes
             auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
 
+                BL_PROFILE_VAR("rhs_fun()",rhs_fun);
+
                 Print() << "Calling rhs_fun at time = " << time_in << "\n";
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
-                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                    rhs[idim].setVal(0.);
-                } 
 
                 //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
@@ -594,12 +593,11 @@ void main_main ()
             // Create a fast RHS source function we will integrate
             auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
 
+                BL_PROFILE_VAR("rhs_fast_fun()",rhs_fast_fun);
+
                 Print() << "Calling rhs_fast_fun at time = " << time_in << "\n";
 
                 // User function to calculate the rhs MultiFab given the state MultiFab
-                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                    rhs[idim].setVal(0.);
-                } 
 
 	        //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
@@ -667,10 +665,13 @@ void main_main ()
 
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
+
             };
 
             // Create a function to call after updating a state
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real& time_in) {
+
+                BL_PROFILE_VAR("post_update_fun()",post_update_fun);
 
                 Print() << "Calling post_update_fun at time = " << time_in << "\n";
 
