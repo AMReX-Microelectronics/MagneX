@@ -169,7 +169,7 @@ void InitializeMagneXNamespace() {
 
     pp.get("TimeIntegratorOption",TimeIntegratorOption);
 
-    fast_dt_ratio = 0.1;
+    fast_dt_ratio = 1.;
     pp.query("fast_dt_ratio",fast_dt_ratio);
 
     fast_H_bias = 0;
