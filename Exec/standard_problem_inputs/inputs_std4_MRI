@@ -1,0 +1,137 @@
+##############
+# 3.125nm case
+##############
+#n_cell = 160 40 1
+#max_grid_size_x = 160
+#max_grid_size_y = 40
+#max_grid_size_z = 1
+#dt = 5.e-15  # forward Euler (685s), 1.e-14 unstable
+#dt = 2.5e-13 # Predictor-corrector (70s), 5.e-13 unstable
+#dt = 1.e-13 # trapezoidal (63s), 2.5e-13 unstable
+#dt = 2.5e-13 # SSPRK3 (36s), 5.e-13 unstable
+#dt = 5.e-13 # RK4 (24s), 1.e-12 unstable
+
+##############
+# 1.5625nm case
+##############
+n_cell = 320 80 2
+max_grid_size_x = 320
+max_grid_size_y = 80
+max_grid_size_z = 2
+#dt = 1.e-15 # forward Euler (11528s) 2.5e-15 unstable
+#dt = 5.e-14 # Predictor-corrector (1132s) 1.e-13 unstable
+#dt = 1.e-14 # trapezoidal (2229s) 2.5e-14 unstable
+#dt = 5.e-14 # SSPRK3 (665s) 1.e-13 unstable
+#dt = 1.e-13 # RK4 (438s) 2.5e-13 unstable
+
+dt = 2.e-13 # SUNDIALS MRI
+
+stop_time = 4.e-9
+
+plot_int = 10000
+chk_int = -1
+restart = -1
+diag_type = 4
+
+prob_lo = 0. 0. 0.
+prob_hi = 500.e-9 125.e-9 3.125e-9
+
+mu0 = 1.25663e-6
+
+Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9)"
+My_parser(x,y,z) = "0."
+Mz_parser(x,y,z) = "0."
+
+# Field 1:  mu_0 Hx=-24.6 mT, mu_0 Hy= 4.3 mT, mu_0 Hz= 0.0 mT
+# which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
+timedependent_Hbias = 1
+Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*19576"
+Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>1.e-9)*3422"
+Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+
+# Field 2:  mu_0 Hx=-35.5 mT, mu_0 Hy=-6.3 mT, mu_0 Hz= 0.0 mT
+# which is a field approximately 36 mT, directed 190 degrees counterclockwise from the positive x axis
+#timedependent_Hbias = 1
+#Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*28259"
+#Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*5013"
+#Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+
+timedependent_alpha = 1
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * (0.5*(t<=1.e-9) + 0.02*(t>1.e-9))"
+Ms_parser(x,y,z) =       " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9)* 1.3e-11"
+anisotropy_parser(x,y,z) = "0."
+DMI_parser(x,y,z) = "0."
+
+precession = 1
+demag_coupling = 1
+FFT_solver = 1
+M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
+exchange_coupling = 1
+anisotropy_coupling = 0
+anisotropy_axis = 0.0 1.0 0.0
+DMI_coupling = 0
+
+# INTEGRATION
+#TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 2 #Predictor-corrector
+#TimeIntegratorOption = 3 #2nd order artemis way
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
+
+# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+iterative_tolerance = 1.e-9
+
+# for TimeIntegratorOption = 4, integration.type can take on the following values:
+## 0 or "ForwardEuler" => Native AMReX Forward Euler integrator
+## 1 or "RungeKutta"   => Native AMReX Explicit Runge Kutta controlled by integration.rk.type
+## 2 or "SUNDIALS"     => SUNDIALS backend controlled by integration.sundials.type
+integration.type = SUNDIALS
+
+## for integration.type = RungeKutta, integration.rk.type can take the following values:
+### 0 = User-specified Butcher Tableau
+### 1 = Forward Euler
+### 2 = Trapezoid Method
+### 3 = SSPRK3 Method
+### 4 = RK4 Method
+integration.rk.type = 4
+
+## If using a user-specified Butcher Tableau, then
+## set nodes, weights, and table entries here:
+#
+## The Butcher Tableau is read as a flattened,
+## lower triangular matrix (but including the diagonal)
+## in row major format.
+integration.rk.weights = 1
+integration.rk.nodes = 0
+integration.rk.tableau = 0.0
+
+## for integration.type = SUNDIALS, set the SUNDIALS method type:
+# ERK      = Explicit Runge-Kutta method
+# DIRK     = Diagonally Implicit Runge-Kutta method
+# IMEX-RK  = Implicit-Explicit Additive Runge-Kutta method
+# EX-MRI   = Explicit Multirate Infatesimal method
+# IM-MRI   = Implicit Multirate Infatesimal method
+# IMEX-MRI = Implicit-Explicit Multirate Infatesimal method
+integration.sundials.type = EX-MRI
+
+# *** Select a specific SUNDIALS ERK or DIRK method ***
+# https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#explicit-butcher-tables
+# https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#implicit-butcher-tables
+#integration.sundials.method = ARKODE_FORWARD_EULER_1_1
+#integration.sundials.method = ARKODE_BACKWARD_EULER_1_1
+
+# *** Select a specific SUNDIALS IMEX-RK method ***
+# https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#additive-butcher-tables
+#integration.sundials.method_i = ARKODE_ARK2_DIRK_3_1_2
+#integration.sundials.method_e = ARKODE_ARK2_ERK_3_1_2
+
+# *** Select a specific SUNDIALS EX-MRI, IM-MRI, or IMEX-MRI method ***
+# https://sundials.readthedocs.io/en/latest/arkode/Usage/MRIStep/MRIStepCoupling.html#mri-coupling-tables
+#  *** Select a specific SUNDIALS MRI slow method coupling table ***
+integration.sundials.method = ARKODE_MIS_KW3
+#  *** Select a specific SUNDIALS ERK or DIRK fast method ***
+integration.sundials.fast_type = ERK  # ERK or DIRK
+integration.sundials.fast_method = ARKODE_KNOTH_WOLKE_3_3
+
+fast_exchange = 1
