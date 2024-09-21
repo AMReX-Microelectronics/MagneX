@@ -28,6 +28,12 @@ namespace MagneX {
     extern int fast_anisotropy;
     extern int fast_demag;
 
+    extern int implicit_H_bias;
+    extern int implicit_exchange;
+    extern int implicit_DMI;
+    extern int implicit_anisotropy;
+    extern int implicit_demag;
+
     extern amrex::Real iterative_tolerance;
 
     extern int plot_int;

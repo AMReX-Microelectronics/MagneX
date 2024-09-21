@@ -46,6 +46,13 @@ int MagneX:: fast_DMI;
 int MagneX:: fast_anisotropy;
 int MagneX:: fast_demag;
 
+// for IMEX, specify what goes into the implicit partition
+int MagneX:: implicit_H_bias;
+int MagneX:: implicit_exchange;
+int MagneX:: implicit_DMI;
+int MagneX:: implicit_anisotropy;
+int MagneX:: implicit_demag;
+
 // for TimeIntegrationOption 2 and 3 options only
 // tolerance threshold (L_inf change between iterations) required for completing time step
 // special cases:
@@ -182,6 +189,17 @@ void InitializeMagneXNamespace() {
     pp.query("fast_DMI",fast_DMI);
     pp.query("fast_anisotropy",fast_anisotropy);
     pp.query("fast_demag",fast_demag);
+
+    implicit_H_bias = 0;
+    implicit_exchange = 0;
+    implicit_DMI = 0;
+    implicit_anisotropy = 0;
+    implicit_demag = 0;
+    pp.query("implicit_H_bias",implicit_H_bias);
+    pp.query("implicit_exchange",implicit_exchange);
+    pp.query("implicit_DMI",implicit_DMI);
+    pp.query("implicit_anisotropy",implicit_anisotropy);
+    pp.query("implicit_demag",implicit_demag);
 
     iterative_tolerance = 1.e-9;
     pp.query("iterative_tolerance",iterative_tolerance);
