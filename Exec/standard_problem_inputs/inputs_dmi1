@@ -11,7 +11,7 @@ plot_H_bias = 0
 plot_exchange = 0
 plot_DMI = 0
 plot_anisotropy = 0
-plot_demag = 1
+plot_demag = 0
 plot_theta = 0
 
 prob_lo = -50.0e-9 -50.0e-9 -1.0e-9
@@ -24,6 +24,7 @@ M_normalization = 1
 exchange_coupling = 1
 DMI_coupling = 1
 anisotropy_coupling = 1
+FFT_solver = 1
 
 diag_type = 5
 
