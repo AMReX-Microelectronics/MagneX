@@ -582,7 +582,7 @@ void main_main ()
                     demag_solver.CalculateH_demag(ar_state, H_demagfield);
                 }
 
-                // Compute f^n = f(M^n, H^n) 
+                // Compute f^n = f(M^n, H^n)
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
@@ -599,8 +599,8 @@ void main_main ()
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
 
                 Array<MultiFab, AMREX_SPACEDIM> ar_rhs{AMREX_D_DECL(MultiFab(rhs[0],amrex::make_alias,0,rhs[0].nComp()),
-		                                                    MultiFab(rhs[1],amrex::make_alias,0,rhs[1].nComp()),
-			       			                    MultiFab(rhs[2],amrex::make_alias,0,rhs[2].nComp()))};
+                                                                    MultiFab(rhs[1],amrex::make_alias,0,rhs[1].nComp()),
+                                                                    MultiFab(rhs[2],amrex::make_alias,0,rhs[2].nComp()))};
 
                 Array<MultiFab, AMREX_SPACEDIM> ar_state{AMREX_D_DECL(MultiFab(state[0],amrex::make_alias,0,state[0].nComp()),
                                                                       MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
