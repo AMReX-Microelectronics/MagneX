@@ -558,39 +558,47 @@ void main_main ()
                 }
 
                 // exchange
-                if ( (using_MRI==1 && fast_exchange) || (using_IMEX==1 && implicit_exchange) ) {
-                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
-                        H_exchangefield[idim].setVal(0.);
+                if (exchange_coupling == 1) {
+                    if ( (using_MRI==1 && fast_exchange) || (using_IMEX==1 && implicit_exchange) ) {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_exchangefield[idim].setVal(0.);
+                        }
+                    } else {
+                        CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
                     }
-                } else {
-                    CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
                 }
 
                 // DMI
-                if ( (using_MRI==1 && fast_DMI) || (using_IMEX==1 && implicit_DMI) ) {
-                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
-                        H_DMIfield[idim].setVal(0.);
+                if (DMI_coupling == 1) {
+                    if ( (using_MRI==1 && fast_DMI) || (using_IMEX==1 && implicit_DMI) ) {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_DMIfield[idim].setVal(0.);
+                        }
+                    } else {
+                        CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
                     }
-                } else {
-                    CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
                 }
 
                 // anisotropy
-                if ( (using_MRI==1 && fast_anisotropy) || (using_IMEX==1 && implicit_anisotropy) ) {
-                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
-                        H_anisotropyfield[idim].setVal(.0);
+                if (anisotropy_coupling == 1) {
+                    if ( (using_MRI==1 && fast_anisotropy) || (using_IMEX==1 && implicit_anisotropy) ) {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_anisotropyfield[idim].setVal(.0);
+                        }
+                    } else {
+                        CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
                     }
-                } else {
-                    CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
                 }
 
                 // H_demag
-                if ( (using_MRI==1 && fast_demag) || (using_IMEX==1 && implicit_demag) ) {
-                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
-                        H_demagfield[idim].setVal(0.);
+                if (demag_coupling == 1) {
+                    if ( (using_MRI==1 && fast_demag) || (using_IMEX==1 && implicit_demag) ) {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_demagfield[idim].setVal(0.);
+                        }
+                    } else {
+                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
                     }
-                } else {
-                    demag_solver.CalculateH_demag(ar_state, H_demagfield);
                 }
 
                 // Compute f^n = f(M^n, H^n)
