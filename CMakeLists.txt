@@ -35,58 +35,21 @@ endif()
 # Set dimensions (3D only for MagneX)
 set(MagneX_DIMS 3 CACHE STRING "Simulation dimensionality (3D only)")
 
-# AMReX dependency options (similar to FerroX)
+# AMReX dependency options (defined in cmake/dependencies/AMReX.cmake)
 option(MagneX_amrex_internal "Download & build AMReX" ON)
-set(MagneX_amrex_repo "https://github.com/AMReX-Codes/amrex.git" CACHE STRING "Repository URI to pull and build AMReX from")
-set(MagneX_amrex_branch "development" CACHE STRING "Repository branch for MagneX_amrex_repo")
-set(MagneX_amrex_src "" CACHE PATH "Path to AMReX source directory (if MagneX_amrex_internal=OFF)")
 
-# SUNDIALS options (when enabled)
+# SUNDIALS integration support - matches FerroX SUNDIALS setup
+# Default OFF matches GNU Make default behavior (only enabled when explicitly set)
 if(MagneX_SUNDIALS)
-    option(MagneX_sundials_internal "Download & build SUNDIALS" ON)
-    set(MagneX_sundials_src "" CACHE PATH "Path to SUNDIALS source directory (if MagneX_sundials_internal=OFF)")
+    # Build/find SUNDIALS first, before AMReX looks for it
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/SUNDIALS.cmake)
+
+    # Enable AMReX SUNDIALS support when MagneX SUNDIALS is requested
+    set(AMReX_SUNDIALS ON CACHE BOOL "Enable SUNDIALS interfaces" FORCE)
 endif()
 
-# Set up AMReX dependency
-if(MagneX_amrex_internal)
-    # Download and build AMReX (like FerroX does)
-    include(FetchContent)
-    
-    if(MagneX_amrex_src)
-        # Use local source directory
-        FetchContent_Declare(amrex
-            SOURCE_DIR ${MagneX_amrex_src}
-        )
-    else()
-        # Download from repository
-        FetchContent_Declare(amrex
-            GIT_REPOSITORY ${MagneX_amrex_repo}
-            GIT_TAG ${MagneX_amrex_branch}
-        )
-    endif()
-    
-    # Configure AMReX options
-    set(AMReX_SPACEDIM 3 CACHE STRING "" FORCE)
-    set(AMReX_MPI ${MagneX_MPI} CACHE BOOL "" FORCE)
-    set(AMReX_FFT ${MagneX_FFT} CACHE BOOL "" FORCE)
-    if(MagneX_COMPUTE STREQUAL "OMP")
-        set(AMReX_OMP ON CACHE BOOL "" FORCE)
-    elseif(MagneX_COMPUTE STREQUAL "CUDA")
-        set(AMReX_GPU_BACKEND CUDA CACHE STRING "" FORCE)
-    elseif(MagneX_COMPUTE STREQUAL "HIP")
-        set(AMReX_GPU_BACKEND HIP CACHE STRING "" FORCE)
-    endif()
-    if(MagneX_SUNDIALS)
-        set(AMReX_SUNDIALS ON CACHE BOOL "" FORCE)
-    endif()
-    
-    FetchContent_MakeAvailable(amrex)
-else()
-    # Find external AMReX installation
-    find_package(AMReX REQUIRED
-        COMPONENTS Base FFT Boundary
-    )
-endif()
+# AMReX dependency - use advanced configuration from dependency file
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 
 # Create executable with sophisticated naming
 if(MagneX_APP)
@@ -145,22 +108,43 @@ if(MagneX_APP)
     # Link AMReX
     target_link_libraries(${binary_name} PRIVATE AMReX::amrex)
     
-    # Handle SUNDIALS if enabled
+    # Handle SUNDIALS if enabled - matches FerroX advanced integration
     if(MagneX_SUNDIALS)
         target_compile_definitions(${binary_name} PRIVATE AMREX_USE_SUNDIALS)
         
-        if(MagneX_sundials_internal)
-            # Would need SUNDIALS FetchContent setup here
-            message(STATUS "SUNDIALS internal build not implemented yet")
-        else()
-            # Find external SUNDIALS
-            find_package(SUNDIALS REQUIRED)
-            target_link_libraries(${binary_name} PRIVATE
-                SUNDIALS::cvode
-                SUNDIALS::arkode
-                SUNDIALS::nvecmanyvector
-                SUNDIALS::core
-            )
+        # Link SUNDIALS 7+ core component if available (following AMReX pattern)
+        if(SUNDIALS_VERSION VERSION_GREATER_EQUAL 7)
+            target_link_libraries(${binary_name} PRIVATE SUNDIALS::core)
+        endif()
+        
+        target_link_libraries(${binary_name} PRIVATE 
+            SUNDIALS::cvode
+            SUNDIALS::nvecserial
+            SUNDIALS::nvecmanyvector
+            SUNDIALS::nvecmpimanyvector
+        )
+        
+        # Add backend-specific libraries
+        if(MagneX_COMPUTE STREQUAL OMP)
+            if(TARGET SUNDIALS::nvecopenmp)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::nvecopenmp)
+            endif()
+        elseif(MagneX_COMPUTE STREQUAL CUDA)
+            if(TARGET SUNDIALS::nveccuda)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::nveccuda)
+            endif()
+            # Conditionally link fused CUDA libraries if available
+            if(TARGET SUNDIALS::cvode_fused_cuda)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::cvode_fused_cuda)
+            endif()
+        elseif(MagneX_COMPUTE STREQUAL HIP)
+            if(TARGET SUNDIALS::nvechip)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::nvechip)
+            endif()
+            # Conditionally link fused HIP libraries if available
+            if(TARGET SUNDIALS::cvode_fused_hip)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::cvode_fused_hip)
+            endif()
         endif()
     endif()
     
