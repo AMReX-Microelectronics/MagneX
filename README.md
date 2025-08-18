@@ -26,12 +26,107 @@ heFFTe is a required dependency.  At the same level that AMReX and MagneX are cl
 ``` >> make -j4 ```\
 ``` >> make install```
 ## Build
- Navigate to MagneX/Exec/ and run:\
+
+### GNU Make (Primary)
+Navigate to MagneX/Exec/ and run:\
 ```>> make -j4```
 
+### CMake (Alternative)
+MagneX also supports building with CMake, which can automatically download and build dependencies.
+
+#### Basic CMake Build
+```bash
+# CPU build with default options (NOACC backend)
+cmake -S . -B build
+cmake --build build -j 4
+
+# OpenMP build  
+cmake -S . -B build -DMagneX_COMPUTE=OMP
+cmake --build build -j 4
+
+# CUDA build
+cmake -S . -B build -DMagneX_COMPUTE=CUDA
+cmake --build build -j 4
+```
+
+#### Core Configuration Options
+- **MagneX_COMPUTE**: `NOACC` (default), `OMP`, `CUDA`, `HIP` - Computing backend
+- **MagneX_MPI**: `ON` (default), `OFF` - Multi-node support
+- **MagneX_FFT**: `ON` (default), `OFF` - FFT support
+- **MagneX_SUNDIALS**: `OFF` (default), `ON` - SUNDIALS ODE solver support
+
+#### External Dependencies
+
+**AMReX Configuration:**
+```bash
+# Use external AMReX installation
+cmake -S . -B build \
+  -DMagneX_amrex_internal=OFF \
+  -DAMReX_DIR=/path/to/amrex/lib/cmake/AMReX
+
+# Use local AMReX source directory
+cmake -S . -B build -DMagneX_amrex_src=/path/to/amrex/source
+
+# Use custom AMReX repository/branch
+cmake -S . -B build \
+  -DMagneX_amrex_repo=https://github.com/user/amrex.git \
+  -DMagneX_amrex_branch=my_branch
+```
+
+**SUNDIALS Configuration (when MagneX_SUNDIALS=ON):**
+```bash
+# Use external SUNDIALS installation
+cmake -S . -B build \
+  -DMagneX_SUNDIALS=ON \
+  -DMagneX_sundials_internal=OFF \
+  -DSUNDIALS_DIR=/path/to/sundials/lib/cmake/sundials
+
+# Use local SUNDIALS source directory
+cmake -S . -B build \
+  -DMagneX_SUNDIALS=ON \
+  -DMagneX_sundials_src=/path/to/sundials/source
+```
+
+#### Example Build Commands
+```bash
+# Build with local AMReX source (recommended for development)
+cmake -S . -B build -DMagneX_amrex_src=../amrex
+cmake --build build -j 4
+
+# OpenMP build with SUNDIALS support
+cmake -S . -B build \
+  -DMagneX_COMPUTE=OMP \
+  -DMagneX_SUNDIALS=ON
+cmake --build build -j 4
+
+# CUDA build with external AMReX
+export CMAKE_PREFIX_PATH=/path/to/amrex/install:$CMAKE_PREFIX_PATH
+cmake -S . -B build \
+  -DMagneX_COMPUTE=CUDA \
+  -DMagneX_amrex_internal=OFF
+cmake --build build -j 4
+```
+
 # Running MagneX
+
+## GNU Make builds (from Exec directory)
 You can run the following to simulate muMAG Standard Problem 4 dynamics:\
 ```>> ./main3d.gnu.MPI.ex standard_problem_inputs/inputs_std4```
+
+## CMake builds (from project root directory)
+```bash
+# For CPU build (NOACC backend)
+./build/main3d.gnu.MPI.ex Exec/standard_problem_inputs/inputs_std4
+
+# For OpenMP build
+./build/main3d.gnu.MPI.OMP.ex Exec/standard_problem_inputs/inputs_std4
+
+# For CUDA build  
+./build/main3d.gnu.MPI.CUDA.ex Exec/standard_problem_inputs/inputs_std4
+
+# Using the convenience symlink
+./build/magnex Exec/standard_problem_inputs/inputs_std4
+```
 # Visualization and Data Analysis
 Refer to the following link for several visualization tools that can be used for AMReX plotfiles. 
 
