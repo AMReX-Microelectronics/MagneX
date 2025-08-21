@@ -24,12 +24,15 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        # Install OpenMP support for macOS
+        brew install libomp
         if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
           git clone https://github.com/AMReX-Codes/amrex.git _deps/amrex-src
           git clone https://github.com/LLNL/sundials.git _deps/sundials-src
           _deps/amrex-src/.github/workflows/dependencies/dependencies_mac.sh
         else
-          .github/workflows/dependencies/documentation.sh
+          # Install basic dependencies for internal mode
+          brew install openmpi ccache
         fi
 
     - name: Set Up Cache
@@ -49,6 +52,9 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=$(which ccache) \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/include" \
+            -DOpenMP_CXX_LIB_NAMES=omp \
+            -DOpenMP_omp_LIBRARY=/opt/homebrew/lib/libomp.dylib \
             -DMagneX_MPI:BOOL=TRUE \
             -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} \
             -DMagneX_amrex_src:PATH=${{github.workspace}}/_deps/amrex-src \
@@ -61,6 +67,9 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=$(which ccache) \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/include" \
+            -DOpenMP_CXX_LIB_NAMES=omp \
+            -DOpenMP_omp_LIBRARY=/opt/homebrew/lib/libomp.dylib \
             -DMagneX_MPI:BOOL=TRUE \
             -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} \
             ${{github.workspace}}

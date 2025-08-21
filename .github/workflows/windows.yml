@@ -21,25 +21,33 @@ jobs:
       with:
         submodules: true
 
+    - name: Dependencies
+      run: |
+        # Install MS-MPI
+        Invoke-WebRequest -Uri "https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe" -OutFile msmpisetup.exe
+        .\msmpisetup.exe -unattend
+        Invoke-WebRequest -Uri "https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisdk.msi" -OutFile msmpisdk.msi
+        Start-Process msiexec.exe -Wait -ArgumentList '/I msmpisdk.msi /quiet'
+
     - name: Configure Project and Generate Build System
       run: |
-        if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
+        if ("${{matrix.amrex_mode}}" -eq "external_src") {
           git clone https://github.com/AMReX-Codes/amrex.git _deps/amrex-src
           git clone https://github.com/LLNL/sundials.git _deps/sundials-src
           cmake -S . -B build `
             -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install `
             -DCMAKE_BUILD_TYPE:STRING=Debug `
-            -DMagneX_MPI:BOOL=OFF `
+            -DMagneX_MPI:BOOL=ON `
             -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} `
             -DMagneX_amrex_src:PATH=${{github.workspace}}/_deps/amrex-src `
             -DMagneX_sundials_src:PATH=${{github.workspace}}/_deps/sundials-src
-        else
+        } else {
           cmake -S . -B build `
             -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install `
             -DCMAKE_BUILD_TYPE:STRING=Debug `
-            -DMagneX_MPI:BOOL=OFF `
+            -DMagneX_MPI:BOOL=ON `
             -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}}
-        fi
+        }
 
     - name: Compile and Link
       run: |
