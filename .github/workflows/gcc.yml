@@ -109,5 +109,3 @@ jobs:
         cat ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt
         export return=$(tail -n 1 ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt | awk '{print $2}')
         exit ${return}
-
-      run: |

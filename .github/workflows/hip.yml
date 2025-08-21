@@ -1,4 +1,4 @@
-name: ERF CI (hip)
+name: MagneX CI (hip)
 
 on:
   push:
