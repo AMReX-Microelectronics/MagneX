@@ -26,6 +26,8 @@ jobs:
       run: |
         # Install OpenMP support for macOS
         brew install libomp
+        # Install FFTW with MPI support
+        brew install fftw --with-mpi || brew install fftw
         if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
           git clone https://github.com/AMReX-Codes/amrex.git _deps/amrex-src
           git clone https://github.com/LLNL/sundials.git _deps/sundials-src
