@@ -17,7 +17,8 @@ find . -type d \( -name .git \
                   -o -name "*.txt" \
                   -o -name "*.yml" \) \
                  -a \( ! -name "*.tab.h" -a ! -name "*.tab.nolint.H" \
-                    -a ! -name "*.lex.h" -a ! -name "*.lex.nolint.H" \) \
+                    -a ! -name "*.lex.h" -a ! -name "*.lex.nolint.H" \
+                    -a ! -name "Legal.txt" \) \
                \) \
     -exec grep -Iq . {} \; \
     -exec perl -i -pe's/[[:blank:]]+$//g' {} +
