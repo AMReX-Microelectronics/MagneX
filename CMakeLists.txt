@@ -55,7 +55,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 if(MagneX_APP)
     # Build binary name like FerroX
     set(binary_name "main3d")
-    
+
     # Add compiler info
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(binary_name "${binary_name}.gnu")
@@ -64,12 +64,12 @@ if(MagneX_APP)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(binary_name "${binary_name}.clang")
     endif()
-    
+
     # Add MPI support
     if(MagneX_MPI)
         set(binary_name "${binary_name}.MPI")
     endif()
-    
+
     # Add compute backend
     if(MagneX_COMPUTE STREQUAL "OMP")
         set(binary_name "${binary_name}.OMP")
@@ -78,11 +78,11 @@ if(MagneX_APP)
     elseif(MagneX_COMPUTE STREQUAL "HIP")
         set(binary_name "${binary_name}.HIP")
     endif()
-    
+
     set(binary_name "${binary_name}.ex")
-    
+
     add_executable(${binary_name})
-    
+
     # Add all source files from Make.package
     target_sources(${binary_name} PRIVATE
         Source/Checkpoint.cpp
@@ -99,32 +99,32 @@ if(MagneX_APP)
         Source/main.cpp
         Source/Plotfile.cpp
     )
-    
+
     # Include directories
     target_include_directories(${binary_name} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Source
     )
-    
+
     # Link AMReX
     target_link_libraries(${binary_name} PRIVATE AMReX::amrex)
-    
+
     # Handle SUNDIALS if enabled - matches FerroX advanced integration
     if(MagneX_SUNDIALS)
         target_compile_definitions(${binary_name} PRIVATE AMREX_USE_SUNDIALS)
-        
+
         # Link SUNDIALS 7+ core component if available (following AMReX pattern)
         if(SUNDIALS_VERSION VERSION_GREATER_EQUAL 7)
             target_link_libraries(${binary_name} PRIVATE SUNDIALS::core)
         endif()
-        
-        target_link_libraries(${binary_name} PRIVATE 
+
+        target_link_libraries(${binary_name} PRIVATE
             SUNDIALS::cvode
             SUNDIALS::nvecserial
             SUNDIALS::nvecmanyvector
         )
-        
+
         if(MagneX_MPI)
-            target_link_libraries(lib_${SD} PUBLIC
+            target_link_libraries(${binary_name} PUBLIC
                 SUNDIALS::nvecmpimanyvector
             )
         endif()
@@ -152,12 +152,12 @@ if(MagneX_APP)
             endif()
         endif()
     endif()
-    
+
     # Set output directory
     set_target_properties(${binary_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     )
-    
+
     # Create simple symlink for convenience
     add_custom_command(TARGET ${binary_name} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink
