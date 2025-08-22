@@ -98,7 +98,7 @@ int MagneX::Hbias_sweep;
 // tolerance threshold for equilibrium in M in Hbias sweeping
 amrex::Real MagneX::equilibrium_tolerance;
 
-// increment size for Hbias  
+// increment size for Hbias
 AMREX_GPU_MANAGED amrex::Real MagneX::increment_size;
 
 // number of increments on Hbias before reversing sign of increment
@@ -260,7 +260,7 @@ void InitializeMagneXNamespace() {
             anisotropy_axis[i] = temp[i];
         }
     }
-   
+
     pp.get("demag_coupling",demag_coupling);
     if (demag_coupling == 1) {
         pp.get("FFT_solver",FFT_solver);
@@ -274,5 +274,5 @@ void InitializeMagneXNamespace() {
     if (diag_type == 2 && Hbias_sweep == 0) {
         amrex::Abort("Cannot have diag_type == 2 && Hbias_sweep == 0");
     }
-    
+
 }

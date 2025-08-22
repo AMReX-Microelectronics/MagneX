@@ -1,5 +1,5 @@
 #include <AMReX_Gpu.H>
-// Algorithm to calculate 
+// Algorithm to calculate
 // 1. Laplacian for exchange term in LLG equation
 // 2. Divergence for demagnetization term
 // 3. Spatial derivative for DMI term
@@ -82,7 +82,7 @@ static amrex::Real DownwardDz (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real LaplacianDx_Mag (
     amrex::Array4<amrex::Real const> const& F,
-    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x, 
+    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real const BC_lo_x, amrex::Real const BC_hi_x,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 
     amrex::Real const inv_dx = 1./dx[0];
@@ -150,8 +150,8 @@ static amrex::Real LaplacianDz_Mag (
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 static amrex::Real Laplacian_Mag (
     amrex::Array4<amrex::Real const> const& F,
-    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real BC_lo_x, amrex::Real BC_hi_x, 
-    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real BC_lo_y, amrex::Real BC_hi_y, 
+    amrex::Real const Ms_lo_x, amrex::Real const Ms_hi_x, amrex::Real BC_lo_x, amrex::Real BC_hi_x,
+    amrex::Real const Ms_lo_y, amrex::Real const Ms_hi_y, amrex::Real BC_lo_y, amrex::Real BC_hi_y,
     amrex::Real const Ms_lo_z, amrex::Real const Ms_hi_z, amrex::Real BC_lo_z, amrex::Real BC_hi_z,
     int const i, int const j, int const k, amrex::GpuArray<amrex::Real, 3> dx) {
 

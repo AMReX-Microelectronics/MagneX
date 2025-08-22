@@ -61,7 +61,7 @@ void Demagnetization::define()
     auto cba_large = amrex::decompose(cdomain_large, ParallelContext::NProcsSub(),
                                       {AMREX_D_DECL(true,true,false)});
     DistributionMapping cdm_large(cba_large);
-    
+
     Kxx_fft.define(cba_large, cdm_large, 1, 0);
     Kxy_fft.define(cba_large, cdm_large, 1, 0);
     Kxz_fft.define(cba_large, cdm_large, 1, 0);
@@ -84,7 +84,7 @@ void Demagnetization::define()
     MultiFab Kyy(ba_large, dm_large, 1, 0);
     MultiFab Kyz(ba_large, dm_large, 1, 0);
     MultiFab Kzz(ba_large, dm_large, 1, 0);
-    
+
     Kxx.setVal(0.);
     Kxy.setVal(0.);
     Kxz.setVal(0.);
@@ -100,7 +100,7 @@ void Demagnetization::define()
     {
         const Box& bx = mfi.tilebox();
 
-	// extract dx from the geometry object
+        // extract dx from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dx = geom_large.CellSizeArray();
 
         const Array4<Real>& Kxx_ptr = Kxx.array(mfi);
@@ -109,10 +109,10 @@ void Demagnetization::define()
         const Array4<Real>& Kyy_ptr = Kyy.array(mfi);
         const Array4<Real>& Kyz_ptr = Kyz.array(mfi);
         const Array4<Real>& Kzz_ptr = Kzz.array(mfi);
-   
+
         // Set the demag tensor
-	amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int L, int M, int N)
-        {   
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int L, int M, int N)
+        {
             // L,M,N range from 0:2*n_cell-1
             // I,J,K range from -n_cell+1:n_cell
             int I = L - n_cell[0] + 1;
@@ -129,26 +129,26 @@ void Demagnetization::define()
                 return;
             }
             */
-            
+
             // **********************************
             // SET VALUES FOR EACH CELL
             // **********************************
 #if 1
             for (int i = 0; i <= 1; i++) { // helper indices
-                for (int j = 0; j <= 1; j++) { 
+                for (int j = 0; j <= 1; j++) {
                     for (int k = 0; k <= 1; k++) {
- 		        Real r = std::sqrt ((I+i-0.5)*(I+i-0.5)*dx[0]*dx[0] + (J+j-0.5)*(J+j-0.5)*dx[1]*dx[1] + (K+k-0.5)*(K+k-0.5)*dx[2]*dx[2]);
-                        
+                        Real r = std::sqrt ((I+i-0.5)*(I+i-0.5)*dx[0]*dx[0] + (J+j-0.5)*(J+j-0.5)*dx[1]*dx[1] + (K+k-0.5)*(K+k-0.5)*dx[2]*dx[2]);
+
                         Kxx_ptr(L,M,N) = Kxx_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::atan ((K+k-0.5) * (J+j-0.5) * dx[2] * dx[1] / r / (I+i-0.5) / dx[0])));
-                        
+
                         Kxy_ptr(L,M,N) = Kxy_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::log ((K+k-0.5) * dx[2] + r)));
-                        
+
                         Kxz_ptr(L,M,N) = Kxz_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::log ((J+j-0.5) * dx[1] + r)));
-                        
+
                         Kyy_ptr(L,M,N) = Kyy_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::atan ((I+i-0.5) * (K+k-0.5) * dx[0] * dx[2] / r / (J+j-0.5) / dx[1])));
-                        
+
                         Kyz_ptr(L,M,N) = Kyz_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * (std::log ((I+i-0.5) * dx[0] + r)));
-                        
+
                         Kzz_ptr(L,M,N) = Kzz_ptr(L,M,N) + ((std::pow(-1,i+j+k)) * std::atan ((J+j-0.5) * (I+i-0.5) * dx[1] * dx[0] / r / (K+k-0.5) / dx[2]));
                     }
                 }
@@ -245,7 +245,7 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 
     for ( MFIter mfi(Kxx_fft,TilingIfNotGPU()); mfi.isValid(); ++mfi )
     {
-	const Box& bx = mfi.tilebox();
+        const Box& bx = mfi.tilebox();
 
         Array4<GpuComplex<Real>> const& Kxx_fft_ptr = Kxx_fft.array(mfi);
         Array4<GpuComplex<Real>> const& Kxy_fft_ptr = Kxy_fft.array(mfi);
@@ -261,10 +261,10 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
         Array4<GpuComplex<Real>> Hx_fft_ptr = Hx_fft.array(mfi);
         Array4<GpuComplex<Real>> Hy_fft_ptr = Hy_fft.array(mfi);
         Array4<GpuComplex<Real>> Hz_fft_ptr = Hz_fft.array(mfi);
-	
-	amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-	{
-	    // Take the dot product in fourier space of M and K and store that in 6 different multifabs
+
+        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
+            // Take the dot product in fourier space of M and K and store that in 6 different multifabs
             GpuComplex<Real> Hx_fft_pt(  (Mx_fft_ptr(i,j,k).real() * Kxx_fft_ptr(i,j,k).real() + My_fft_ptr(i,j,k).real() * Kxy_fft_ptr(i,j,k).real() + Mz_fft_ptr(i,j,k).real() * Kxz_fft_ptr(i,j,k).real())
                                        - (Mx_fft_ptr(i,j,k).imag() * Kxx_fft_ptr(i,j,k).imag() + My_fft_ptr(i,j,k).imag() * Kxy_fft_ptr(i,j,k).imag() + Mz_fft_ptr(i,j,k).imag() * Kxz_fft_ptr(i,j,k).imag()),
                                          (Mx_fft_ptr(i,j,k).real() * Kxx_fft_ptr(i,j,k).imag() + My_fft_ptr(i,j,k).real() * Kxy_fft_ptr(i,j,k).imag() + Mz_fft_ptr(i,j,k).real() * Kxz_fft_ptr(i,j,k).imag())
@@ -282,9 +282,9 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
                                          (Mx_fft_ptr(i,j,k).real() * Kxz_fft_ptr(i,j,k).imag() + My_fft_ptr(i,j,k).real() * Kyz_fft_ptr(i,j,k).imag() + Mz_fft_ptr(i,j,k).real() * Kzz_fft_ptr(i,j,k).imag())
                                        + (Mx_fft_ptr(i,j,k).imag() * Kxz_fft_ptr(i,j,k).real() + My_fft_ptr(i,j,k).imag() * Kyz_fft_ptr(i,j,k).real() + Mz_fft_ptr(i,j,k).imag() * Kzz_fft_ptr(i,j,k).real()) );
             Hz_fft_ptr(i,j,k) = Hz_fft_pt;
-	});
+        });
      }
-    
+
     MultiFab Hx_large(ba_large, dm_large, 1, 0);
     MultiFab Hy_large(ba_large, dm_large, 1, 0);
     MultiFab Hz_large(ba_large, dm_large, 1, 0);
@@ -300,7 +300,7 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     Hx_large.mult(1./n_cells);
     Hy_large.mult(1./n_cells);
     Hz_large.mult(1./n_cells);
-    
+
     // Copying the elements near the 'upper right' of the double-sized demag back to multifab that is the problem size
     // This is not quite the 'upper right' of the source, it's the destination_coordinate + (n_cell-1)
     MultiBlockIndexMapping dtos;
@@ -309,6 +309,6 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
     ParallelCopy(H_demagfield[0], dest_box, Hx_large, 0, 0, 1, IntVect(0), dtos);
     ParallelCopy(H_demagfield[1], dest_box, Hy_large, 0, 0, 1, IntVect(0), dtos);
     ParallelCopy(H_demagfield[2], dest_box, Hz_large, 0, 0, 1, IntVect(0), dtos);
-    
+
 }
 

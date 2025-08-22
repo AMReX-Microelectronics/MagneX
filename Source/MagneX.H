@@ -140,7 +140,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
   Initialization.cpp
 */
 
-void InitializeMagneticProperties(MultiFab& Ms, 
+void InitializeMagneticProperties(MultiFab& Ms,
                                   MultiFab& gamma,
                                   MultiFab& exchange,
                                   MultiFab& DMI,

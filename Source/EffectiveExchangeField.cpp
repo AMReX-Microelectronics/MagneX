@@ -20,15 +20,15 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
         // extract dd from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();
 
-        const Array4<Real>& Mx = Mfield[0].array(mfi); 
-        const Array4<Real>& My = Mfield[1].array(mfi); 
-        const Array4<Real>& Mz = Mfield[2].array(mfi); 
+        const Array4<Real>& Mx = Mfield[0].array(mfi);
+        const Array4<Real>& My = Mfield[1].array(mfi);
+        const Array4<Real>& Mz = Mfield[2].array(mfi);
         const Array4<Real>& Ms_arr = Ms.array(mfi);
         const Array4<Real>& DMI_arr = DMI.array(mfi);
         const Array4<Real>& exchange_arr = exchange.array(mfi);
-        const Array4<Real>& Hx_exchange = H_exchangefield[0].array(mfi); 
-        const Array4<Real>& Hy_exchange = H_exchangefield[1].array(mfi); 
-        const Array4<Real>& Hz_exchange = H_exchangefield[2].array(mfi); 
+        const Array4<Real>& Hx_exchange = H_exchangefield[0].array(mfi);
+        const Array4<Real>& Hy_exchange = H_exchangefield[1].array(mfi);
+        const Array4<Real>& Hz_exchange = H_exchangefield[2].array(mfi);
 
         amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) {
@@ -42,15 +42,15 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                         amrex::Real const H_exchange_coeff = 2.0 * exchange_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
                         // Neumann boundary condition dM/dn = -1/xi (z x n) x M
                         amrex::Real xi_DMI = 0.0; // xi_DMI cannot be zero, this is just initialization
-                        
+
                         amrex::Real Ms_lo_x = Ms_arr(i-1, j, k);
                         amrex::Real Ms_hi_x = Ms_arr(i+1, j, k);
                         amrex::Real Ms_lo_y = Ms_arr(i, j-1, k);
                         amrex::Real Ms_hi_y = Ms_arr(i, j+1, k);
                         amrex::Real Ms_lo_z = Ms_arr(i, j, k-1);
                         amrex::Real Ms_hi_z = Ms_arr(i, j, k+1);
-                        
-                        // // Neumann boundary condition in scalar form, dMx/dx = -/+ 1/xi*Mz 
+
+                        // // Neumann boundary condition in scalar form, dMx/dx = -/+ 1/xi*Mz
                         // at x-faces, dM/dn = dM/dx
                         amrex::Real dMxdx_BC_lo_x = 0.0; // lower x BC: dMx/dx = 1/xi*Mz
                         amrex::Real dMxdx_BC_hi_x = 0.0; // higher x BC: dMx/dx = -1/xi*Mz
@@ -75,7 +75,7 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
 
                         if (DMI_coupling == 1) {
                             if (DMI_arr(i,j,k) == 0.) amrex::Abort("The DMI_arr(i,j,k) is 0.0 while including the DMI coupling");
-                            
+
                             xi_DMI = 2.0*exchange_arr(i,j,k)/DMI_arr(i,j,k);
 
                             dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k) ; // lower x BC: dMx/dx = 1/xi*Mz
@@ -89,15 +89,15 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                             dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k);  // lower y BC: dMz/dy = -1/xi*My
                             dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k);  // higher y BC: dMz/dy = 1/xi*My
                         }
-                        
-                        Hx_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, 
+
+                        Hx_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x,
                                                                                   Ms_lo_y, Ms_hi_y, dMxdy_BC_lo_y, dMxdy_BC_hi_y,
                                                                                   Ms_lo_z, Ms_hi_z, dMxdz_BC_lo_z, dMxdz_BC_hi_z, i, j, k, dd);
-                        
-                        Hy_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(My, Ms_lo_x, Ms_hi_x, dMydx_BC_lo_x, dMydx_BC_hi_x, 
-                                                                                  Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, 
+
+                        Hy_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(My, Ms_lo_x, Ms_hi_x, dMydx_BC_lo_x, dMydx_BC_hi_x,
+                                                                                  Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y,
                                                                                   Ms_lo_z, Ms_hi_z, dMydz_BC_lo_z, dMydz_BC_hi_z, i, j, k, dd);
-                        
+
                         Hz_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mz, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x,
                                                                                   Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y,
                                                                                   Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd);
