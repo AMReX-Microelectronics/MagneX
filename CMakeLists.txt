@@ -121,9 +121,14 @@ if(MagneX_APP)
             SUNDIALS::cvode
             SUNDIALS::nvecserial
             SUNDIALS::nvecmanyvector
-            SUNDIALS::nvecmpimanyvector
         )
         
+        if(MagneX_MPI)
+            target_link_libraries(lib_${SD} PUBLIC
+                SUNDIALS::nvecmpimanyvector
+            )
+        endif()
+
         # Add backend-specific libraries
         if(MagneX_COMPUTE STREQUAL OMP)
             if(TARGET SUNDIALS::nvecopenmp)
