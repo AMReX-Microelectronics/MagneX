@@ -56,18 +56,7 @@ if(MagneX_SUNDIALS AND AMReX_FOUND)
     message(STATUS "Checking AMReX/SUNDIALS type compatibility...")
     message(STATUS "DEBUG: FerroX_PRECISION=${FerroX_PRECISION}, SUNDIALS_PRECISION=${SUNDIALS_PRECISION}")
 
-    file(WRITE ${CMAKE_BINARY_DIR}/test_types.cpp "
-        #include <AMReX_REAL.H>
-        #include <sundials/sundials_types.h>
-        #include <type_traits>
-        int main() {
-            static_assert(sizeof(amrex::Real) == sizeof(sunrealtype),
-                         \"Size mismatch\");
-            static_assert(std::is_same<amrex::Real, sunrealtype>::value,
-                         \"Type mismatch\");
-            return 0;
-        }
-    ")
+    file(WRITE ${CMAKE_BINARY_DIR}/test_types.cpp "#include <AMReX_REAL.H>\n#include <sundials/sundials_types.h>\n#include <type_traits>\nint main() {\n    static_assert(sizeof(amrex::Real) == sizeof(sunrealtype), \"Size mismatch\");\n    static_assert(std::is_same<amrex::Real, sunrealtype>::value, \"Type mismatch\");\n    return 0;\n}")
 
     try_compile(
         TYPES_COMPATIBLE
@@ -82,16 +71,7 @@ if(MagneX_SUNDIALS AND AMReX_FOUND)
         message(STATUS "Compile output: ${COMPILE_OUTPUT}")
 
         # Try to get more info
-        file(WRITE ${CMAKE_BINARY_DIR}/test_sizes.cpp "
-            #include <AMReX_REAL.H>
-            #include <sundials/sundials_types.h>
-            #include <fstream>
-            int main() {
-                std::ofstream out(\"${CMAKE_BINARY_DIR}/type_sizes.txt\");
-                out << sizeof(amrex::Real) << \" \" << sizeof(sunrealtype);
-                return 0;
-            }
-        ")
+        file(WRITE ${CMAKE_BINARY_DIR}/test_sizes.cpp "#include <AMReX_REAL.H>\n#include <sundials/sundials_types.h>\n#include <fstream>\nint main() {\n    std::ofstream out(\"${CMAKE_BINARY_DIR}/type_sizes.txt\");\n    out << sizeof(amrex::Real) << \" \" << sizeof(sunrealtype);\n    return 0;\n}")
 
         try_run(
             RUN_RESULT COMPILE_RESULT
