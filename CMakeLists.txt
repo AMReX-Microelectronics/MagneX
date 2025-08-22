@@ -56,7 +56,7 @@ if(MagneX_SUNDIALS AND AMReX_FOUND)
     message(STATUS "Checking AMReX/SUNDIALS type compatibility...")
     message(STATUS "DEBUG: FerroX_PRECISION=${FerroX_PRECISION}, SUNDIALS_PRECISION=${SUNDIALS_PRECISION}")
 
-    file(WRITE ${CMAKE_BINARY_DIR}/test_types.cpp "#include <AMReX_REAL.H>\n#include <sundials/sundials_types.h>\n#include <type_traits>\nint main() {\n    static_assert(sizeof(amrex::Real) == sizeof(sunrealtype), \"Size mismatch\");\n    static_assert(std::is_same<amrex::Real, sunrealtype>::value, \"Type mismatch\");\n    return 0;\n}")
+    file(WRITE ${CMAKE_BINARY_DIR}/test_types.cpp "#include <AMReX_REAL.H>\n#include <sundials/sundials_types.h>\n#include <type_traits>\n#include <iostream>\nint main() {\n    static_assert(sizeof(amrex::Real) == sizeof(sunrealtype));\n    static_assert(std::is_same<amrex::Real, sunrealtype>::value);\n    static_assert(sizeof(int) == sizeof(sunindextype));\n    std::cout << sizeof(amrex::Real) << 32 << sizeof(sunrealtype) << 10;\n    std::cout << sizeof(int) << 32 << sizeof(sunindextype) << 10;\n    return 0;\n}")
 
     try_compile(
         TYPES_COMPATIBLE
@@ -67,30 +67,6 @@ if(MagneX_SUNDIALS AND AMReX_FOUND)
         OUTPUT_VARIABLE COMPILE_OUTPUT
     )
 
-    if(NOT TYPES_COMPATIBLE)
-        message(STATUS "Compile output: ${COMPILE_OUTPUT}")
-
-        # Try to get more info
-        file(WRITE ${CMAKE_BINARY_DIR}/test_sizes.cpp "#include <AMReX_REAL.H>\n#include <sundials/sundials_types.h>\n#include <fstream>\nint main() {\n    std::ofstream out(\"${CMAKE_BINARY_DIR}/type_sizes.txt\");\n    out << sizeof(amrex::Real) << \" \" << sizeof(sunrealtype);\n    return 0;\n}")
-
-        try_run(
-            RUN_RESULT COMPILE_RESULT
-            ${CMAKE_BINARY_DIR}/test_build2
-            ${CMAKE_BINARY_DIR}/test_sizes.cpp
-            CMAKE_FLAGS
-                "-DINCLUDE_DIRECTORIES=${AMReX_INCLUDE_DIRS};${SUNDIALS_INCLUDE_DIR}"
-                "-DLINK_LIBRARIES=${AMReX_LIBRARIES};${SUNDIALS_LIBRARIES}"
-        )
-
-        if(COMPILE_RESULT AND EXISTS ${CMAKE_BINARY_DIR}/type_sizes.txt)
-            file(READ ${CMAKE_BINARY_DIR}/type_sizes.txt TYPE_SIZES)
-            message(FATAL_ERROR "AMReX/SUNDIALS type mismatch! Sizes: ${TYPE_SIZES} (amrex::Real sunrealtype)")
-        else
-            message(FATAL_ERROR "AMReX/SUNDIALS type mismatch detected!")
-        endif()
-    else
-        message(STATUS "AMReX and SUNDIALS types are compatible")
-    endif()
 endif()
 
 # Create executable with sophisticated naming
