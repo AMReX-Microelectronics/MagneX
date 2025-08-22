@@ -315,6 +315,8 @@ void ComputeTheta(MultiFab& Ms,
                   MultiFab& Mfield_z,
                   MultiFab& theta)
 {
+    constexpr double TWOPI = 2.*3.14159265358979323846264338327950288;
+    constexpr double PI = 3.14159265358979323846264338327950288;
     for (MFIter mfi(Ms,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         const Box& bx = mfi.tilebox();
@@ -327,23 +329,11 @@ void ComputeTheta(MultiFab& Ms,
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
 
-            if (Mx(i,j,k) >= 0. && Mz(i,j,k) > 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k));
-            } else if (Mx(i,j,k) >= 0. && Mz(i,j,k) < 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + M_PI;
-            } else if (Mx(i,j,k) < 0. && Mz(i,j,k) < 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + M_PI;
-            } else if (Mx(i,j,k) < 0. && Mz(i,j,k) > 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + 2.*M_PI;
-            }
+            theta_arr(i,j,k) = std::atan2(Mx(i,j,k), Mz(i,j,k));
 
-            if (Mz(i,j,k) == 0.) {
-                if (Mx(i,j,k) >= 0.) {
-                    theta_arr(i,j,k) = 0.;
-                }
-                else {
-                    theta_arr(i,j,k) = M_PI;
-                }
+            // Convert from [-π, π] to [0, 2π] range if needed
+            if (theta_arr(i,j,k) < 0.) {
+                theta_arr(i,j,k) += 2.*PI;
             }
 
         });
