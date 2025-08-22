@@ -39,7 +39,7 @@ void Demagnetization::define()
     IntVect max_grid_size(AMREX_D_DECL(2*max_grid_size_x,2*max_grid_size_y,2*max_grid_size_z));
     ba_large.maxSize(max_grid_size);
 
-    // How Boxes are distrubuted among MPI processes
+    // How Boxes are distributed among MPI processes
     dm_large.define(ba_large);
 
     // periodic in all directions

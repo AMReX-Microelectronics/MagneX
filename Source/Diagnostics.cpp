@@ -221,7 +221,7 @@ Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                     amrex::Real dMzdz_BC_lo_z = 0.0; // dMz/dz = 0
                     amrex::Real dMzdz_BC_hi_z = 0.0; // dMz/dz = 0
 
-                    // Take 9 spacial derivatives where 'Hxy' is the derivative of Mx with respect to y
+                    // Take 9 spatial derivatives where 'Hxy' is the derivative of Mx with respect to y
                     amrex::Real Hxx = DMDx_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd);
                     amrex::Real Hxy = DMDy_Mag(Mx, Ms_lo_y, Ms_hi_y, dMydx_BC_lo_x, dMydx_BC_hi_x, i, j, k, dd);
                     amrex::Real Hxz = DMDz_Mag(Mx, Ms_lo_z, Ms_hi_z, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd);

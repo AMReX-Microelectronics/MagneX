@@ -156,7 +156,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                     // a_temp_static_coeff does not change in the current step for SATURATED materials; but it does change for UNSATURATED ones
                     amrex::Real a_temp_static_coeff = alpha_arr(i,j,k) / M_magnitude;
 
-                    // calculate the b_temp_static_coeff (it is divided by 2.0 because the derivation is based on an interger dt)
+                    // calculate the b_temp_static_coeff (it is divided by 2.0 because the derivation is based on an integer dt)
                     amrex::Real b_temp_static_coeff = - mu0 * amrex::Math::abs(gamma_arr(i,j,k)) / 2.;
 
                     // calculate a_temp_static
@@ -283,7 +283,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                         Hz_eff_prev += Hz_anisotropy_prev(i,j,k);
                     }
 
-                    // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
+                    // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an integer dt,
                     // while in real simulations, the input dt is actually dt/2.0)
                     amrex::Real a_temp_dynamic_coeff = mu0 * amrex::Math::abs(gamma_arr(i,j,k)) / 2.;
 

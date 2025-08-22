@@ -16,7 +16,7 @@ int MagneX::max_grid_size_x;
 int MagneX::max_grid_size_y;
 int MagneX::max_grid_size_z;
 
-// physical lo/hi coordiates of the domain
+// physical lo/hi coordinates of the domain
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_lo;
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_hi;
 

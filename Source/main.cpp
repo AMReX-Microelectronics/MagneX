@@ -124,7 +124,7 @@ void main_main ()
         IntVect max_grid_size(AMREX_D_DECL(max_grid_size_x,max_grid_size_y,max_grid_size_z));
         ba.maxSize(max_grid_size);
 
-        // How Boxes are distrubuted among MPI processes
+        // How Boxes are distributed among MPI processes
         dm.define(ba);
     }
 
@@ -957,7 +957,7 @@ void main_main ()
         ParallelDescriptor::ReduceLongMin(min_fab_megabytes, IOProc);
         ParallelDescriptor::ReduceLongMax(max_fab_megabytes, IOProc);
 
-        amrex::Print() << "Curent     FAB megabyte spread across MPI nodes: ["
+        amrex::Print() << "Current     FAB megabyte spread across MPI nodes: ["
                        << min_fab_megabytes << " ... " << max_fab_megabytes << "]\n";
 
         // If we have completed the hysteresis loop, we end the simulation
