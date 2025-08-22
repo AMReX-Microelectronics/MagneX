@@ -319,9 +319,9 @@ void ComputeTheta(MultiFab& Ms,
 
         const Box& bx = mfi.tilebox();
 
-        auto const& Ms_arr = Ms.array(mfi);
+        [[maybe_unused]] auto const& Ms_arr = Ms.array(mfi);
         auto const& Mx = Mfield_x.array(mfi);
-        auto const& My = Mfield_y.array(mfi);
+        [[maybe_unused]] auto const& My = Mfield_y.array(mfi);
         auto const& Mz = Mfield_z.array(mfi);
         auto const& theta_arr = theta.array(mfi);
 
