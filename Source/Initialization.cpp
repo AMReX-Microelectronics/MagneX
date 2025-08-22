@@ -16,7 +16,7 @@ void InitializeMagneticProperties(MultiFab& Ms,
 
     // Ms is the only material property with ghost cells
     Ms.setVal(0.);
-    
+
     // extract dx from the geometry object
     GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
@@ -88,7 +88,7 @@ void InitializeMagneticProperties(MultiFab& Ms,
 
                 exchange_arr(i,j,k) = exchange_p(x,y,z);
 
-            }); 
+            });
         }
     }
 
@@ -98,7 +98,7 @@ void InitializeMagneticProperties(MultiFab& Ms,
         Parser DMI_parser(DMI_parser_string);
         DMI_parser.registerVariables({"x","y","z"});
         auto DMI_p = DMI_parser.compile<3>();
-    
+
         for (MFIter mfi(DMI,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.tilebox(); // no ghost cells
@@ -113,7 +113,7 @@ void InitializeMagneticProperties(MultiFab& Ms,
 
                 DMI_arr(i,j,k) = DMI_p(x,y,z);
 
-            }); 
+            });
         }
     }
 
@@ -138,7 +138,7 @@ void InitializeMagneticProperties(MultiFab& Ms,
 
                 anisotropy_arr(i,j,k) = anisotropy_p(x,y,z);
 
-            }); 
+            });
         }
     }
 
@@ -174,13 +174,13 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
     for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.growntilebox(1);
- 
+
         // extract dx from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
         // extract field data
-        const Array4<Real>& Mx = Mfield[0].array(mfi);         
-        const Array4<Real>& My = Mfield[1].array(mfi);         
+        const Array4<Real>& Mx = Mfield[0].array(mfi);
+        const Array4<Real>& My = Mfield[1].array(mfi);
         const Array4<Real>& Mz = Mfield[2].array(mfi);
 
         amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -268,7 +268,7 @@ void ComputeAlpha(MultiFab&  alpha,
     Parser alpha_parser(alpha_parser_string);
     alpha_parser.registerVariables({"x","y","z","t"});
     auto alpha_p = alpha_parser.compile<4>();
-    
+
     // loop over boxes
     for (MFIter mfi(alpha,TilingIfNotGPU); mfi.isValid(); ++mfi)
     {
@@ -284,6 +284,6 @@ void ComputeAlpha(MultiFab&  alpha,
 
             alpha_arr(i,j,k) = alpha_p(x,y,z,time);
 
-        }); 
+        });
     }
 }
