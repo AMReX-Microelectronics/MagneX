@@ -2,7 +2,9 @@
 #include <cufft.h>
 #else
 #include <fftw3.h>
+#ifdef AMREX_USE_MPI
 #include <fftw3-mpi.h>
+#endif
 #endif
 
 #include <AMReX_MultiFab.H>

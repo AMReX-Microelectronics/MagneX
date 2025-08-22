@@ -107,7 +107,7 @@ macro(find_sundials)
             set(SUNDIALS_INDEX_SIZE 32 CACHE INTERNAL "")
             set(SUNDIALS_BUILD_PACKAGE_FUSED_KERNELS ON CACHE INTERNAL "")
             # Add CUDA-specific SUNDIALS options
-            set(SUNDIALS_PRECISION "DOUBLE" CACHE INTERNAL "")
+            set(SUNDIALS_PRECISION "double" CACHE INTERNAL "")
             # Disable problematic CUDA components that require cusolver/cusparse
             set(BUILD_SUNMATRIX_CUSPARSE OFF CACHE INTERNAL "")
             set(BUILD_SUNLINSOL_CUSOLVERSP OFF CACHE INTERNAL "")
