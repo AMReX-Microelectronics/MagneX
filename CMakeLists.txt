@@ -181,6 +181,7 @@ if(MagneX_APP)
 
         target_link_libraries(${binary_name} PRIVATE
             SUNDIALS::cvode
+            SUNDIALS::arkode
             SUNDIALS::nvecserial
             SUNDIALS::nvecmanyvector
         )
@@ -204,6 +205,10 @@ if(MagneX_APP)
             if(TARGET SUNDIALS::cvode_fused_cuda)
                 target_link_libraries(${binary_name} PRIVATE SUNDIALS::cvode_fused_cuda)
             endif()
+            # Also add ARKODE fused kernels if using ARKODE with CUDA
+            if(TARGET SUNDIALS::arkode_fused_cuda)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::arkode_fused_cuda)
+            endif()
         elseif(MagneX_COMPUTE STREQUAL HIP)
             if(TARGET SUNDIALS::nvechip)
                 target_link_libraries(${binary_name} PRIVATE SUNDIALS::nvechip)
@@ -211,6 +216,10 @@ if(MagneX_APP)
             # Conditionally link fused HIP libraries if available
             if(TARGET SUNDIALS::cvode_fused_hip)
                 target_link_libraries(${binary_name} PRIVATE SUNDIALS::cvode_fused_hip)
+            endif()
+            # Also add ARKODE fused kernels if using ARKODE with HIP
+            if(TARGET SUNDIALS::arkode_fused_hip)
+                target_link_libraries(${binary_name} PRIVATE SUNDIALS::arkode_fused_hip)
             endif()
         endif()
     endif()
