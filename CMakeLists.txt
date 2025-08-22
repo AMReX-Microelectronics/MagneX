@@ -51,6 +51,68 @@ endif()
 # AMReX dependency - use advanced configuration from dependency file
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AMReX.cmake)
 
+# Add after finding AMReX and SUNDIALS packages
+if(MagneX_SUNDIALS AND AMReX_FOUND)
+    message(STATUS "Checking AMReX/SUNDIALS type compatibility...")
+    message(STATUS "DEBUG: FerroX_PRECISION=${FerroX_PRECISION}, SUNDIALS_PRECISION=${SUNDIALS_PRECISION}")
+
+    file(WRITE ${CMAKE_BINARY_DIR}/test_types.cpp "
+        #include <AMReX_REAL.H>
+        #include <sundials/sundials_types.h>
+        #include <type_traits>
+        int main() {
+            static_assert(sizeof(amrex::Real) == sizeof(sunrealtype),
+                         \"Size mismatch\");
+            static_assert(std::is_same<amrex::Real, sunrealtype>::value,
+                         \"Type mismatch\");
+            return 0;
+        }
+    ")
+
+    try_compile(
+        TYPES_COMPATIBLE
+        ${CMAKE_BINARY_DIR}/test_build
+        ${CMAKE_BINARY_DIR}/test_types.cpp
+        CMAKE_FLAGS
+            "-DINCLUDE_DIRECTORIES=${AMReX_INCLUDE_DIRS};${SUNDIALS_INCLUDE_DIR}"
+        OUTPUT_VARIABLE COMPILE_OUTPUT
+    )
+
+    if(NOT TYPES_COMPATIBLE)
+        message(STATUS "Compile output: ${COMPILE_OUTPUT}")
+
+        # Try to get more info
+        file(WRITE ${CMAKE_BINARY_DIR}/test_sizes.cpp "
+            #include <AMReX_REAL.H>
+            #include <sundials/sundials_types.h>
+            #include <fstream>
+            int main() {
+                std::ofstream out(\"${CMAKE_BINARY_DIR}/type_sizes.txt\");
+                out << sizeof(amrex::Real) << \" \" << sizeof(sunrealtype);
+                return 0;
+            }
+        ")
+
+        try_run(
+            RUN_RESULT COMPILE_RESULT
+            ${CMAKE_BINARY_DIR}/test_build2
+            ${CMAKE_BINARY_DIR}/test_sizes.cpp
+            CMAKE_FLAGS
+                "-DINCLUDE_DIRECTORIES=${AMReX_INCLUDE_DIRS};${SUNDIALS_INCLUDE_DIR}"
+                "-DLINK_LIBRARIES=${AMReX_LIBRARIES};${SUNDIALS_LIBRARIES}"
+        )
+
+        if(COMPILE_RESULT AND EXISTS ${CMAKE_BINARY_DIR}/type_sizes.txt)
+            file(READ ${CMAKE_BINARY_DIR}/type_sizes.txt TYPE_SIZES)
+            message(FATAL_ERROR "AMReX/SUNDIALS type mismatch! Sizes: ${TYPE_SIZES} (amrex::Real sunrealtype)")
+        else
+            message(FATAL_ERROR "AMReX/SUNDIALS type mismatch detected!")
+        endif()
+    else
+        message(STATUS "AMReX and SUNDIALS types are compatible")
+    endif()
+endif()
+
 # Create executable with sophisticated naming
 if(MagneX_APP)
     # Build binary name like FerroX
