@@ -315,7 +315,7 @@ void ComputeTheta(MultiFab& Ms,
                   MultiFab& Mfield_z,
                   MultiFab& theta)
 {
-    constexpr double TWOPI = 2.*3.14159265358979323846264338327950288;
+    [[maybe_unused]] constexpr double TWOPI = 2.*3.14159265358979323846264338327950288;
     constexpr double PI = 3.14159265358979323846264338327950288;
     for (MFIter mfi(Ms,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
