@@ -30,28 +30,30 @@ jobs:
       with:
         submodules: true
 
+    - name: Clone AMReX for dependency scripts
+      run: |
+        git clone https://github.com/AMReX-Codes/amrex.git ${{runner.workspace}}/amrex
+
+    - name: Setup
+      run: |
+        if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
+          echo "AMREX_SRC_DIR=${{runner.workspace}}/amrex" >> $GITHUB_ENV
+          if [ "${{matrix.sundials}}" == "ON" ]; then
+            git clone https://github.com/LLNL/sundials.git ${{runner.workspace}}/sundials
+            echo "SUNDIALS_SRC_DIR=${{runner.workspace}}/sundials" >> $GITHUB_ENV
+          fi
+        fi
+
     - name: Free up disk space
       uses: ./.github/actions/free-space-ubuntu
 
     - name: Dependencies
       run: |
-        if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
-          git clone https://github.com/AMReX-Codes/amrex.git _deps/amrex-src
-          git clone https://github.com/LLNL/sundials.git _deps/sundials-src
-          _deps/amrex-src/.github/workflows/dependencies/dependencies_dpcpp.sh
-        else
-          .github/workflows/dependencies/documentation.sh
-        fi
+        ${{runner.workspace}}/amrex/.github/workflows/dependencies/dependencies_dpcpp.sh
         sudo apt-get install -y libfftw3-dev libfftw3-mpi-dev
 
     - name: Install CCache
-      run: |
-        if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
-          _deps/amrex-src/.github/workflows/dependencies/dependencies_ccache.sh
-        else
-          sudo apt-get update
-          sudo apt-get install -y ccache
-        fi
+      run: ${{runner.workspace}}/amrex/.github/workflows/dependencies/dependencies_ccache.sh
 
     - name: Set Up Cache
       uses: actions/cache@v4
@@ -75,19 +77,36 @@ jobs:
         mkdir build
         cd build
         if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
-          cmake .. \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DMagneX_MPI:BOOL=ON \
-            -DMagneX_COMPUTE:STRING=SYCL \
-            -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} \
-            -DMagneX_amrex_src:PATH=${{github.workspace}}/_deps/amrex-src \
-            -DMagneX_sundials_src:PATH=${{github.workspace}}/_deps/sundials-src \
-            -DCMAKE_C_COMPILER=$(which icx) \
-            -DCMAKE_CXX_COMPILER=$(which icpx) \
-            -DCMAKE_CXX_STANDARD=17
+          if [ "${{matrix.sundials}}" == "ON" ]; then
+            cmake .. \
+              -DCMAKE_VERBOSE_MAKEFILE=ON \
+              -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install \
+              -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+              -DMagneX_MPI:BOOL=ON \
+              -DMagneX_COMPUTE:STRING=SYCL \
+              -DMagneX_SUNDIALS:BOOL=ON \
+              -DMagneX_ENABLE_ALL_WARNINGS:BOOL=ON \
+              -DMagneX_amrex_src:PATH=${{env.AMREX_SRC_DIR}} \
+              -DMagneX_sundials_src:PATH=${{env.SUNDIALS_SRC_DIR}} \
+              -DCMAKE_C_COMPILER=$(which icx) \
+              -DCMAKE_CXX_COMPILER=$(which icpx) \
+              -DCMAKE_CXX_STANDARD=17
+          else
+            cmake .. \
+              -DCMAKE_VERBOSE_MAKEFILE=ON \
+              -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install \
+              -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+              -DMagneX_MPI:BOOL=ON \
+              -DMagneX_COMPUTE:STRING=SYCL \
+              -DMagneX_SUNDIALS:BOOL=OFF \
+              -DMagneX_ENABLE_ALL_WARNINGS:BOOL=ON \
+              -DMagneX_amrex_src:PATH=${{env.AMREX_SRC_DIR}} \
+              -DCMAKE_C_COMPILER=$(which icx) \
+              -DCMAKE_CXX_COMPILER=$(which icpx) \
+              -DCMAKE_CXX_STANDARD=17
+          fi
         else
           cmake .. \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -97,6 +116,7 @@ jobs:
             -DMagneX_MPI:BOOL=ON \
             -DMagneX_COMPUTE:STRING=SYCL \
             -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} \
+            -DMagneX_ENABLE_ALL_WARNINGS:BOOL=ON \
             -DCMAKE_C_COMPILER=$(which icx) \
             -DCMAKE_CXX_COMPILER=$(which icpx) \
             -DCMAKE_CXX_STANDARD=17
@@ -108,8 +128,8 @@ jobs:
 
     - name: Report
       run: |
-        egrep "warning:|error:" ${{runner.workspace}}/build-output-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt \
-          | egrep -v "_deps/.*amrex" | egrep -v "_deps/.*sundials" | egrep -v "${{runner.workspace}}/amrex" | egrep -v "${{runner.workspace}}/sundials" | egrep -v "lto-wrapper: warning:" | sort | uniq \
+        egrep "warning:|error:|deprecated:" ${{runner.workspace}}/build-output-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt \
+          | egrep -v "_deps/.*amrex" | egrep -v "_deps/.*sundials" | egrep -v "${{runner.workspace}}/amrex" | egrep -v "${{runner.workspace}}/sundials" | egrep -v "lto-wrapper: warning:" | egrep "SUNMatrix.*deprecated|warning:|error:" | sort | uniq \
           | awk 'BEGIN{i=0}{print $0}{i++}END{print "Warnings: "i}' > ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt
         cat ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt
         export return=$(tail -n 1 ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt | awk '{print $2}')
