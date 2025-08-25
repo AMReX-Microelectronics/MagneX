@@ -2,7 +2,7 @@
 #include "CartesianAlgorithm_K.H"
 #include <cmath>
 
-amrex::Long CountMagneticCells(MultiFab& Ms)
+long CountMagneticCells(MultiFab& Ms)
 {
     // timer for profiling
     BL_PROFILE_VAR("CountMagneticCells()",CountMagneticCells);
@@ -31,7 +31,7 @@ amrex::Long CountMagneticCells(MultiFab& Ms)
     }
 
     amrex::Long sum = amrex::get<0>(reduce_data.value());
-    ParallelDescriptor::ReduceAmrex::LongSum(sum);
+    ParallelDescriptor::ReduceLongSum(sum);
 
     return sum;
 }
