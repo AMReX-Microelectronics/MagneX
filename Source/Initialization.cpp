@@ -270,7 +270,7 @@ void ComputeAlpha(MultiFab&  alpha,
     auto alpha_p = alpha_parser.compile<4>();
 
     // loop over boxes
-    for (MFIter mfi(alpha,TilingIfNotGPU); mfi.isValid(); ++mfi)
+    for (MFIter mfi(alpha,TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.tilebox();
 
