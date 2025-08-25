@@ -64,9 +64,13 @@ macro(find_amrex)
         set(AMReX_LINEAR_SOLVERS_EM ON CACHE INTERNAL "")
         set(AMReX_LINEAR_SOLVERS_INCFLO ON CACHE INTERNAL "")
 
-        # we don't need RDC and disabling it simplifies the build
-        # complexity and potentially improves code optimization
-        set(AMReX_GPU_RDC OFF CACHE BOOL "")
+        if(MagneX_GPU_RDC)
+            set(AMReX_GPU_RDC ON CACHE BOOL "")
+        else()
+            # we don't need RDC and disabling it simplifies the build
+            # complexity and potentially improves code optimization
+            set(AMReX_GPU_RDC OFF CACHE BOOL "")
+        endif()
 
         # Position independent code for shared libraries
         set(AMReX_PIC ON CACHE INTERNAL "" FORCE)

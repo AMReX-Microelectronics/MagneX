@@ -23,6 +23,7 @@ option(MagneX_APP "Build the MagneX executable application" ON)
 option(MagneX_MPI "Multi-node support (message-passing)" ON)
 option(MagneX_FFT "FFT support" ON)
 option(MagneX_SUNDIALS "SUNDIALS support" OFF)
+option(MagneX_GPU_RDC "Enable relocatable device code" ON)
 
 # Compute backend selection (matches FerroX strategy)
 set(MagneX_COMPUTE_VALUES NOACC OMP CUDA HIP)
