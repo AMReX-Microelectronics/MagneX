@@ -127,6 +127,23 @@ if(MagneX_APP)
     # Link AMReX
     target_link_libraries(${binary_name} PRIVATE AMReX::amrex)
 
+    # Handle CUDA compilation like FerroX
+    if(MagneX_COMPUTE STREQUAL "CUDA")
+        # AMReX helper function: propagate CUDA specific target & source properties
+        setup_target_for_cuda_compilation(${binary_name})
+        target_compile_features(${binary_name} PUBLIC cuda_std_17)
+        set_target_properties(${binary_name} PROPERTIES
+            CUDA_EXTENSIONS OFF
+            CUDA_STANDARD_REQUIRED ON
+        )
+    else()
+        target_compile_features(${binary_name} PUBLIC cxx_std_17)
+        set_target_properties(${binary_name} PROPERTIES
+            CXX_EXTENSIONS OFF
+            CXX_STANDARD_REQUIRED ON
+        )
+    endif()
+
     # Handle SUNDIALS if enabled - matches FerroX advanced integration
     if(MagneX_SUNDIALS)
         target_compile_definitions(${binary_name} PRIVATE AMREX_USE_SUNDIALS)
