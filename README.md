@@ -71,6 +71,9 @@ cmake -S . -B build -DMagneX_amrex_src=/path/to/amrex/source
 cmake -S . -B build \
   -DMagneX_amrex_repo=https://github.com/user/amrex.git \
   -DMagneX_amrex_branch=my_branch
+
+# Test with specific AMReX pull request (CI/testing)
+cmake -S . -B build -DMagneX_amrex_pr=1234
 ```
 
 **SUNDIALS Configuration (when MagneX_SUNDIALS=ON):**
