@@ -74,11 +74,11 @@ void WritePlotfile(MultiFab& Ms,
         nvar++;
         var_names.push_back("theta");
     }
-    
+
     MultiFab Plt(ba, dm, nvar, 0);
 
     int counter = 0;
-    
+
     if (plot_Ms) {
         MultiFab::Copy(Plt, Ms, 0, counter++, 1, 0);
     }

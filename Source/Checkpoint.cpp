@@ -34,7 +34,7 @@ void WriteCheckPoint(int step,
     // ---- after all directories are built
     // ---- ParallelDescriptor::IOProcessor() creates the directories
     amrex::PreBuildDirectorHierarchy(checkpointname, "Level_", nlevels, true);
-    
+
     VisMF::IO_Buffer io_buffer(VisMF::IO_Buffer_Size);
 
     // write Header file
@@ -58,7 +58,7 @@ void WriteCheckPoint(int step,
 
         // write out time
         HeaderFile << time << "\n";
-        
+
         // write the BoxArray (fluid)
         ba.writeOn(HeaderFile);
         HeaderFile << '\n';
@@ -74,10 +74,10 @@ void WriteCheckPoint(int step,
 }
 
 void ReadCheckPoint(int& restart,
-		    amrex::Real& time,
-		    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    BoxArray& ba,
-		    DistributionMapping& dm)
+                    amrex::Real& time,
+                    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+                    BoxArray& ba,
+                    DistributionMapping& dm)
 {
     // timer for profiling
     BL_PROFILE_VAR("ReadCheckPoint()",ReadCheckPoint);

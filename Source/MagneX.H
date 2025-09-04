@@ -2,7 +2,9 @@
 #include <cufft.h>
 #else
 #include <fftw3.h>
+#ifdef AMREX_USE_MPI
 #include <fftw3-mpi.h>
+#endif
 #endif
 
 #include <AMReX_MultiFab.H>
@@ -27,10 +29,10 @@ void WriteCheckPoint(int step,
                      Array< MultiFab, AMREX_SPACEDIM>& Mfield);
 
 void ReadCheckPoint(int& restart,
-		    amrex::Real& time,
-		    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    BoxArray& ba,
-		    DistributionMapping& dm);
+                    amrex::Real& time,
+                    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+                    BoxArray& ba,
+                    DistributionMapping& dm);
 
 /*
   ComputeLLGRHS.cpp
@@ -57,7 +59,7 @@ Real SumNormalizedM(MultiFab& Ms,
                     MultiFab& Mfield);
 
 Real SumHbias(MultiFab& H_biasfield,
-	      MultiFab& Ms);
+              MultiFab& Ms);
 
 Real DemagEnergy(MultiFab& Ms,
                   MultiFab& Mfield_x,
@@ -70,7 +72,7 @@ Real DemagEnergy(MultiFab& Ms,
 Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                     MultiFab& Ms,
                     const Geometry& geom,
-		    Real exch_const);
+                    Real exch_const);
 
 Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_x,
@@ -140,7 +142,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
   Initialization.cpp
 */
 
-void InitializeMagneticProperties(MultiFab& Ms, 
+void InitializeMagneticProperties(MultiFab& Ms,
                                   MultiFab& gamma,
                                   MultiFab& exchange,
                                   MultiFab& DMI,
