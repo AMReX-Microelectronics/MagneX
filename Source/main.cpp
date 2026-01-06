@@ -1,15 +1,17 @@
 #include "MagneX.H"
 #include "Demagnetization.H"
-
+#include <torch/script.h>
 #include <AMReX_MultiFab.H>
 #include <AMReX_VisMF.H>
-
+#include <AMReX_ParmParse.H>
 #ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
 
 #include <cmath>
 
+#include <ATen/cuda/CUDAContext.h>  // for at::cuda::setDevice
+#include <c10/cuda/CUDAGuard.h>
 using namespace amrex;
 using namespace MagneX;
 
@@ -57,6 +59,10 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
+    torch::jit::script::Module ml_module;
+    torch::jit::script::Module x_norm_module;
+    torch::jit::script::Module y_norm_module;
+
 
     // Declare variables for hysteresis
     Real normalized_Mx;
@@ -99,6 +105,42 @@ void main_main ()
         ReadCheckPoint(restart,time,Mfield,ba,dm);
 
     }
+
+    // **********************************
+    // // LOAD PYTORCH MODEL
+
+    BL_PROFILE_VAR("LoadPytorch",LoadPytorch);
+
+    // Load pytorch module via torch script
+
+
+    std::string ml_model_name;
+    std::string x_normalizer_name;
+    std::string y_normalizer_name;
+
+    ParmParse pp_ml;
+    pp_ml.query("ml_model_name", ml_model_name);
+    pp_ml.query("x_normalizer_name", x_normalizer_name);
+    pp_ml.query("y_normalizer_name", y_normalizer_name);
+
+    amrex::Print()<<"\n"<<ml_model_name<<"\n";
+    amrex::Print()<<x_normalizer_name<<"\n";
+    amrex::Print()<<y_normalizer_name<<"\n";
+
+    int dev_id = amrex::Gpu::Device::deviceId();
+    c10::cuda::CUDAGuard device_guard(dev_id);
+    torch::Device dev(torch::kCUDA, dev_id);
+    try {
+        // Deserialize the ScriptModule from a file using torch::jit::load().
+        ml_module = torch::jit::load(ml_model_name, dev);
+        x_norm_module = torch::jit::load(x_normalizer_name, dev);
+        y_norm_module = torch::jit::load(y_normalizer_name, dev);
+    }
+    catch (const c10::Error& e) {
+        amrex::Abort("Error loading the model\n");
+    }
+
+    Print() << "Model loaded.\n";
 
     // **********************************
     // SIMULATION SETUP
@@ -378,7 +420,12 @@ void main_main ()
 
             // Evolve H_demag
             if (demag_coupling == 1) {
-                demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                if (ml_enable == 1) {
+                    CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, H_demagfield);
+                } else {
+                    demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                }
             }
 
             if (exchange_coupling == 1) {
@@ -496,7 +543,13 @@ void main_main ()
 
                 // Poisson solve and H_demag computation with Mfield
                 if (demag_coupling == 1) {
-                    demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                    // demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                    if (ml_enable == 1) {
+                        CalculateH_demag_ML(Mfield, x_norm_module, ml_module, y_norm_module, H_demagfield);
+                    } else {
+                        demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                    }
+
                 }
 
                 if (exchange_coupling == 1) {
@@ -662,7 +715,12 @@ void main_main ()
                 // H_demag
                 if (demag_coupling == 1) {
                     if (fast_demag==1) {
-                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        // demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        if (ml_enable == 1) {
+                            CalculateH_demag_ML(ar_state, x_norm_module, ml_module, y_norm_module, H_demagfield);
+                        } else {
+                            demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        }
                     } else {
                         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
                             H_demagfield[idim].setVal(0.);

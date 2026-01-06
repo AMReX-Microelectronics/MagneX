@@ -1,5 +1,5 @@
 # AMREX_HOME defines the directory in which we will find all the AMReX code.
-AMREX_HOME ?= ../../amrex
+AMREX_HOME = ../../amrex
 
 DEBUG        = FALSE
 USE_MPI      = TRUE
@@ -11,6 +11,32 @@ DIM          = 3
 USE_FFT      = TRUE
 
 USE_SUNDIALS = FALSE
+
+
+# Pytorch directories 
+ifeq ($(USE_CUDA),TRUE)
+  PYTORCH_ROOT := ../../libtorch_cuda
+else
+  PYTORCH_ROOT := ../../libtorch_cpu
+endif
+TORCH_LIBPATH = $(PYTORCH_ROOT)/lib
+
+ifeq ($(USE_CUDA),TRUE)
+  TORCH_LIBS = -ltorch -ltorch_cpu -lc10 -lc10_cuda -lcuda 
+else
+  TORCH_LIBS = -ltorch -ltorch_cpu -lc10
+endif
+
+INCLUDE_LOCATIONS += $(PYTORCH_ROOT)/include \
+                     $(PYTORCH_ROOT)/include/torch/csrc/api/include
+LIBRARY_LOCATIONS += $(TORCH_LIBPATH)
+
+DEFINES += -D_GLIBCXX_USE_CXX11_ABI=1
+ifeq ($(USE_CUDA),TRUE)
+  LDFLAGS += -Xlinker "--no-as-needed,-rpath $(TORCH_LIBPATH) $(TORCH_LIBS)"
+else
+  LDFLAGS += -Wl,--no-as-needed,-rpath=$(TORCH_LIBPATH) $(TORCH_LIBS)
+endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 

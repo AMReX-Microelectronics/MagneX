@@ -1,5 +1,6 @@
 #ifdef AMREX_USE_CUDA
 #include <cufft.h>
+#include <torch/script.h>
 #else
 #include <fftw3.h>
 #ifdef AMREX_USE_MPI
@@ -184,3 +185,11 @@ void WritePlotfile(MultiFab& Ms,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step);
+
+
+void CalculateH_demag_ML(const Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
+                         torch::jit::script::Module& x_norm_module,
+                         torch::jit::script::Module& ml_module,
+                         torch::jit::script::Module& y_norm_module,
+                        Array< MultiFab, AMREX_SPACEDIM> &   H_demagfield);
+                        

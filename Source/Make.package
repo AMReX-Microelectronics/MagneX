@@ -15,3 +15,4 @@ CEXE_headers += CartesianAlgorithm_K.H
 CEXE_headers += Demagnetization.H
 CEXE_headers += MagneX.H
 CEXE_headers += MagneX_namespace.H
+CEXE_sources += Demag_ml.cpp

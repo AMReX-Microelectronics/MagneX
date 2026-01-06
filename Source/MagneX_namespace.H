@@ -52,6 +52,8 @@ namespace MagneX {
 
     extern int diag_type;
 
+    extern int ml_enable;
+
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
 
