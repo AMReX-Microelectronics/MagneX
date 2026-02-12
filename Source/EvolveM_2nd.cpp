@@ -43,14 +43,14 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         H_anisotropyfield_prev[i].define(ba, dm, 1, 0);
         Mfield_old[i].define(ba, dm, 1, 1);
         Mfield_prev[i].define(ba, dm, 1, 1);
-        
+
         MultiFab::Copy(H_demagfield_prev[i], H_demagfield[i], 0, 0, 1, 0);
         MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
         MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
         MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 1, 1);
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
-        
+
         Mfield_error[i].define(ba, dm, 1, 0);
         Mfield_error[i].setVal(0.); // reset Mfield_error to zero
 
@@ -58,8 +58,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         a_temp[i].define(ba, dm, 1, 0);
         a_temp_static[i].define(ba, dm, 1, 0);
         b_temp_static[i].define(ba, dm, 1, 0);
-    }    
-    
+    }
+
     // calculate the b_temp_static, a_temp_static
     for (MFIter mfi(a_temp_static[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
@@ -67,7 +67,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         const Array4<Real>& gamma_arr = gamma.array(mfi);
         const Array4<Real>& Ms_arr = Ms.array(mfi);
 
-        // extract field data   
+        // extract field data
         const Array4<Real>& Hx_bias = H_biasfield[0].array(mfi);
         const Array4<Real>& Hy_bias = H_biasfield[1].array(mfi);
         const Array4<Real>& Hz_bias = H_biasfield[2].array(mfi);
@@ -156,7 +156,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                     // a_temp_static_coeff does not change in the current step for SATURATED materials; but it does change for UNSATURATED ones
                     amrex::Real a_temp_static_coeff = alpha_arr(i,j,k) / M_magnitude;
 
-                    // calculate the b_temp_static_coeff (it is divided by 2.0 because the derivation is based on an interger dt)
+                    // calculate the b_temp_static_coeff (it is divided by 2.0 because the derivation is based on an integer dt)
                     amrex::Real b_temp_static_coeff = - mu0 * amrex::Math::abs(gamma_arr(i,j,k)) / 2.;
 
                     // calculate a_temp_static
@@ -260,7 +260,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                     if (exchange_coupling == 1){
 
                         // H_exchange - use M^[(new_time),r-1]
-                            
+
                         Hx_eff_prev += Hx_exchange_prev(i, j, k);
                         Hy_eff_prev += Hy_exchange_prev(i, j, k);
                         Hz_eff_prev += Hz_exchange_prev(i, j, k);
@@ -283,7 +283,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                         Hz_eff_prev += Hz_anisotropy_prev(i,j,k);
                     }
 
-                    // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
+                    // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an integer dt,
                     // while in real simulations, the input dt is actually dt/2.0)
                     amrex::Real a_temp_dynamic_coeff = mu0 * amrex::Math::abs(gamma_arr(i,j,k)) / 2.;
 
@@ -303,10 +303,10 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                     az_temp(i, j, k) = (M_normalization != 0) ? -(dt * a_temp_dynamic_coeff * Hz_eff_prev + az_temp_static(i, j, k))
                         : -(dt * a_temp_dynamic_coeff * Hz_eff_prev + 0.5 * az_temp_static(i, j, k)
                             + 0.5 * alpha_arr(i,j,k) * 1. / std::sqrt(std::pow(Mx(i, j, k), 2.) + std::pow(My(i, j, k), 2.) + std::pow(Mz(i, j, k), 2.)) * Mz_old(i, j, k));
-                        
+
                     amrex::Real a_square = pow(ax_temp(i, j, k), 2.0) + pow(ay_temp(i, j, k), 2.0) + pow(az_temp(i, j, k), 2.0);
                     amrex::Real a_dot_b =  ax_temp(i, j, k) * bx_temp_static(i, j, k) + ay_temp(i, j, k) * by_temp_static(i, j, k) + az_temp(i, j, k) * bz_temp_static(i, j, k);
-                        
+
                     amrex::Real a_cross_b_x = ay_temp(i, j, k) * bz_temp_static(i, j, k) - az_temp(i, j, k) * by_temp_static(i, j, k);
                     Mx(i,j,k) = ( bx_temp_static(i, j, k) + a_dot_b * ax_temp(i, j, k) - a_cross_b_x ) / ( 1.0 + a_square);
 
@@ -321,13 +321,13 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
         // normalize M
         NormalizeM(Mfield,Ms,geom);
-                
+
         for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
-     
+
             const Box& bx = mfi.tilebox();
-    
+
             Array4<Real> const& Ms_arr = Ms.array(mfi);
-    
+
             Array4<Real> const& Mx_error = Mfield_error[0].array(mfi);
             Array4<Real> const& My_error = Mfield_error[1].array(mfi);
             Array4<Real> const& Mz_error = Mfield_error[2].array(mfi);
@@ -337,7 +337,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             Array4<Real> const& Mx_prev = Mfield_prev[0].array(mfi);
             Array4<Real> const& My_prev = Mfield_prev[1].array(mfi);
             Array4<Real> const& Mz_prev = Mfield_prev[2].array(mfi);
-    
+
             amrex::ParallelFor (bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 if (Ms_arr(i,j,k) > 0) {
                     Mx_error(i,j,k) = amrex::Math::abs(Mx(i,j,k) - Mx_prev(i,j,k)) / Ms_arr(i,j,k);
@@ -353,9 +353,9 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
 
         // re-compute the RHS terms no matter what, even if the iterations will end
         // that way at the beginning of the next time step we will have them
-        
+
         // update H_demag
-        if(demag_coupling == 1) {            
+        if(demag_coupling == 1) {
             demag_solver.CalculateH_demag(Mfield, H_demagfield);
         }
 

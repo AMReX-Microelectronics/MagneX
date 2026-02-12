@@ -8,7 +8,7 @@ def power_law(x, a, b, c):
 
 # Generate some sample data
 x_data = [10**3, 20**3, 30**3];#, 40**3, 50**3];
-y_data = [8.15, 8.38, 8.43]; #, 8.45, 8.453]; 
+y_data = [8.15, 8.38, 8.43]; #, 8.45, 8.453];
 
 # Fit the power law function to the data
 popt, pcov = curve_fit(power_law, x_data, y_data, maxfev=10000, p0=[1, 1, 1])

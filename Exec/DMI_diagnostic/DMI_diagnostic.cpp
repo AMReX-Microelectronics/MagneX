@@ -114,7 +114,7 @@ main (int   argc,
             const Array4<Real>& mfdata = mf.array(mfi);
 
             Real offset = 0.;
-            
+
             int k = (hi.z+1)/2;
             int j = (hi.y+1)/2;
             for (auto i = (hi.x+1)/2; i <= hi.x; ++i) {
@@ -126,7 +126,7 @@ main (int   argc,
                     }
                 }
             }
-           
+
         } // end MFIter
 
         // proceed to next level of refinement

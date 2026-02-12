@@ -50,10 +50,10 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                         amrex::Real Ms_lo_y = Ms_arr(i, j-1, k);
                         amrex::Real Ms_hi_y = Ms_arr(i, j+1, k);
 
-                        // Neumann boundary condition in scalar form, dMz/dx = +/- 1/xi*Mx 
-                        
-                        amrex::Real dMzdx_BC_lo_x =  1.0/xi_DMI*Mx(i,j,k); // lower x BC: dMz/dx = - 1/xi*Mx 
-                        amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*Mx(i,j,k); // higher x BC: dMz/dx = 1/xi*Mx 
+                        // Neumann boundary condition in scalar form, dMz/dx = +/- 1/xi*Mx
+
+                        amrex::Real dMzdx_BC_lo_x =  1.0/xi_DMI*Mx(i,j,k); // lower x BC: dMz/dx = - 1/xi*Mx
+                        amrex::Real dMzdx_BC_hi_x =  1.0/xi_DMI*Mx(i,j,k); // higher x BC: dMz/dx = 1/xi*Mx
                         Hx_DMI(i,j,k) = H_DMI_coeff * DMDx_Mag(Mz, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd); // z component at x nodality
 
                         amrex::Real dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k); // lower y BC: dMz/dy = -1/xi*My
