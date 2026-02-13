@@ -7,11 +7,11 @@ n_cell = 640 160 4
 max_grid_size_x = 640
 max_grid_size_y = 160
 max_grid_size_z = 4
-dt = 2.5e-14 # RK4, 5.e-14 unstable
+dt = 5.e-15 # IMEX, 1.e-14 unstable
 
 stop_time = 4.e-9
 
-plot_int = 5000
+plot_int = 25000
 chk_int = -1
 restart = -1
 diag_type = 4
@@ -69,7 +69,7 @@ iterative_tolerance = 1.e-9
 ## 0 or "ForwardEuler" => Native AMReX Forward Euler integrator
 ## 1 or "RungeKutta"   => Native AMReX Explicit Runge Kutta controlled by integration.rk.type
 ## 2 or "SUNDIALS"     => SUNDIALS backend controlled by integration.sundials.type
-integration.type = RungeKutta
+integration.type = SUNDIALS
 
 ## for integration.type = RungeKutta, integration.rk.type can take the following values:
 ### 0 = User-specified Butcher Tableau
@@ -96,7 +96,7 @@ integration.rk.tableau = 0.0
 # EX-MRI   = Explicit Multirate Infatesimal method
 # IM-MRI   = Implicit Multirate Infatesimal method
 # IMEX-MRI = Implicit-Explicit Multirate Infatesimal method
-integration.sundials.type = EX-MRI
+integration.sundials.type = IMEX-RK
 
 # *** Select a specific SUNDIALS ERK or DIRK method ***
 # https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#explicit-butcher-tables
@@ -106,15 +106,15 @@ integration.sundials.type = EX-MRI
 
 # *** Select a specific SUNDIALS IMEX-RK method ***
 # https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#additive-butcher-tables
-#integration.sundials.method_i = ARKODE_ARK2_DIRK_3_1_2
-#integration.sundials.method_e = ARKODE_ARK2_ERK_3_1_2
+integration.sundials.method_i = ARKODE_ARK2_DIRK_3_1_2
+integration.sundials.method_e = ARKODE_ARK2_ERK_3_1_2
 
 # *** Select a specific SUNDIALS EX-MRI, IM-MRI, or IMEX-MRI method ***
 # https://sundials.readthedocs.io/en/latest/arkode/Usage/MRIStep/MRIStepCoupling.html#mri-coupling-tables
 #  *** Select a specific SUNDIALS MRI slow method coupling table ***
-integration.sundials.method = ARKODE_MIS_KW3
+#integration.sundials.method = ARKODE_MIS_KW3
 #  *** Select a specific SUNDIALS ERK or DIRK fast method ***
-integration.sundials.fast_type = ERK  # ERK or DIRK
-integration.sundials.fast_method = ARKODE_KNOTH_WOLKE_3_3
+#integration.sundials.fast_type = ERK  # ERK or DIRK
+#integration.sundials.fast_method = ARKODE_KNOTH_WOLKE_3_3
 
-fast_exchange = 1
+implicit_exchange = 1
