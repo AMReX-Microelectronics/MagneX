@@ -54,16 +54,16 @@ DMI_coupling = 0
 equilibrium_tolerance = 1.e-9
 
 # hysteresis increment for H_bias
-increment_size = 1280
+increment_size = 128
 
 # number of increments ONE WAY: Must = 2*(Hx_bias/increment_size)
-nsteps_hysteresis = 100
+nsteps_hysteresis = 1000
 
 # INTEGRATION
-TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 # tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
