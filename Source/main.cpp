@@ -554,7 +554,9 @@ void main_main ()
                         H_biasfield[idim].setVal(0.);
                     }
                 } else {
-                    ComputeHbias(H_biasfield, time_in, geom);
+                    if (timedependent_Hbias) {
+                        ComputeHbias(H_biasfield, time_in, geom);
+                    }
                 }
 
                 // exchange
@@ -627,7 +629,9 @@ void main_main ()
 
                 // H_bias
                 if (fast_H_bias==1) {
-                    ComputeHbias(H_biasfield, time_in, geom);
+                    if (timedependent_Hbias) {
+                        ComputeHbias(H_biasfield, time_in, geom);
+                    }
                 } else {
                     for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
                         H_biasfield[idim].setVal(0.);
@@ -705,7 +709,9 @@ void main_main ()
 
                 // H_bias
                 if (implicit_H_bias==1) {
-                    ComputeHbias(H_biasfield, time_in, geom);
+                    if (timedependent_Hbias) {
+                        ComputeHbias(H_biasfield, time_in, geom);
+                    }
                 } else {
                     for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
                         H_biasfield[idim].setVal(0.);

@@ -9,9 +9,9 @@ max_grid_size_y = 160
 max_grid_size_z = 4
 dt = 5.e-15 # IMEX, 1.e-14 unstable
 
-stop_time = 4.e-9
+stop_time = 1.25e-12
 
-plot_int = 25000
+plot_int = -1
 chk_int = -1
 restart = -1
 diag_type = 4
