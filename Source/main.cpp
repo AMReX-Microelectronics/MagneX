@@ -453,7 +453,6 @@ void main_main ()
 
             // Evolve H_demag
             if (demag_coupling == 1) {
-                // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
                 if (ml_enable == 1) {
 #ifdef AMREX_USE_ML
                     for (amrex::MFIter mfi(Mfield_old[0], amrex::TilingIfNotGPU());
@@ -475,16 +474,7 @@ void main_main ()
                     }
 #endif
                 } else {
-                    // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
-                    amrex::Gpu::streamSynchronize();
-                    double start_time = amrex::second();
-
                     demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
-
-                    amrex::Gpu::streamSynchronize();
-                    double end_time = amrex::second();
-
-                    amrex::Print() << "Demag Solver Time: " << (end_time - start_time) * 1000.0 << " ms" << std::endl;
                 }
             }
 
@@ -603,7 +593,6 @@ void main_main ()
 
                 // Poisson solve and H_demag computation with Mfield
                 if (demag_coupling == 1) {
-                    // demag_solver.CalculateH_demag(Mfield, H_demagfield);
                     if (ml_enable == 1) {
 #ifdef AMREX_USE_ML
                         for (amrex::MFIter mfi(Mfield_old[0], amrex::TilingIfNotGPU());
@@ -625,16 +614,7 @@ void main_main ()
                         }
 #endif
                     } else {
-                        // demag_solver.CalculateH_demag(Mfield, H_demagfield);
-                        amrex::Gpu::streamSynchronize();
-                        double start_time = amrex::second();
-
                         demag_solver.CalculateH_demag(Mfield, H_demagfield);
-
-                        amrex::Gpu::streamSynchronize();
-                        double end_time = amrex::second();
-
-                        amrex::Print() << "Demag Solver Time: " << (end_time - start_time) * 1000.0 << " ms" << std::endl;
                     }
 
                 }
@@ -739,7 +719,11 @@ void main_main ()
                             H_demagfield[idim].setVal(0.);
                         }
                     } else {
-                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        if (ml_enable == 1) {
+                            amrex::Abort("add ML demag to SUNDIALS rhs");
+                        } else {
+                            demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        }
                     }
                 }
 
@@ -814,7 +798,6 @@ void main_main ()
                 // H_demag
                 if (demag_coupling == 1) {
                     if (fast_demag==1) {
-                        // demag_solver.CalculateH_demag(ar_state, H_demagfield);
                         if (ml_enable == 1) {
                             amrex::Abort("add ML demag to fast dynamics");
                         } else {
@@ -899,7 +882,11 @@ void main_main ()
                 // H_demag
                 if (demag_coupling == 1) {
                     if (implicit_demag==1) {
-                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        if (ml_enable == 1) {
+                            amrex::Abort("ML demag for implicit not supported");
+                        } else {
+                            demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        }
                     } else {
                         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
                             H_demagfield[idim].setVal(0.);
