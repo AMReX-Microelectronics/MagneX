@@ -1,13 +1,3 @@
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
-#include <torch/script.h>
-#else
-#include <fftw3.h>
-#ifdef AMREX_USE_MPI
-#include <fftw3-mpi.h>
-#endif
-#endif
-
 #include <AMReX_MultiFab.H>
 
 #include "MagneX_namespace.H"
