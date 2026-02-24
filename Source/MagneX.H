@@ -1,3 +1,7 @@
+#ifdef AMREX_USE_ML
+#include <torch/script.h>
+#endif
+
 #include <AMReX_MultiFab.H>
 
 #include "MagneX_namespace.H"
@@ -175,3 +179,40 @@ void WritePlotfile(MultiFab& Ms,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step);
+
+#ifdef AMREX_USE_ML
+
+at::Tensor PackMfieldToTensorDynamic(
+  const amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& Mfield,
+  const amrex::MFIter& mfi,
+  const amrex::Box& bx,
+  const amrex::IntVect& expected_spatial,
+  int device_id);
+
+at::Tensor NormalizeInput(
+  const at::Tensor& M_cuda_f32,
+  torch::jit::script::Module& x_norm_module);
+
+at::Tensor MLForwardOnly(
+  const at::Tensor& norm_tensor,
+  torch::jit::script::Module& ml_module);
+
+at::Tensor DenormalizeOutput(
+  const at::Tensor& y_tensor,
+  torch::jit::script::Module& y_norm_module);
+
+void UnpackTensorToHfieldDynamic(
+  const at::Tensor& denorm_torch_f64,
+  amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& H_demagfield,
+  const amrex::MFIter& mfi,
+  const amrex::Box& bx,
+  const amrex::IntVect& expected_spatial);
+
+// Move all parameters + buffers of a TorchScript module to a device
+void MoveModuleToDevice(torch::jit::script::Module& m,
+                      const torch::Device& device);
+
+// Read expected_spatial = [nx, ny, nz] from normalizer module
+amrex::IntVect GetExpectedSpatial(torch::jit::script::Module& x_norm_module);
+
+#endif

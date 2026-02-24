@@ -1,14 +1,20 @@
 #include "MagneX.H"
 #include "Demagnetization.H"
-
 #include <AMReX_MultiFab.H>
 #include <AMReX_VisMF.H>
-
+#include <AMReX_ParmParse.H>
+#include <AMReX_Gpu.H>
 #ifdef AMREX_USE_SUNDIALS
 #include <AMReX_TimeIntegrator.H>
 #endif
 
 #include <cmath>
+
+#ifdef AMREX_USE_ML
+#include <torch/script.h>
+#include <ATen/cuda/CUDAContext.h>  // for at::cuda::setDevice
+#include <c10/cuda/CUDAGuard.h>
+#endif
 
 using namespace amrex;
 using namespace MagneX;
@@ -57,6 +63,11 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
+#ifdef AMREX_USE_ML
+    torch::jit::script::Module ml_module;
+    torch::jit::script::Module x_norm_module;
+    torch::jit::script::Module y_norm_module;
+#endif
 
     // Declare variables for hysteresis
     Real normalized_Mx;
@@ -83,6 +94,10 @@ void main_main ()
     // Count how many times we have incremented Hbias
     int increment_count = 0;
 
+    // ML related variables (Declared here so they are visible to the whole function)
+    amrex::IntVect expected_spatial(0,0,0);
+    int device_id = -1;
+
     BoxArray ba;
     DistributionMapping dm;
 
@@ -98,6 +113,66 @@ void main_main ()
         // create a DistributionMapping dm
         ReadCheckPoint(restart,time,Mfield,ba,dm);
 
+    }
+
+    // **********************************
+    // // LOAD PYTORCH MODEL
+    if (ml_enable == 1) {
+#ifdef AMREX_USE_ML
+        BL_PROFILE_VAR("LoadPytorch",LoadPytorch);
+
+        // Load pytorch module via torch script
+
+
+        std::string ml_model_name;
+        std::string x_normalizer_name;
+        std::string y_normalizer_name;
+
+        ParmParse pp_ml;
+        pp_ml.query("ml_model_name", ml_model_name);
+        pp_ml.query("x_normalizer_name", x_normalizer_name);
+        pp_ml.query("y_normalizer_name", y_normalizer_name);
+
+        amrex::Print()<<"\n"<<ml_model_name<<"\n";
+        amrex::Print()<<x_normalizer_name<<"\n";
+        amrex::Print()<<y_normalizer_name<<"\n";
+
+        int dev_id = amrex::Gpu::Device::deviceId();
+        // int dev_id = 3;
+
+        c10::cuda::CUDAGuard device_guard(dev_id);
+        torch::Device dev(torch::kCUDA, dev_id);
+        try {
+            // Deserialize the ScriptModule from a file using torch::jit::load().
+            ml_module = torch::jit::load(ml_model_name, dev);
+            x_norm_module = torch::jit::load(x_normalizer_name, dev);
+            y_norm_module = torch::jit::load(y_normalizer_name, dev);
+        }
+        catch (const c10::Error& e) {
+            amrex::Abort("Error loading the model\n");
+        }
+        // ---- make sure all modules are on the same device (safe even if already there)
+        MoveModuleToDevice(ml_module, dev);
+        MoveModuleToDevice(x_norm_module, dev);
+        MoveModuleToDevice(y_norm_module, dev);
+
+        // ---- read expected spatial shape from x_normalizer module
+        expected_spatial = GetExpectedSpatial(x_norm_module);
+
+        // ---- keep device id for PackMfieldToTensorDynamic
+        device_id = dev_id;
+
+        // (optional) print it once
+        amrex::Print() << "ML expected_spatial = "
+                    << expected_spatial[0] << " "
+                    << expected_spatial[1] << " "
+                    << expected_spatial[2] << "\n";
+
+        Print() << "Model loaded.\n";
+#endif
+    }
+    else {
+        Print() << "ML disabled. Skipping model load.\n";
     }
 
     // **********************************
@@ -378,7 +453,29 @@ void main_main ()
 
             // Evolve H_demag
             if (demag_coupling == 1) {
-                demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                if (ml_enable == 1) {
+#ifdef AMREX_USE_ML
+                    for (amrex::MFIter mfi(Mfield_old[0], amrex::TilingIfNotGPU());
+                            mfi.isValid(); ++mfi)
+                        {
+                            const amrex::Box& bx = mfi.validbox();
+
+                            // pack: MultiFab -> tensor
+                            at::Tensor M_cuda_f32 = PackMfieldToTensorDynamic(
+                                Mfield_old, mfi, bx, expected_spatial, device_id
+                            );
+
+                            at::Tensor norm  = NormalizeInput(M_cuda_f32, x_norm_module);
+                            at::Tensor pred  = MLForwardOnly(norm, ml_module);
+                            at::Tensor denorm_f64 = DenormalizeOutput(pred, y_norm_module);
+
+                            // unpack: tensor -> MultiFab
+                            UnpackTensorToHfieldDynamic(denorm_f64, H_demagfield, mfi, bx, expected_spatial);
+                    }
+#endif
+                } else {
+                    demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
+                }
             }
 
             if (exchange_coupling == 1) {
@@ -496,7 +593,30 @@ void main_main ()
 
                 // Poisson solve and H_demag computation with Mfield
                 if (demag_coupling == 1) {
-                    demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                    if (ml_enable == 1) {
+#ifdef AMREX_USE_ML
+                        for (amrex::MFIter mfi(Mfield_old[0], amrex::TilingIfNotGPU());
+                            mfi.isValid(); ++mfi)
+                        {
+                            const amrex::Box& bx = mfi.validbox();
+
+                            // pack: MultiFab -> tensor
+                            at::Tensor M_cuda_f32 = PackMfieldToTensorDynamic(
+                                Mfield_old, mfi, bx, expected_spatial, device_id
+                            );
+
+                            at::Tensor norm  = NormalizeInput(M_cuda_f32, x_norm_module);
+                            at::Tensor pred  = MLForwardOnly(norm, ml_module);
+                            at::Tensor denorm_f64 = DenormalizeOutput(pred, y_norm_module);
+
+                            // unpack: tensor -> MultiFab
+                            UnpackTensorToHfieldDynamic(denorm_f64, H_demagfield, mfi, bx, expected_spatial);
+                        }
+#endif
+                    } else {
+                        demag_solver.CalculateH_demag(Mfield, H_demagfield);
+                    }
+
                 }
 
                 if (exchange_coupling == 1) {
@@ -599,7 +719,11 @@ void main_main ()
                             H_demagfield[idim].setVal(0.);
                         }
                     } else {
-                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        if (ml_enable == 1) {
+                            amrex::Abort("add ML demag to SUNDIALS rhs");
+                        } else {
+                            demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        }
                     }
                 }
 
@@ -674,7 +798,11 @@ void main_main ()
                 // H_demag
                 if (demag_coupling == 1) {
                     if (fast_demag==1) {
-                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        if (ml_enable == 1) {
+                            amrex::Abort("add ML demag to fast dynamics");
+                        } else {
+                            demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        }
                     } else {
                         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
                             H_demagfield[idim].setVal(0.);
@@ -754,7 +882,11 @@ void main_main ()
                 // H_demag
                 if (demag_coupling == 1) {
                     if (implicit_demag==1) {
-                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        if (ml_enable == 1) {
+                            amrex::Abort("ML demag for implicit not supported");
+                        } else {
+                            demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                        }
                     } else {
                         for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
                             H_demagfield[idim].setVal(0.);

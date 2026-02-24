@@ -132,6 +132,10 @@ AMREX_GPU_MANAGED int MagneX::demag_coupling;
 // 0 = FFTW (single-MPI), 1 = heFFTe (distributed)
 AMREX_GPU_MANAGED int MagneX::FFT_solver;
 
+// ML flag
+int MagneX::ml_enable;
+
+
 void InitializeMagneXNamespace() {
 
     BL_PROFILE_VAR("InitializeMagneXNamespace()",InitializeMagneXNameSpace);
@@ -227,6 +231,14 @@ void InitializeMagneXNamespace() {
 
     restart = -1;
     pp.query("restart",restart);
+
+    ml_enable = 0;
+    pp.query("ml_enable",ml_enable);
+#ifndef AMREX_USE_ML
+    if (ml_enable == 1) {
+        amrex::Abort("ml_enable=1 requires USE_ML=TRUE");
+    }
+#endif
 
     diag_type = -1;
     pp.query("diag_type",diag_type);
