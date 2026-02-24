@@ -470,12 +470,12 @@ void main_main ()
                     }
                 } else {
                     // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
-                    amrex::Gpu::streamSynchronize(); 
+                    amrex::Gpu::streamSynchronize();
                     double start_time = amrex::second();
 
                     demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
 
-                    amrex::Gpu::streamSynchronize(); 
+                    amrex::Gpu::streamSynchronize();
                     double end_time = amrex::second();
 
                     amrex::Print() << "Demag Solver Time: " << (end_time - start_time) * 1000.0 << " ms" << std::endl;
@@ -620,12 +620,12 @@ void main_main ()
                         }
                     } else {
                         // demag_solver.CalculateH_demag(Mfield, H_demagfield);
-                        amrex::Gpu::streamSynchronize(); 
+                        amrex::Gpu::streamSynchronize();
                         double start_time = amrex::second();
 
                         demag_solver.CalculateH_demag(Mfield, H_demagfield);
 
-                        amrex::Gpu::streamSynchronize(); 
+                        amrex::Gpu::streamSynchronize();
                         double end_time = amrex::second();
 
                         amrex::Print() << "Demag Solver Time: " << (end_time - start_time) * 1000.0 << " ms" << std::endl;

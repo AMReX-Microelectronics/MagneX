@@ -192,7 +192,7 @@ void WritePlotfile(MultiFab& Ms,
 //                          torch::jit::script::Module& ml_module,
 //                          torch::jit::script::Module& y_norm_module,
 //                         Array< MultiFab, AMREX_SPACEDIM> &   H_demagfield);
-                        
+
 
 at::Tensor PackMfieldToTensorDynamic(
   const amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& Mfield,
