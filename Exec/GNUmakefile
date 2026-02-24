@@ -1,6 +1,5 @@
 # AMREX_HOME defines the directory in which we will find all the AMReX code.
 AMREX_HOME ?= ../../amrex
-SUNDIALS_HOME ?= ../../sundials/instdir
 
 DEBUG        = FALSE
 USE_MPI      = TRUE
@@ -14,6 +13,7 @@ USE_ML       = FALSE
 TINY_PROFILE = FALSE
 PROFILE      = FALSE
 USE_SUNDIALS = FALSE
+SUNDIALS_HOME ?= ../../sundials/instdir
 
 ifeq ($(USE_ML),TRUE)
 
