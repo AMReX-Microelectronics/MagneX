@@ -1,0 +1,36 @@
+# PyTorch (libtorch) Download and Setup
+
+This guide downloads the libtorch CUDA 11.8 C++ distribution and unzips it in the same directory that contains `MagneX`, then renames the extracted folder to `libtorch_cuda`.
+
+## Steps
+
+1. Change to the parent directory of `MagneX`:
+
+```bash
+cd <MAGNEX_PARENT_DIR>
+```
+
+2. Download the libtorch archive with `wget`:
+
+```bash
+wget https://download.pytorch.org/libtorch/cu118/libtorch-cxx11-abi-shared-with-deps-2.7.1%2Bcu118.zip
+```
+
+3. Unzip the archive in the same directory:
+
+```bash
+unzip libtorch-cxx11-abi-shared-with-deps-2.7.1+cu118.zip
+```
+
+4. Rename the extracted folder to `libtorch_cuda`:
+
+```bash
+mv libtorch libtorch_cuda
+```
+
+## Result
+
+After the steps above, you should have:
+
+- `<MAGNEX_PARENT_DIR>/MagneX`
+- `<MAGNEX_PARENT_DIR>/pytorch_cuda`
