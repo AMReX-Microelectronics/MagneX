@@ -1,11 +1,5 @@
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
+#ifdef AMREX_USE_ML
 #include <torch/script.h>
-#else
-#include <fftw3.h>
-#ifdef AMREX_USE_MPI
-#include <fftw3-mpi.h>
-#endif
 #endif
 
 #include <AMReX_MultiFab.H>
@@ -186,8 +180,7 @@ void WritePlotfile(MultiFab& Ms,
                    const Real& time,
                    const int& plt_step);
 
-
-                        
+#ifdef AMREX_USE_ML
 
 at::Tensor PackMfieldToTensorDynamic(
   const amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& Mfield,
@@ -221,3 +214,5 @@ void MoveModuleToDevice(torch::jit::script::Module& m,
 
 // Read expected_spatial = [nx, ny, nz] from normalizer module
 amrex::IntVect GetExpectedSpatial(torch::jit::script::Module& x_norm_module);
+
+#endif
