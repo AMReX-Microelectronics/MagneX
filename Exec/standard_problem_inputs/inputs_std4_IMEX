@@ -1,63 +1,60 @@
 amrex.use_gpu_aware_mpi=1
 
+##############
+# 0.78125nm case
+##############
+n_cell = 640 160 4
+max_grid_size_x = 640
+max_grid_size_y = 160
+max_grid_size_z = 4
+dt = 5.e-15 # IMEX, 1.e-14 unstable
 
-###
-n_cell = 50 10 1
-max_grid_size_x = 50
-max_grid_size_y = 10
-max_grid_size_z = 1
+stop_time = 1.25e-12
 
-nsteps = 100000000
 plot_int = -1
 chk_int = -1
 restart = -1
-diag_type = 2
-Hbias_sweep = 1
+diag_type = 4
 
 prob_lo = 0. 0. 0.
-
-# d/l_ex = 15
-prob_hi = 375.e-9 75.e-9 7.5e-9
-dt = 1.e-11
+prob_hi = 500.e-9 125.e-9 3.125e-9
 
 mu0 = 1.25663e-6
 
-Mx_parser(x,y,z) = "8.e5/sqrt(3.) * (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9)"
-My_parser(x,y,z) = "8.e5/sqrt(3.) * (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9)"
-Mz_parser(x,y,z) = "8.e5/sqrt(3.) * (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9)"
+Mx_parser(x,y,z) = "8.e5 * (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9)"
+My_parser(x,y,z) = "0."
+Mz_parser(x,y,z) = "0."
 
-# Field Ensemble for hysteresis:  [Hx/Ms= +.08 -> -.08 -> +.08], [Hy/Ms= +.08 -> -.08 -> +.08], mu_0 [Hz/Ms= +.08 -> -.08 -> +.08]
-# which is a field directed about 57 degrees offset from each coordinate axis
-timedependent_Hbias = 0
-Hx_bias_parser(x,y,z,t) = "6.4e4"
-Hy_bias_parser(x,y,z,t) = "6.4e4"
-Hz_bias_parser(x,y,z,t) = "6.4e4"
+# Field 1:  mu_0 Hx=-24.6 mT, mu_0 Hy= 4.3 mT, mu_0 Hz= 0.0 mT
+# which is a field approximately 25 mT, directed 170 degrees counterclockwise from the positive x axis
+timedependent_Hbias = 1
+Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*19576"
+Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 + (t>1.e-9)*3422"
+Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
 
-timedependent_alpha = 0
-alpha_parser(x,y,z,t) =  " (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9) * 0.5"
-Ms_parser(x,y,z) =       " (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9) * 8.e5"
-gamma_parser(x,y,z) =    " (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9) * -1.759e11"
-exchange_parser(x,y,z) = " (x>0.)*(x<375.e-9)*(y>0.)*(y<75.e-9)*(z>0.)*(z<7.5e-9)* 1.005304e-11"
+# Field 2:  mu_0 Hx=-35.5 mT, mu_0 Hy=-6.3 mT, mu_0 Hz= 0.0 mT
+# which is a field approximately 36 mT, directed 190 degrees counterclockwise from the positive x axis
+#timedependent_Hbias = 1
+#Hx_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*28259"
+#Hy_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16 - (t>1.e-9)*5013"
+#Hz_bias_parser(x,y,z,t) = "(t<=2.e-11)*1.e5 + (t>2.e-11)*(t<=3.e-11)*(3.e-11-t)*1.e16"
+
+timedependent_alpha = 1
+alpha_parser(x,y,z,t) =  " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * (0.5*(t<=1.e-9) + 0.02*(t>1.e-9))"
+Ms_parser(x,y,z) =       " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * 8.e5"
+gamma_parser(x,y,z) =    " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9) * -1.759e11"
+exchange_parser(x,y,z) = " (x>0.)*(x<500.e-9)*(y>0.)*(y<125.e-9)*(z>0.)*(z<3.125e-9)* 1.3e-11"
 anisotropy_parser(x,y,z) = "0."
 DMI_parser(x,y,z) = "0."
 
-precession = 0
+precession = 1
 demag_coupling = 1
 FFT_solver = 1
 M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
 exchange_coupling = 1
 anisotropy_coupling = 0
-anisotropy_axis = 1.0 1.0 1.0
+anisotropy_axis = 0.0 1.0 0.0
 DMI_coupling = 0
-
-# tolerance for equilibrium in M when Hbias_sweep = 1
-equilibrium_tolerance = 1.e-9
-
-# hysteresis increment for H_bias
-increment_size = 128
-
-# number of increments ONE WAY: Must = 2*(Hx_bias/increment_size)
-nsteps_hysteresis = 1000
 
 # INTEGRATION
 #TimeIntegratorOption = 1 #Forward Euler
@@ -72,7 +69,7 @@ iterative_tolerance = 1.e-9
 ## 0 or "ForwardEuler" => Native AMReX Forward Euler integrator
 ## 1 or "RungeKutta"   => Native AMReX Explicit Runge Kutta controlled by integration.rk.type
 ## 2 or "SUNDIALS"     => SUNDIALS backend controlled by integration.sundials.type
-integration.type = RungeKutta
+integration.type = SUNDIALS
 
 ## for integration.type = RungeKutta, integration.rk.type can take the following values:
 ### 0 = User-specified Butcher Tableau
@@ -99,18 +96,18 @@ integration.rk.tableau = 0.0
 # EX-MRI   = Explicit Multirate Infatesimal method
 # IM-MRI   = Implicit Multirate Infatesimal method
 # IMEX-MRI = Implicit-Explicit Multirate Infatesimal method
-integration.sundials.type = ERK
+integration.sundials.type = IMEX-RK
 
 # *** Select a specific SUNDIALS ERK or DIRK method ***
 # https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#explicit-butcher-tables
 # https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#implicit-butcher-tables
-integration.sundials.method = ARKODE_FORWARD_EULER_1_1
+#integration.sundials.method = ARKODE_FORWARD_EULER_1_1
 #integration.sundials.method = ARKODE_BACKWARD_EULER_1_1
 
 # *** Select a specific SUNDIALS IMEX-RK method ***
 # https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html#additive-butcher-tables
-#integration.sundials.method_i = ARKODE_ARK2_DIRK_3_1_2
-#integration.sundials.method_e = ARKODE_ARK2_ERK_3_1_2
+integration.sundials.method_i = ARKODE_ARK2_DIRK_3_1_2
+integration.sundials.method_e = ARKODE_ARK2_ERK_3_1_2
 
 # *** Select a specific SUNDIALS EX-MRI, IM-MRI, or IMEX-MRI method ***
 # https://sundials.readthedocs.io/en/latest/arkode/Usage/MRIStep/MRIStepCoupling.html#mri-coupling-tables
@@ -119,3 +116,5 @@ integration.sundials.method = ARKODE_FORWARD_EULER_1_1
 #  *** Select a specific SUNDIALS ERK or DIRK fast method ***
 #integration.sundials.fast_type = ERK  # ERK or DIRK
 #integration.sundials.fast_method = ARKODE_KNOTH_WOLKE_3_3
+
+implicit_exchange = 1

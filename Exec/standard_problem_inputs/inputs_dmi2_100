@@ -7,8 +7,10 @@ max_grid_size_y = 256
 max_grid_size_z = 4
 dt = 2.5e-14
 nsteps = 100000
-plot_int = 1000
+plot_int = 100000
 chk_int = 100000
+
+restart = -1
 
 prob_lo = -100.0e-9 -100.0e-9 -1.0e-9
 prob_hi =  100.0e-9  100.0e-9  1.0e-9
@@ -32,9 +34,7 @@ anisotropy_parser(x,y,z) = " 510.0e3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9
 anisotropy_axis = 0.0 0.0 1.0
 
 # D_c = 4 sqrt(AK) / pi = 3.6371e-3
-#DMI_parser(x,y,z) = "       -1.25e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "        -1.5e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "        -2.0e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
+#DMI_parser(x,y,z) = "        -2.3e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -2.5e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -3.0e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "       -3.25e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
@@ -46,10 +46,6 @@ DMI_parser(x,y,z) = "      -3.625e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9
 #DMI_parser(x,y,z) = "       -4.25e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -4.5e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 #DMI_parser(x,y,z) = "        -5.0e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "        -5.5e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "        -6.0e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "        -6.5e-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
-#DMI_parser(x,y,z) = "         -7.0-3*(sqrt(x*x + y*y) <= 100.0e-9) * (z>=-1.0e-9) * (z<=1.0e-9)" # unit is J/m^2
 
 # quasi-uniform initialization: change the value before pi to 0; or Mx = My = 0; Mz(i,j,k) = (sqrt(x*x + y*y) <= 100.0e-9) ? Ms_arr(i,j,k):0.0;
 # skyrmion initialization: sin(pi * sqrt(x*x + y*y) / 100.0e-9)
@@ -65,10 +61,10 @@ Hy_bias_parser(x,y,z,t) = "0.0"
 Hz_bias_parser(x,y,z,t) = "0.0"
 
 # INTEGRATION
-TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 # tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
