@@ -10,9 +10,11 @@ COMP         = gnu
 DIM          = 3
 USE_FFT      = TRUE
 USE_ML       = FALSE
-USE_SUNDIALS = FALSE
 TINY_PROFILE = FALSE
 PROFILE      = FALSE
+
+USE_SUNDIALS = FALSE
+SUNDIALS_HOME ?= ../../sundials/instdir
 
 ifeq ($(USE_ML),TRUE)
   # Define a macro for the C++ preprocessor
@@ -24,7 +26,7 @@ ifeq ($(USE_ML),TRUE)
   else
     PYTORCH_ROOT := ../../libtorch_cpu
   endif
-  
+
   TORCH_LIBPATH = $(PYTORCH_ROOT)/lib
 
   # Library definitions
@@ -38,7 +40,7 @@ ifeq ($(USE_ML),TRUE)
   # Header search paths
   INCLUDE_LOCATIONS += $(PYTORCH_ROOT)/include \
                        $(PYTORCH_ROOT)/include/torch/csrc/api/include
-  
+
   # Library search paths
   LIBRARY_LOCATIONS += $(TORCH_LIBPATH)
 
@@ -49,32 +51,6 @@ ifeq ($(USE_ML),TRUE)
     LDFLAGS += -Wl,--no-as-needed,-rpath=$(TORCH_LIBPATH) $(TORCH_LIBS)
   endif
 endif
-
-# # Pytorch directories 
-# ifeq ($(USE_CUDA),TRUE)
-#   PYTORCH_ROOT := ../../libtorch_cuda
-# else
-#   PYTORCH_ROOT := ../../libtorch_cpu
-# endif
-# TORCH_LIBPATH = $(PYTORCH_ROOT)/lib
-
-# ifeq ($(USE_CUDA),TRUE)
-#   TORCH_LIBS = -ltorch -ltorch_cpu -lc10 -lc10_cuda -lcuda 
-# else
-#   TORCH_LIBS = -ltorch -ltorch_cpu -lc10
-# endif
-
-# INCLUDE_LOCATIONS += $(PYTORCH_ROOT)/include \
-#                      $(PYTORCH_ROOT)/include/torch/csrc/api/include
-# LIBRARY_LOCATIONS += $(TORCH_LIBPATH)
-
-# DEFINES += -D_GLIBCXX_USE_CXX11_ABI=1
-# ifeq ($(USE_CUDA),TRUE)
-#   LDFLAGS += -Xlinker "--no-as-needed,-rpath $(TORCH_LIBPATH) $(TORCH_LIBS)"
-# else
-#   LDFLAGS += -Wl,--no-as-needed,-rpath=$(TORCH_LIBPATH) $(TORCH_LIBS)
-# endif
-SUNDIALS_HOME ?= ../../sundials/instdir
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
