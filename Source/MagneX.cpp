@@ -234,6 +234,11 @@ void InitializeMagneXNamespace() {
 
     ml_enable = 0;
     pp.query("ml_enable",ml_enable);
+#ifndef AMREX_USE_ML
+    if (ml_enable == 1) {
+        amrex::Abort("ml_enable=1 requires USE_ML=TRUE");
+    }
+#endif
 
     diag_type = -1;
     pp.query("diag_type",diag_type);

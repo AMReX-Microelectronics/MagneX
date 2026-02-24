@@ -1,6 +1,5 @@
 #include "MagneX.H"
 #include "Demagnetization.H"
-#include <torch/script.h>
 #include <AMReX_MultiFab.H>
 #include <AMReX_VisMF.H>
 #include <AMReX_ParmParse.H>
@@ -11,8 +10,12 @@
 
 #include <cmath>
 
+#ifdef AMREX_USE_ML
+#include <torch/script.h>
 #include <ATen/cuda/CUDAContext.h>  // for at::cuda::setDevice
 #include <c10/cuda/CUDAGuard.h>
+#endif
+
 using namespace amrex;
 using namespace MagneX;
 
@@ -60,10 +63,11 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
+#ifdef AMREX_USE_ML
     torch::jit::script::Module ml_module;
     torch::jit::script::Module x_norm_module;
     torch::jit::script::Module y_norm_module;
-
+#endif
 
     // Declare variables for hysteresis
     Real normalized_Mx;
@@ -114,6 +118,7 @@ void main_main ()
     // **********************************
     // // LOAD PYTORCH MODEL
     if (ml_enable == 1) {
+#ifdef AMREX_USE_ML
         BL_PROFILE_VAR("LoadPytorch",LoadPytorch);
 
         // Load pytorch module via torch script
@@ -164,6 +169,7 @@ void main_main ()
                     << expected_spatial[2] << "\n";
 
         Print() << "Model loaded.\n";
+#endif
     }
     else {
         Print() << "ML disabled. Skipping model load.\n";
@@ -449,7 +455,7 @@ void main_main ()
             if (demag_coupling == 1) {
                 // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
                 if (ml_enable == 1) {
-                    // CalculateH_demag_ML(Mfield_old, x_norm_module, ml_module, y_norm_module, H_demagfield);
+#ifdef AMREX_USE_ML
                     for (amrex::MFIter mfi(Mfield_old[0], amrex::TilingIfNotGPU());
                             mfi.isValid(); ++mfi)
                         {
@@ -460,7 +466,6 @@ void main_main ()
                                 Mfield_old, mfi, bx, expected_spatial, device_id
                             );
 
-                            //
                             at::Tensor norm  = NormalizeInput(M_cuda_f32, x_norm_module);
                             at::Tensor pred  = MLForwardOnly(norm, ml_module);
                             at::Tensor denorm_f64 = DenormalizeOutput(pred, y_norm_module);
@@ -468,6 +473,7 @@ void main_main ()
                             // unpack: tensor -> MultiFab
                             UnpackTensorToHfieldDynamic(denorm_f64, H_demagfield, mfi, bx, expected_spatial);
                     }
+#endif
                 } else {
                     // demag_solver.CalculateH_demag(Mfield_old, H_demagfield);
                     amrex::Gpu::streamSynchronize();
@@ -599,8 +605,7 @@ void main_main ()
                 if (demag_coupling == 1) {
                     // demag_solver.CalculateH_demag(Mfield, H_demagfield);
                     if (ml_enable == 1) {
-                        // CalculateH_demag_ML(Mfield, x_norm_module, ml_module, y_norm_module, H_demagfield);
-
+#ifdef AMREX_USE_ML
                         for (amrex::MFIter mfi(Mfield_old[0], amrex::TilingIfNotGPU());
                             mfi.isValid(); ++mfi)
                         {
@@ -618,6 +623,7 @@ void main_main ()
                             // unpack: tensor -> MultiFab
                             UnpackTensorToHfieldDynamic(denorm_f64, H_demagfield, mfi, bx, expected_spatial);
                         }
+#endif
                     } else {
                         // demag_solver.CalculateH_demag(Mfield, H_demagfield);
                         amrex::Gpu::streamSynchronize();
@@ -810,7 +816,7 @@ void main_main ()
                     if (fast_demag==1) {
                         // demag_solver.CalculateH_demag(ar_state, H_demagfield);
                         if (ml_enable == 1) {
-                            CalculateH_demag_ML(ar_state, x_norm_module, ml_module, y_norm_module, H_demagfield);
+                            amrex::Abort("add ML demag to fast dynamics");
                         } else {
                             demag_solver.CalculateH_demag(ar_state, H_demagfield);
                         }

@@ -1,3 +1,5 @@
+#ifdef AMREX_USE_ML
+
 // MagneX_ML_Infer_Dynamic.cpp
 #include "MagneX.H"
 #include <torch/script.h>
@@ -319,3 +321,5 @@ void RunMLDemagOnBox(
     // 5) Unpack back to MultiFab
     UnpackTensorToHfieldDynamic(denorm, H_demagfield, mfi, bx, b.expected_spatial);
 }
+
+#endif
