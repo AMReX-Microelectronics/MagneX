@@ -7,12 +7,15 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
                  std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_STT_DLfield, // damping-like STT field
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_STT_TLfield, // field-like STT field
                  MultiFab                              &alpha,
                  MultiFab                              &Ms,
                  MultiFab                              &gamma,
                  MultiFab                              &exchange,
                  MultiFab                              &DMI,
                  MultiFab                              &anisotropy,
+                 MultiFab                              &J_STT,
                  Demagnetization                       &demag_solver,
                  const Geometry& geom,
                  const Real& time,
@@ -26,6 +29,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
     std::array<MultiFab, 3> H_exchangefield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> H_DMIfield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> H_anisotropyfield_prev;    // H^(new_time) of the (r-1)th iteration
+    std::array<MultiFab, 3> H_STT_DLfield_prev;    // H^(new_time) of the (r-1)th iteration
+    std::array<MultiFab, 3> H_STT_TLfield_prev;    // H^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_old;    // M^(old_time) before the current time step
     std::array<MultiFab, 3> Mfield_prev;   // M^(new_time) of the (r-1)th iteration
     std::array<MultiFab, 3> Mfield_error;  // The error of the M field between the two consecutive iterations
@@ -41,6 +46,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         H_exchangefield_prev[i].define(ba, dm, 1, 0);
         H_DMIfield_prev[i].define(ba, dm, 1, 0);
         H_anisotropyfield_prev[i].define(ba, dm, 1, 0);
+        H_STT_DLfield_prev[i].define(ba, dm, 1, 0);
+        H_STT_TLfield_prev[i].define(ba, dm, 1, 0);
         Mfield_old[i].define(ba, dm, 1, 1);
         Mfield_prev[i].define(ba, dm, 1, 1);
         
@@ -48,6 +55,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
         MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
         MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
+        MultiFab::Copy(H_STT_DLfield_prev[i], H_STT_DLfield[i], 0, 0, 1, 0);
+        MultiFab::Copy(H_STT_TLfield_prev[i], H_STT_TLfield[i], 0, 0, 1, 0);
         MultiFab::Copy(Mfield_old[i], Mfield[i], 0, 0, 1, 1);
         MultiFab::Copy(Mfield_prev[i], Mfield[i], 0, 0, 1, 1);
         
@@ -83,6 +92,12 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         const Array4<Real>& Hx_anisotropy = H_anisotropyfield[0].array(mfi);
         const Array4<Real>& Hy_anisotropy = H_anisotropyfield[1].array(mfi);
         const Array4<Real>& Hz_anisotropy = H_anisotropyfield[2].array(mfi);
+        const Array4<Real>& Hx_STT_DL = H_STT_DLfield[0].array(mfi);
+        const Array4<Real>& Hy_STT_DL = H_STT_DLfield[1].array(mfi);
+        const Array4<Real>& Hz_STT_DL = H_STT_DLfield[2].array(mfi);
+        const Array4<Real>& Hx_STT_TL = H_STT_TLfield[0].array(mfi);
+        const Array4<Real>& Hy_STT_TL = H_STT_TLfield[1].array(mfi);
+        const Array4<Real>& Hz_STT_TL = H_STT_TLfield[2].array(mfi);
         const Array4<Real>& Mx_old = Mfield_old[0].array(mfi);
         const Array4<Real>& My_old = Mfield_old[1].array(mfi);
         const Array4<Real>& Mz_old = Mfield_old[2].array(mfi);
@@ -150,6 +165,22 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                         Hz_eff_old += Hz_anisotropy(i, j, k);
                     }
 
+                    if (STT_DL_coupling == 1){
+
+                        // H_STT_DL - use M^(old_time)
+                        Hx_eff_old += Hx_STT_DL(i, j, k);
+                        Hy_eff_old += Hy_STT_DL(i, j, k);
+                        Hz_eff_old += Hz_STT_DL(i, j, k);
+                    }
+
+                    if (STT_TL_coupling == 1){
+
+                        // H_STT_TL - use J^(old_time)
+                        Hx_eff_old += Hx_STT_TL(i, j, k);
+                        Hy_eff_old += Hy_STT_TL(i, j, k);
+                        Hz_eff_old += Hz_STT_TL(i, j, k);
+                    }
+
                     // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s
                     amrex::Real M_magnitude = (M_normalization == 0) ? std::sqrt(std::pow(Mx_old(i, j, k), 2._rt) + std::pow(My_old(i, j, k), 2._rt) + std::pow(Mz_old(i, j, k), 2._rt))
                                                               : Ms_arr(i,j,k);
@@ -186,6 +217,12 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
         ComputeAlpha(alpha,geom,time+dt);
     }
 
+    // compute new-time STT current density, and use it for the first guess of the new-time STT fields
+    if (timedependent_J_STT && (STT_DL_coupling == 1 || STT_TL_coupling == 1)) {
+        ComputeJ_STT(J_STT,geom,time+dt);
+        CalculateH_STT(Mfield, H_STT_DLfield_prev, H_STT_TLfield_prev, Ms, J_STT);
+    }
+
     // initialize max_iter, M_iter, M_tol, M_iter_error
     // maximum number of iterations allowed
     int max_iter = 100;
@@ -219,6 +256,12 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             const Array4<Real>& Hx_anisotropy_prev = H_anisotropyfield_prev[0].array(mfi);
             const Array4<Real>& Hy_anisotropy_prev = H_anisotropyfield_prev[1].array(mfi);
             const Array4<Real>& Hz_anisotropy_prev = H_anisotropyfield_prev[2].array(mfi);
+            const Array4<Real>& Hx_STT_DL_prev = H_STT_DLfield_prev[0].array(mfi);
+            const Array4<Real>& Hy_STT_DL_prev = H_STT_DLfield_prev[1].array(mfi);
+            const Array4<Real>& Hz_STT_DL_prev = H_STT_DLfield_prev[2].array(mfi);
+            const Array4<Real>& Hx_STT_TL_prev = H_STT_TLfield_prev[0].array(mfi);
+            const Array4<Real>& Hy_STT_TL_prev = H_STT_TLfield_prev[1].array(mfi);
+            const Array4<Real>& Hz_STT_TL_prev = H_STT_TLfield_prev[2].array(mfi);
 
             // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp_static
             const Array4<Real>& Mx_old = Mfield_old[0].array(mfi);
@@ -281,6 +324,22 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                         Hx_eff_prev += Hx_anisotropy_prev(i,j,k);
                         Hy_eff_prev += Hy_anisotropy_prev(i,j,k);
                         Hz_eff_prev += Hz_anisotropy_prev(i,j,k);
+                    }
+
+                    if (STT_DL_coupling == 1){
+
+                        // H_STT_DL - use M^[(new_time),r-1]
+                        Hx_eff_prev += Hx_STT_DL_prev(i,j,k);
+                        Hy_eff_prev += Hy_STT_DL_prev(i,j,k);
+                        Hz_eff_prev += Hz_STT_DL_prev(i,j,k);
+                    }
+
+                    if (STT_TL_coupling == 1){
+
+                        // H_STT_TL - use J^(new_time)
+                        Hx_eff_prev += Hx_STT_TL_prev(i,j,k);
+                        Hy_eff_prev += Hy_STT_TL_prev(i,j,k);
+                        Hz_eff_prev += Hz_STT_TL_prev(i,j,k);
                     }
 
                     // calculate the a_temp_dynamic_coeff (it is divided by 2.0 because the derivation is based on an interger dt,
@@ -371,6 +430,10 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
          CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
        }
 
+       if (STT_DL_coupling == 1 || STT_TL_coupling == 1){
+          CalculateH_STT(Mfield, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+       }
+
         // Check the error between Mfield and Mfield_prev and decide whether another iteration is needed
         amrex::Real iter_maxerror = -1.;
         iter_maxerror = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
@@ -395,6 +458,8 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
             MultiFab::Copy(H_exchangefield_prev[i], H_exchangefield[i], 0, 0, 1, 0);
             MultiFab::Copy(H_DMIfield_prev[i], H_DMIfield[i], 0, 0, 1, 0);
             MultiFab::Copy(H_anisotropyfield_prev[i], H_anisotropyfield[i], 0, 0, 1, 0);
+            MultiFab::Copy(H_STT_DLfield_prev[i], H_STT_DLfield[i], 0, 0, 1, 0);
+            MultiFab::Copy(H_STT_TLfield_prev[i], H_STT_TLfield[i], 0, 0, 1, 0);
         }
 
     } // end the iteration

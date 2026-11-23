@@ -43,6 +43,8 @@ void Compute_LLG_RHS(Array< MultiFab, AMREX_SPACEDIM >& LLG_RHS,
                      Array< MultiFab, AMREX_SPACEDIM >& H_exchangefield,
                      Array< MultiFab, AMREX_SPACEDIM >& H_DMIfield,
                      Array< MultiFab, AMREX_SPACEDIM >& H_anisotropyfield,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_STT_DLfield,
+                     Array< MultiFab, AMREX_SPACEDIM >& H_STT_TLfield,
                      MultiFab&   alpha,
                      MultiFab&   Ms,
                      MultiFab&   gamma);
@@ -116,6 +118,16 @@ void CalculateH_exchange(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                          const Geometry& geom);
 
 /*
+  EffectiveSTTField.cpp
+*/
+
+void CalculateH_STT(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
+                    Array< MultiFab, AMREX_SPACEDIM> &   H_STT_DLfield,
+                    Array< MultiFab, AMREX_SPACEDIM> &   H_STT_TLfield,
+                    MultiFab&   Ms,
+                    MultiFab&   J_STT);
+
+/*
   EvolveM_2nd.cpp
 */
 
@@ -125,12 +137,15 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_exchangefield, // effective exchange field
                  std::array< MultiFab, AMREX_SPACEDIM> &H_DMIfield,
                  std::array< MultiFab, AMREX_SPACEDIM> &H_anisotropyfield,
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_STT_DLfield, // damping-like STT field
+                 std::array< MultiFab, AMREX_SPACEDIM> &H_STT_TLfield, // field-like STT field
                  MultiFab                              &alpha,
                  MultiFab                              &Ms,
                  MultiFab                              &gamma,
                  MultiFab                              &exchange,
                  MultiFab                              &DMI,
                  MultiFab                              &anisotropy,
+                 MultiFab                              &J_STT,
                  Demagnetization                       &demag_solver,
                  const Geometry& geom,
                  const Real& time,
@@ -159,6 +174,10 @@ void ComputeAlpha(MultiFab&  alpha,
                   const Geometry& geom,
                   const Real& time);
 
+void ComputeJ_STT(MultiFab&  J_STT,
+                  const Geometry& geom,
+                  const Real& time);
+
 /*
   NormalizeM.cpp
 */
@@ -178,6 +197,8 @@ void WritePlotfile(MultiFab& Ms,
                    Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_STT_DLfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_STT_TLfield,
                    MultiFab& theta,
                    const Geometry& geom,
                    const Real& time,

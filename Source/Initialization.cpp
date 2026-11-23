@@ -287,3 +287,41 @@ void ComputeAlpha(MultiFab&  alpha,
         }); 
     }
 }
+
+// current density for the spin-transfer torque terms [A/m^2]
+void ComputeJ_STT(MultiFab&  J_STT,
+                  const Geometry& geom,
+                  const Real& time)
+{
+    // timer for profiling
+    BL_PROFILE_VAR("ComputeJ_STT()",ComputeJ_STT);
+
+    // extract dx from the geometry object
+    GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
+
+    ParmParse pp;
+
+    std::string J_STT_parser_string;
+    pp.get("J_STT_parser(x,y,z,t)",J_STT_parser_string);
+    Parser J_STT_parser(J_STT_parser_string);
+    J_STT_parser.registerVariables({"x","y","z","t"});
+    auto J_STT_p = J_STT_parser.compile<4>();
+
+    // loop over boxes
+    for (MFIter mfi(J_STT,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const Box& bx = mfi.tilebox();
+
+        const Array4<Real>& J_STT_arr = J_STT.array(mfi);
+
+        amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+        {
+            Real x = prob_lo[0] + (i+0.5) * dx[0];
+            Real y = prob_lo[1] + (j+0.5) * dx[1];
+            Real z = prob_lo[2] + (k+0.5) * dx[2];
+
+            J_STT_arr(i,j,k) = J_STT_p(x,y,z,time);
+
+        });
+    }
+}

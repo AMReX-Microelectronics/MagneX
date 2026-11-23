@@ -52,6 +52,8 @@ void main_main ()
     Array<MultiFab, AMREX_SPACEDIM> H_exchangefield;
     Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
     Array<MultiFab, AMREX_SPACEDIM> H_anisotropyfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_STT_DLfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_STT_TLfield;
     Array<MultiFab, AMREX_SPACEDIM> Heff;
 
     Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
@@ -152,6 +154,8 @@ void main_main ()
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
         H_demagfield[dir].define(ba, dm, 1, 0);
+        H_STT_DLfield[dir].define(ba, dm, 1, 0);
+        H_STT_TLfield[dir].define(ba, dm, 1, 0);
 	Heff[dir].define(ba, dm, 1, 1);
 
         // set to zero in case we don't include
@@ -159,6 +163,8 @@ void main_main ()
         H_DMIfield[dir].setVal(0.);
         H_anisotropyfield[dir].setVal(0.);
         H_demagfield[dir].setVal(0.);
+        H_STT_DLfield[dir].setVal(0.);
+        H_STT_TLfield[dir].setVal(0.);
         Heff[dir].setVal(0.);
 
         LLG_RHS[dir].define(ba, dm, 1, 0);
@@ -183,6 +189,13 @@ void main_main ()
     MultiFab DMI(ba, dm, 1, 0);
     MultiFab anisotropy(ba, dm, 1, 0);
 
+    // current density for the spin-transfer torque (STT) terms
+    MultiFab J_STT(ba, dm, 1, 0);
+    J_STT.setVal(0.);
+
+    // the STT fields are needed if either of the two STT terms is enabled
+    const int STT_coupling = (STT_DL_coupling == 1 || STT_TL_coupling == 1) ? 1 : 0;
+
     MultiFab theta;
     if (diag_type == 5) {
         theta.define(ba, dm, 1, 0);
@@ -197,6 +210,8 @@ void main_main ()
     amrex::Print() << " exchange_coupling    = " << exchange_coupling   << "\n";
     amrex::Print() << " DMI_coupling         = " << DMI_coupling        << "\n";
     amrex::Print() << " anisotropy_coupling  = " << anisotropy_coupling << "\n";
+    amrex::Print() << " STT_DL_coupling      = " << STT_DL_coupling     << "\n";
+    amrex::Print() << " STT_TL_coupling      = " << STT_TL_coupling     << "\n";
     amrex::Print() << " TimeIntegratorOption = " << TimeIntegratorOption << "\n";
     amrex::Print() << "=======================================================\n";
 
@@ -228,6 +243,11 @@ void main_main ()
     InitializeMagneticProperties(Ms, gamma, exchange, DMI, anisotropy, geom, time);
     ComputeAlpha(alpha,geom,time);
     ComputeHbias(H_biasfield, time, geom);
+
+    // read in the STT current density from parser
+    if (STT_coupling == 1) {
+        ComputeJ_STT(J_STT,geom,time);
+    }
 
     // Extract maximum anisotropy and exchange constants
     // FIMXE; used for Diagnostics, can pass in full MultiFab instead
@@ -261,6 +281,10 @@ void main_main ()
             if (anisotropy_coupling == 1) {
                 CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
             }
+
+            if (STT_coupling == 1) {
+                CalculateH_STT(Mfield, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+            }
         
             // DMI Diagnostics
             if (diag_type == 5) {
@@ -268,7 +292,7 @@ void main_main ()
             }
         
             WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, theta, geom, time, 0);
+                          H_demagfield, H_STT_DLfield, H_STT_TLfield, theta, geom, time, 0);
         }
     }
 
@@ -372,6 +396,10 @@ void main_main ()
             ComputeAlpha(alpha,geom,time);
         }
 
+        if (timedependent_J_STT) {
+            ComputeJ_STT(J_STT,geom,time);
+        }
+
         // compute old-time LLG_RHS
         if (TimeIntegratorOption == 1 ||
             TimeIntegratorOption == 2 ||
@@ -393,13 +421,17 @@ void main_main ()
             if (anisotropy_coupling == 1) {
                 CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy);
             }
+
+            if (STT_coupling == 1) {
+                CalculateH_STT(Mfield_old, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+            }
         }
 
         if (TimeIntegratorOption == 1) { // first order forward Euler
 
             // Evolve M
             // Compute f^n = f(M^n, H^n)
-            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha,
                             Ms, gamma);
 
             // M^{n+1} = M^n + dt * f^n
@@ -413,7 +445,7 @@ void main_main ()
         } else if (TimeIntegratorOption == 2) { // iterative predictor-corrector
     
             // Compute f^{n} = f(M^{n}, H^{n})
-            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha,
                             Ms, gamma);
 
             for (int comp = 0; comp < 3; comp++) {
@@ -431,6 +463,11 @@ void main_main ()
             // compute new-time alpha
             if (timedependent_alpha) {
                 ComputeAlpha(alpha,geom,time+dt);
+            }
+
+            // compute new-time STT current density
+            if (timedependent_J_STT) {
+                ComputeJ_STT(J_STT,geom,time+dt);
             }
 
             int iter = 1;
@@ -511,18 +548,22 @@ void main_main ()
                 if (anisotropy_coupling == 1) {
                     CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy);
                 }
+
+                if (STT_coupling == 1) {
+                    CalculateH_STT(Mfield, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+                }
     
                 // LLG RHS with new H_demag and Mfield_pre
                 // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-                Compute_LLG_RHS(LLG_RHS_pre, Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha,
+                Compute_LLG_RHS(LLG_RHS_pre, Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha,
                                 Ms, gamma);
 
             }
     
         } else if (TimeIntegratorOption == 3) { // iterative direct solver (ARTEMIS way)
         
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms,
-                        gamma, exchange, DMI, anisotropy, demag_solver,
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha, Ms,
+                        gamma, exchange, DMI, anisotropy, J_STT, demag_solver,
                         geom, time, dt);
 
         }  else if (TimeIntegratorOption == 4) { // AMReX and SUNDIALS integrators
@@ -594,8 +635,23 @@ void main_main ()
                     demag_solver.CalculateH_demag(ar_state, H_demagfield);
                 }
 
+                // STT
+                if (STT_coupling == 1) {
+                    if ( (using_MRI==1 && fast_STT) || (using_IMEX==1 && implicit_STT) ) {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_STT_DLfield[idim].setVal(0.);
+                            H_STT_TLfield[idim].setVal(0.);
+                        }
+                    } else {
+                        if (timedependent_J_STT) {
+                            ComputeJ_STT(J_STT,geom,time_in);
+                        }
+                        CalculateH_STT(ar_state, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+                    }
+                }
+
                 // Compute f^n = f(M^n, H^n)
-                Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
+                Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha, Ms, gamma);
             };
 
             // Create a fast RHS source function we will integrate
@@ -671,8 +727,23 @@ void main_main ()
                     }
                 }
 
+                // STT
+                if (STT_coupling == 1) {
+                    if (fast_STT==1) {
+                        if (timedependent_J_STT) {
+                            ComputeJ_STT(J_STT,geom,time_in);
+                        }
+                        CalculateH_STT(ar_state, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_STT_DLfield[idim].setVal(0.);
+                            H_STT_TLfield[idim].setVal(0.);
+                        }
+                    }
+                }
+
                 // Compute f^n = f(M^n, H^n) 
-                Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
+                Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha, Ms, gamma);
 
             };
 
@@ -749,8 +820,23 @@ void main_main ()
                     }
                 }
 
+                // STT
+                if (STT_coupling == 1) {
+                    if (implicit_STT==1) {
+                        if (timedependent_J_STT) {
+                            ComputeJ_STT(J_STT,geom,time_in);
+                        }
+                        CalculateH_STT(ar_state, H_STT_DLfield, H_STT_TLfield, Ms, J_STT);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_STT_DLfield[idim].setVal(0.);
+                            H_STT_TLfield[idim].setVal(0.);
+                        }
+                    }
+                }
+
                 // Compute f^n = f(M^n, H^n) 
-                Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
+                Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, H_STT_DLfield, H_STT_TLfield, alpha, Ms, gamma);
 
             };
 
@@ -933,7 +1019,7 @@ void main_main ()
             }
             
             WritePlotfile(Ms, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield,
-                          H_demagfield, theta, geom, time, step);
+                          H_demagfield, H_STT_DLfield, H_STT_TLfield, theta, geom, time, step);
         }
 
         if (chk_int > 0 && step%chk_int == 0) {
