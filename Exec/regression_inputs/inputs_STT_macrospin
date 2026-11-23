@@ -1,0 +1,96 @@
+amrex.use_gpu_aware_mpi=1
+
+########################################################################
+# Spin-transfer-torque (STT) test with an analytic solution.
+#
+# A uniformly magnetized block with every field switched off except the two
+# STT fields, so that each cell is an independent macrospin.  With the
+# polarization p along +z the solution is
+#
+#   mz(t)  = tanh( (t - t0)/tau ),   1/tau = mu0 |gamma| (a_J + alpha b_J) / (1 + alpha^2)
+#   phi(t) = phi(0) + mu0 |gamma| (b_J - alpha a_J) t / (1 + alpha^2)
+#
+#   a_J = hbar J P / (2 mu0 e Ms d) = 26189.4 A/m     (Lambda = 1)
+#   b_J = hbar J epsilon' / (mu0 e Ms d) = 5237.9 A/m
+#
+# For the parameters below tau = 0.172123 ns and t0 = 0.538959 ns, i.e.
+#
+#     t [ns]     mx          my          mz
+#     0.25    +0.348482   +0.092853   -0.932705
+#     0.50    +0.845666   +0.485094   -0.222557
+#     0.75    +0.383680   +0.380471   +0.841446
+#     1.00    +0.069002   +0.117984   +0.990615
+#
+# Diagnostics.txt lists "time = t  Sum_normalized_M: mx my mz" every step
+# (the listed magnetization is the one at the end of that step, t + dt).
+########################################################################
+
+n_cell = 8 8 8
+max_grid_size_x = 4
+max_grid_size_y = 4
+max_grid_size_z = 4
+
+dt = 2.e-13
+nsteps = 5000    # 1 ns
+
+plot_int = 1000
+chk_int = -1
+restart = -1
+diag_type = 4
+
+prob_lo = 0. 0. 0.
+prob_hi = 8.e-9 8.e-9 8.e-9
+
+mu0 = 1.25663706212e-6
+
+# 5 degrees away from -z, tilted towards +x
+Mx_parser(x,y,z) = "1.2e6 * 0.08716 * (x>0.)*(x<8.e-9)*(y>0.)*(y<8.e-9)*(z>0.)*(z<8.e-9)"
+My_parser(x,y,z) = "0."
+Mz_parser(x,y,z) = "1.2e6 * -0.99619 * (x>0.)*(x<8.e-9)*(y>0.)*(y<8.e-9)*(z>0.)*(z<8.e-9)"
+
+timedependent_Hbias = 0
+Hx_bias_parser(x,y,z,t) = "0."
+Hy_bias_parser(x,y,z,t) = "0."
+Hz_bias_parser(x,y,z,t) = "0."
+
+timedependent_alpha = 0
+alpha_parser(x,y,z,t) = "0.02"
+Ms_parser(x,y,z) = "1.2e6 * (x>0.)*(x<8.e-9)*(y>0.)*(y<8.e-9)*(z>0.)*(z<8.e-9)"
+gamma_parser(x,y,z) = "-1.759e11"
+exchange_parser(x,y,z) = "0."
+anisotropy_parser(x,y,z) = "0."
+DMI_parser(x,y,z) = "0."
+
+precession = 1
+demag_coupling = 0
+FFT_solver = 1
+M_normalization = 1  # 0 = unsaturated case; 1 = saturated case
+exchange_coupling = 0
+anisotropy_coupling = 0
+anisotropy_axis = 0.0 0.0 1.0
+DMI_coupling = 0
+
+# spin-transfer torque (see STT_inputs/inputs_STT_MTJ for a description of the parameters)
+STT_DL_coupling = 1    # damping-like term, H_STT_DL = a_J (m x p)
+STT_TL_coupling = 1    # field-like term,   H_STT_TL = b_J p
+timedependent_J_STT = 0
+J_STT_parser(x,y,z,t) = "2.e11"
+STT_polarization_axis = 0.0 0.0 1.0
+STT_free_layer_thickness = 1.e-9
+STT_polarization = 0.6
+STT_Lambda = 1.0
+STT_epsilon_prime = 0.06
+
+# INTEGRATION
+#TimeIntegratorOption = 1 #Forward Euler
+TimeIntegratorOption = 2 #Predictor-corrector
+#TimeIntegratorOption = 3 #2nd order artemis way
+#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+
+# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+iterative_tolerance = 1.e-9
+
+# for TimeIntegratorOption = 4 (note: that option currently needs demag_coupling = 1)
+integration.type = RungeKutta
+integration.rk.type = 4
+integration.sundials.type = ERK
