@@ -114,19 +114,19 @@ main (int   argc,
             const Array4<Real>& mfdata = mf.array(mfi);
 
             Real offset = 0.;
-            
+
             int k = (hi.z+1)/2;
             int j = (hi.y+1)/2;
             for (auto i = (hi.x+1)/2; i <= hi.x; ++i) {
-                std::cout << i << " " << mfdata(i,j,k,3)/1.1e6 << " " << mfdata(i,j,k,16)+offset << "\n";
+                std::cout << i << " " << mfdata(i,j,k,2)/1.1e6 << " " << mfdata(i,j,k,3)+offset << "\n";
                 // 2pi cyclic fix
                 if (i<hi.x) {
-                    if (offset==0. && mfdata(i,j,k,16)>5. && mfdata(i+1,j,k,16)<1.) {
+                    if (offset==0. && mfdata(i,j,k,3)>5. && mfdata(i+1,j,k,3)<1.) {
                         offset = 2.*M_PI;
                     }
                 }
             }
-           
+
         } // end MFIter
 
         // proceed to next level of refinement

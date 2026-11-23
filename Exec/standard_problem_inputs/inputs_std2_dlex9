@@ -29,9 +29,9 @@ Mz_parser(x,y,z) = "8.e5/sqrt(3.) * (x>0.)*(x<225.e-9)*(y>0.)*(y<45.e-9)*(z>0.)*
 # Field Ensemble for hysteresis:  [Hx/Ms= +.08 -> -.08 -> +.08], [Hy/Ms= +.08 -> -.08 -> +.08], mu_0 [Hz/Ms= +.08 -> -.08 -> +.08]
 # which is a field directed about 57 degrees offset from each coordinate axis
 timedependent_Hbias = 0
-Hx_bias_parser(x,y,z,t) = "4.54e4"
-Hy_bias_parser(x,y,z,t) = "4.54e4"
-Hz_bias_parser(x,y,z,t) = "4.54e4"
+Hx_bias_parser(x,y,z,t) = "6.4e4"
+Hy_bias_parser(x,y,z,t) = "6.4e4"
+Hz_bias_parser(x,y,z,t) = "6.4e4"
 
 timedependent_alpha = 0
 alpha_parser(x,y,z,t) =  " (x>0.)*(x<225.e-9)*(y>0.)*(y<45.e-9)*(z>0.)*(z<4.5e-9) * 0.5"
@@ -54,16 +54,16 @@ DMI_coupling = 0
 equilibrium_tolerance = 1.e-9
 
 # hysteresis increment for H_bias
-increment_size = 1280
+increment_size = 128
 
 # number of increments ONE WAY: Must = 2*(Hx_bias/increment_size)
-nsteps_hysteresis = 100
+nsteps_hysteresis = 1000
 
 # INTEGRATION
-TimeIntegratorOption = 1 #Forward Euler
+#TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 2 #Predictor-corrector
 #TimeIntegratorOption = 3 #2nd order artemis way
-#TimeIntegratorOption = 4 #amrex/sundials backend integrators
+TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
 # tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9

@@ -16,7 +16,7 @@ int MagneX::max_grid_size_x;
 int MagneX::max_grid_size_y;
 int MagneX::max_grid_size_z;
 
-// physical lo/hi coordiates of the domain
+// physical lo/hi coordinates of the domain
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_lo;
 AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::prob_hi;
 
@@ -103,7 +103,7 @@ int MagneX::Hbias_sweep;
 // tolerance threshold for equilibrium in M in Hbias sweeping
 amrex::Real MagneX::equilibrium_tolerance;
 
-// increment size for Hbias  
+// increment size for Hbias
 AMREX_GPU_MANAGED amrex::Real MagneX::increment_size;
 
 // number of increments on Hbias before reversing sign of increment
@@ -166,6 +166,9 @@ AMREX_GPU_MANAGED amrex::Real MagneX::STT_Lambda;
 // b_J = hbar J epsilon' / (mu0 e Ms d), i.e. b_J/a_J = 2 epsilon'/P for Lambda = 1
 AMREX_GPU_MANAGED amrex::Real MagneX::STT_epsilon_prime;
 ////////////////////////////////
+// ML flag
+int MagneX::ml_enable;
+
 
 void InitializeMagneXNamespace() {
 
@@ -271,6 +274,14 @@ void InitializeMagneXNamespace() {
     restart = -1;
     pp.query("restart",restart);
 
+    ml_enable = 0;
+    pp.query("ml_enable",ml_enable);
+#ifndef AMREX_USE_ML
+    if (ml_enable == 1) {
+        amrex::Abort("ml_enable=1 requires USE_ML=TRUE");
+    }
+#endif
+
     diag_type = -1;
     pp.query("diag_type",diag_type);
 
@@ -303,7 +314,7 @@ void InitializeMagneXNamespace() {
             anisotropy_axis[i] = temp[i];
         }
     }
-   
+
     pp.get("demag_coupling",demag_coupling);
     if (demag_coupling == 1) {
         pp.get("FFT_solver",FFT_solver);

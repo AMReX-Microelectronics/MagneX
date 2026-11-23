@@ -14,14 +14,14 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
 
         const Box& bx = mfi.tilebox();
 
-        const Array4<Real>& Mx = Mfield[0].array(mfi); 
-        const Array4<Real>& My = Mfield[1].array(mfi); 
-        const Array4<Real>& Mz = Mfield[2].array(mfi); 
+        const Array4<Real>& Mx = Mfield[0].array(mfi);
+        const Array4<Real>& My = Mfield[1].array(mfi);
+        const Array4<Real>& Mz = Mfield[2].array(mfi);
         const Array4<Real>& Ms_arr = Ms.array(mfi);
         const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
-        const Array4<Real>& Hx_anisotropy = H_anisotropyfield[0].array(mfi);   
-        const Array4<Real>& Hy_anisotropy = H_anisotropyfield[1].array(mfi);   
-        const Array4<Real>& Hz_anisotropy = H_anisotropyfield[2].array(mfi);   
+        const Array4<Real>& Hx_anisotropy = H_anisotropyfield[0].array(mfi);
+        const Array4<Real>& Hy_anisotropy = H_anisotropyfield[1].array(mfi);
+        const Array4<Real>& Hz_anisotropy = H_anisotropyfield[2].array(mfi);
 
 
         amrex::ParallelFor(bx,
@@ -32,7 +32,7 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
 
                         if (anisotropy_arr(i,j,k) == 0.) amrex::Abort("The anisotropy_xface_arr(i,j,k) is 0.0 while including the anisotropy coupling term H_anisotropy for H_eff");
 
-                        // H_anisotropy 
+                        // H_anisotropy
                         amrex::Real M_dot_anisotropy_axis = 0.0;
                         M_dot_anisotropy_axis = Mx(i, j, k) * anisotropy_axis[0] + My(i, j, k) * anisotropy_axis[1] + Mz(i, j, k) * anisotropy_axis[2];
                         amrex::Real const H_anisotropy_coeff = 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);

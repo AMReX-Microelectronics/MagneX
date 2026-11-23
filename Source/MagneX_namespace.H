@@ -3,7 +3,7 @@ namespace MagneX {
     //////////////////////////////////////////////////////
     // See MagneX.cpp for a description of these parameters
     //////////////////////////////////////////////////////
-    
+
     extern AMREX_GPU_MANAGED amrex::GpuArray<int, 3> n_cell;
 
     extern int max_grid_size_x;
@@ -56,6 +56,8 @@ namespace MagneX {
 
     extern int diag_type;
 
+    extern int ml_enable;
+
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
     extern int timedependent_J_STT;
@@ -75,7 +77,7 @@ namespace MagneX {
     extern AMREX_GPU_MANAGED int exchange_coupling;
     extern AMREX_GPU_MANAGED int DMI_coupling;
     extern AMREX_GPU_MANAGED int anisotropy_coupling;
-    extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
+    extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> anisotropy_axis;
     extern AMREX_GPU_MANAGED int demag_coupling;
     extern AMREX_GPU_MANAGED int FFT_solver;
 

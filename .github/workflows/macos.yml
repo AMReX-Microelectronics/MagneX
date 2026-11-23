@@ -1,0 +1,101 @@
+name: MacOS
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.head_ref }}-macos
+  cancel-in-progress: true
+
+jobs:
+  MacOS-Clang:
+    name: Apple Clang@11.0 - SUNDIALS ${{matrix.sundials}} - AMReX ${{matrix.amrex_mode}}
+    runs-on: macos-latest
+    # env: {CXXFLAGS: "-fno-operator-names -Werror -Wall -Wextra -Wpedantic -Wnull-dereference -Wfloat-conversion -Wshadow -Woverloaded-virtual"}
+    strategy:
+      matrix:
+        sundials: [OFF, ON]
+        amrex_mode: [internal, external_src]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install Dependencies
+      run: |
+        # Install OpenMP support for macOS
+        brew install libomp
+        # Install FFTW with MPI support
+        brew install fftw --with-mpi || brew install fftw
+        if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
+          git clone https://github.com/AMReX-Codes/amrex.git _deps/amrex-src
+          git clone https://github.com/LLNL/sundials.git _deps/sundials-src
+          _deps/amrex-src/.github/workflows/dependencies/dependencies_mac.sh
+        else
+          # Install basic dependencies for internal mode
+          brew install openmpi ccache
+        fi
+
+    - name: Set Up Cache
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/ccache
+        key: ccache-${{ github.workflow }}-${{ github.job }}-git-${{ github.sha }}
+        restore-keys: |
+             ccache-${{ github.workflow }}-${{ github.job }}-git-
+
+    - name: Configure Project and Generate Build System
+      run: |
+        if [ "${{matrix.amrex_mode}}" == "external_src" ]; then
+          cmake \
+            -B${{runner.workspace}}/MagneX/build-${{matrix.sundials}}-${{matrix.amrex_mode}} \
+            -DBUILD_SHARED_LIBS:BOOL=FALSE \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(which ccache) \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/include" \
+            -DOpenMP_CXX_LIB_NAMES=omp \
+            -DOpenMP_omp_LIBRARY=/opt/homebrew/lib/libomp.dylib \
+            -DMagneX_MPI:BOOL=TRUE \
+            -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} \
+            -DMagneX_amrex_src:PATH=${{github.workspace}}/_deps/amrex-src \
+            -DMagneX_sundials_src:PATH=${{github.workspace}}/_deps/sundials-src \
+            ${{github.workspace}}
+        else
+          cmake \
+            -B${{runner.workspace}}/MagneX/build-${{matrix.sundials}}-${{matrix.amrex_mode}} \
+            -DBUILD_SHARED_LIBS:BOOL=FALSE \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(which ccache) \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/include" \
+            -DOpenMP_CXX_LIB_NAMES=omp \
+            -DOpenMP_omp_LIBRARY=/opt/homebrew/lib/libomp.dylib \
+            -DMagneX_MPI:BOOL=TRUE \
+            -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} \
+            ${{github.workspace}}
+        fi
+
+    - name: Compile and Link
+      run: |
+        export CCACHE_COMPRESS=1
+        export CCACHE_COMPRESSLEVEL=10
+        export CCACHE_MAXSIZE=250M
+        export CCACHE_SLOPPINESS=time_macros
+        ccache -z
+
+        cmake --build ${{runner.workspace}}/MagneX/build-${{matrix.sundials}}-${{matrix.amrex_mode}} --parallel 2 --verbose \
+        2>&1 | tee -a ${{runner.workspace}}/build-output-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt;
+
+        du -hs ~/Library/Caches/ccache
+        ccache -s
+
+    - name: Report
+      run: |
+        egrep "warning:|error:" ${{runner.workspace}}/build-output-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt \
+          | egrep -v "_deps/.*amrex" | egrep -v "_deps/.*sundials" | egrep -v "${{runner.workspace}}/amrex" | egrep -v "${{runner.workspace}}/sundials" | egrep -v "lto-wrapper: warning:" | sort | uniq \
+          | awk 'BEGIN{i=0}{print $0}{i++}END{print "Warnings: "i}' > ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt
+        cat ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt
+        export return=$(tail -n 1 ${{runner.workspace}}/build-output-warnings-${{matrix.sundials}}-${{matrix.amrex_mode}}.txt | awk '{print $2}')
+        exit ${return}

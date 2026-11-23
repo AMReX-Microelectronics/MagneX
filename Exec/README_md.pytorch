@@ -1,0 +1,89 @@
+# README_pytorch.md
+## Running a MagneX / AMReX Application with a PyTorch Model (LibTorch + TorchScript)
+
+This guide explains how to run an AMReX-based application (e.g., MagneX) that evaluates a pre-trained PyTorch model using the LibTorch C++ API.
+
+---
+
+## Overview
+
+The typical workflow is:
+
+1. Initialize an AMReX `MultiFab` with input data (e.g., different `dt` values).
+2. Copy the `MultiFab` data into a `torch::Tensor`.
+3. Load a TorchScript model (`model.pt`).
+4. Run inference on CPU or GPU.
+5. Copy the model outputs back into a `MultiFab`.
+6. Write AMReX plotfiles for visualization.
+
+The model **must** be exported as TorchScript (`model.pt`).  
+Do not use a Python-only `.pth` checkpoint.
+
+---
+
+## Requirements
+
+- MagneX (or another AMReX-based application)
+- A TorchScript model file:
+  ```
+  model.pt
+  ```
+- LibTorch (CUDA build recommended for GPU runs)
+- CUDA version tested: **13.0**
+- LibTorch version tested: **2.9.1 + cu126**
+
+---
+
+## Directory Layout (Recommended)
+
+Place LibTorch in the same parent directory as MagneX:
+
+```
+/path/to/work/
+    MagneX/
+    libtorch_cuda/
+```
+
+---
+
+## Step 1: Download LibTorch (CUDA cu126)
+
+From your working directory:
+
+```bash
+wget https://download.pytorch.org/libtorch/cu126/libtorch-shared-with-deps-2.9.1%2Bcu126.zip
+unzip libtorch-shared-with-deps-2.9.1+cu126.zip
+mv libtorch libtorch_cuda
+```
+
+This creates:
+
+```
+libtorch_cuda/
+```
+
+If needed, adjust your build system so it can find:
+
+```
+libtorch_cuda/include
+libtorch_cuda/lib
+```
+
+---
+
+## Step 2: Build MagneX with CUDA + ML Enabled
+
+Go to your MagneX directory:
+
+```bash
+cd /path/to/work/MagneX/Exec
+make -j4 USE_CUDA=TRUE USE_ML=TRUE
+```
+
+This should produce an executable similar to:
+
+```
+main2d.gnu.MPI.CUDA.ex
+```
+
+The exact name depends on compiler and MPI configuration.

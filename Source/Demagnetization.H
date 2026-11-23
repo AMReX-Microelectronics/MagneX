@@ -28,7 +28,7 @@ class Demagnetization {
     FabArray<BaseFab<GpuComplex<amrex::Real> > > Hz_fft;
 
     std::unique_ptr<amrex::FFT::R2C<amrex::Real>> amrex_fft;
-    
+
 public:
 
     Demagnetization();

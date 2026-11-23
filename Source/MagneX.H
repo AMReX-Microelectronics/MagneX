@@ -1,8 +1,5 @@
-#ifdef AMREX_USE_CUDA
-#include <cufft.h>
-#else
-#include <fftw3.h>
-#include <fftw3-mpi.h>
+#ifdef AMREX_USE_ML
+#include <torch/script.h>
 #endif
 
 #include <AMReX_MultiFab.H>
@@ -27,10 +24,10 @@ void WriteCheckPoint(int step,
                      Array< MultiFab, AMREX_SPACEDIM>& Mfield);
 
 void ReadCheckPoint(int& restart,
-		    amrex::Real& time,
-		    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    BoxArray& ba,
-		    DistributionMapping& dm);
+                    amrex::Real& time,
+                    Array< MultiFab, AMREX_SPACEDIM>& Mfield,
+                    BoxArray& ba,
+                    DistributionMapping& dm);
 
 /*
   ComputeLLGRHS.cpp
@@ -59,7 +56,7 @@ Real SumNormalizedM(MultiFab& Ms,
                     MultiFab& Mfield);
 
 Real SumHbias(MultiFab& H_biasfield,
-	      MultiFab& Ms);
+              MultiFab& Ms);
 
 Real DemagEnergy(MultiFab& Ms,
                   MultiFab& Mfield_x,
@@ -72,7 +69,7 @@ Real DemagEnergy(MultiFab& Ms,
 Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                     MultiFab& Ms,
                     const Geometry& geom,
-		    Real exch_const);
+                    Real exch_const);
 
 Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_x,
@@ -155,7 +152,7 @@ void EvolveM_2nd(std::array< MultiFab, AMREX_SPACEDIM> &Mfield,
   Initialization.cpp
 */
 
-void InitializeMagneticProperties(MultiFab& Ms, 
+void InitializeMagneticProperties(MultiFab& Ms,
                                   MultiFab& gamma,
                                   MultiFab& exchange,
                                   MultiFab& DMI,
@@ -203,3 +200,40 @@ void WritePlotfile(MultiFab& Ms,
                    const Geometry& geom,
                    const Real& time,
                    const int& plt_step);
+
+#ifdef AMREX_USE_ML
+
+at::Tensor PackMfieldToTensorDynamic(
+  const amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& Mfield,
+  const amrex::MFIter& mfi,
+  const amrex::Box& bx,
+  const amrex::IntVect& expected_spatial,
+  int device_id);
+
+at::Tensor NormalizeInput(
+  const at::Tensor& M_cuda_f32,
+  torch::jit::script::Module& x_norm_module);
+
+at::Tensor MLForwardOnly(
+  const at::Tensor& norm_tensor,
+  torch::jit::script::Module& ml_module);
+
+at::Tensor DenormalizeOutput(
+  const at::Tensor& y_tensor,
+  torch::jit::script::Module& y_norm_module);
+
+void UnpackTensorToHfieldDynamic(
+  const at::Tensor& denorm_torch_f64,
+  amrex::Array<amrex::MultiFab, AMREX_SPACEDIM>& H_demagfield,
+  const amrex::MFIter& mfi,
+  const amrex::Box& bx,
+  const amrex::IntVect& expected_spatial);
+
+// Move all parameters + buffers of a TorchScript module to a device
+void MoveModuleToDevice(torch::jit::script::Module& m,
+                      const torch::Device& device);
+
+// Read expected_spatial = [nx, ny, nz] from normalizer module
+amrex::IntVect GetExpectedSpatial(torch::jit::script::Module& x_norm_module);
+
+#endif

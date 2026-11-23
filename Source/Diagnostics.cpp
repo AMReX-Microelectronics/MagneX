@@ -8,8 +8,8 @@ long CountMagneticCells(MultiFab& Ms)
     BL_PROFILE_VAR("CountMagneticCells()",CountMagneticCells);
 
     ReduceOps<ReduceOpSum> reduce_op;
-    
-    ReduceData<long> reduce_data(reduce_op);
+
+    ReduceData<amrex::Long> reduce_data(reduce_op);
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
@@ -30,7 +30,7 @@ long CountMagneticCells(MultiFab& Ms)
         });
     }
 
-    long sum = amrex::get<0>(reduce_data.value());
+    amrex::Long sum = amrex::get<0>(reduce_data.value());
     ParallelDescriptor::ReduceLongSum(sum);
 
     return sum;
@@ -43,7 +43,7 @@ Real SumNormalizedM(MultiFab& Ms,
     BL_PROFILE_VAR("SumNormalizedM()",SumNormalizedM);
 
     ReduceOps<ReduceOpSum> reduce_op;
-    
+
     ReduceData<Real> reduce_data(reduce_op);
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -54,8 +54,8 @@ Real SumNormalizedM(MultiFab& Ms,
 
         auto const& fab = Ms.array(mfi);
         auto const& M = Mfield.array(mfi);
-        
-	reduce_op.eval(bx, reduce_data,
+
+        reduce_op.eval(bx, reduce_data,
                        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
             if (fab(i,j,k) > 0.) {
@@ -63,7 +63,7 @@ Real SumNormalizedM(MultiFab& Ms,
             } else {
                 return {0.};
             }
-	});
+        });
     }
 
     Real sum = amrex::get<0>(reduce_data.value());
@@ -73,13 +73,13 @@ Real SumNormalizedM(MultiFab& Ms,
 }
 
 Real SumHbias(MultiFab& H_biasfield,
-	      MultiFab& Ms)
+              MultiFab& Ms)
 {
     // timer for profiling
     BL_PROFILE_VAR("SumNormalizedM()",SumNormalizedM);
 
     ReduceOps<ReduceOpSum> reduce_op;
-    
+
     ReduceData<Real> reduce_data(reduce_op);
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -95,12 +95,12 @@ Real SumHbias(MultiFab& H_biasfield,
         reduce_op.eval(bx, reduce_data,
                        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
-	    if (fab(i,j,k)> 0.){
+            if (fab(i,j,k)> 0.){
                 return {H_bias(i,j,k)/fab(i,j,k)};
             } else {
                 return {0.};
-	    }
-	});
+            }
+        });
     }
 
     Real sum = amrex::get<0>(reduce_data.value());
@@ -114,8 +114,8 @@ Real DemagEnergy(MultiFab& Ms,
                   MultiFab& Mfield_y,
                   MultiFab& Mfield_z,
                   MultiFab& Demagfield_x,
-		  MultiFab& Demagfield_y,
-		  MultiFab& Demagfield_z)
+                  MultiFab& Demagfield_y,
+                  MultiFab& Demagfield_z)
 {
     ReduceOps<ReduceOpSum> reduce_op;
 
@@ -155,8 +155,8 @@ Real DemagEnergy(MultiFab& Ms,
 }
 
 Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
-		    MultiFab& Ms,
-		    const Geometry& geom,
+                    MultiFab& Ms,
+                    const Geometry& geom,
                     Real exch_const)
     {
     // timer for profiling
@@ -167,23 +167,23 @@ Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
     ReduceData<Real> reduce_data(reduce_op);
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
-	
+
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         // extract dd from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();	   
-    
-	const Box& bx = mfi.tilebox();
+        GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();
+
+        const Box& bx = mfi.tilebox();
 
         auto const& Mx = Mfield[0].array(mfi);
         auto const& My = Mfield[1].array(mfi);
         auto const& Mz = Mfield[2].array(mfi);
         auto const& Ms_arr = Ms.array(mfi);
 
-	reduce_op.eval(bx, reduce_data, [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
-	{
+        reduce_op.eval(bx, reduce_data, [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
+        {
 
- 	    // determine if the material is magnetic or not
+            // determine if the material is magnetic or not
                 if (Ms_arr(i,j,k) > 0.){
 
                     // H_exchange - use M^(old_time)
@@ -198,7 +198,7 @@ Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                     amrex::Real Ms_lo_z = Ms_arr(i, j, k-1);
                     amrex::Real Ms_hi_z = Ms_arr(i, j, k+1);
 
-                    // // Neumann boundary condition in scalar form, dMx/dx = -/+ 1/xi*Mz 
+                    // // Neumann boundary condition in scalar form, dMx/dx = -/+ 1/xi*Mz
                     // at x-faces, dM/dn = dM/dx
                     amrex::Real dMxdx_BC_lo_x = 0.0; // lower x BC: dMx/dx = 1/xi*Mz
                     amrex::Real dMxdx_BC_hi_x = 0.0; // higher x BC: dMx/dx = -1/xi*Mz
@@ -221,20 +221,20 @@ Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                     amrex::Real dMzdz_BC_lo_z = 0.0; // dMz/dz = 0
                     amrex::Real dMzdz_BC_hi_z = 0.0; // dMz/dz = 0
 
-		    // Take 9 spacial derivatives where 'Hxy' is the derivative of Mx with respect to y
-		    amrex::Real Hxx = DMDx_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd);
-		    amrex::Real Hxy = DMDy_Mag(Mx, Ms_lo_y, Ms_hi_y, dMydx_BC_lo_x, dMydx_BC_hi_x, i, j, k, dd);
-		    amrex::Real Hxz = DMDz_Mag(Mx, Ms_lo_z, Ms_hi_z, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd);
+                    // Take 9 spatial derivatives where 'Hxy' is the derivative of Mx with respect to y
+                    amrex::Real Hxx = DMDx_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd);
+                    amrex::Real Hxy = DMDy_Mag(Mx, Ms_lo_y, Ms_hi_y, dMydx_BC_lo_x, dMydx_BC_hi_x, i, j, k, dd);
+                    amrex::Real Hxz = DMDz_Mag(Mx, Ms_lo_z, Ms_hi_z, dMzdx_BC_lo_x, dMzdx_BC_hi_x, i, j, k, dd);
 
-                    amrex::Real Hyx = DMDx_Mag(My, Ms_lo_x, Ms_hi_x, dMxdy_BC_lo_y, dMxdy_BC_hi_y, i, j, k, dd); 
-		    amrex::Real Hyy = DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd); 
-		    amrex::Real Hyz = DMDz_Mag(My, Ms_lo_z, Ms_hi_z, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd);			
-		    
-		    amrex::Real Hzx = DMDx_Mag(Mz, Ms_lo_x, Ms_hi_x, dMxdz_BC_lo_z, dMxdz_BC_hi_z, i, j, k, dd);
-		    amrex::Real Hzy = DMDy_Mag(Mz, Ms_lo_y, Ms_hi_y, dMydz_BC_lo_z, dMydz_BC_hi_z, i, j, k, dd);
-		    amrex::Real Hzz = DMDz_Mag(Mz, Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd);
-                         
-			/*
+                    amrex::Real Hyx = DMDx_Mag(My, Ms_lo_x, Ms_hi_x, dMxdy_BC_lo_y, dMxdy_BC_hi_y, i, j, k, dd);
+                    amrex::Real Hyy = DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd);
+                    amrex::Real Hyz = DMDz_Mag(My, Ms_lo_z, Ms_hi_z, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd);
+
+                    amrex::Real Hzx = DMDx_Mag(Mz, Ms_lo_x, Ms_hi_x, dMxdz_BC_lo_z, dMxdz_BC_hi_z, i, j, k, dd);
+                    amrex::Real Hzy = DMDy_Mag(Mz, Ms_lo_y, Ms_hi_y, dMydz_BC_lo_z, dMydz_BC_hi_z, i, j, k, dd);
+                    amrex::Real Hzz = DMDz_Mag(Mz, Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd);
+
+                        /*
                         if (DMI_coupling == 1) {
                             if (DMI_arr(i,j,k) == 0.) amrex::Abort("The DMI_arr(i,j,k) is 0.0 while including the DMI coupling");
 
@@ -252,10 +252,10 @@ Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                             dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k);  // higher y BC: dMz/dy = 1/xi*My
                         }
                         */
-			
-		    return{std::pow(Hxx/Ms_arr(i,j,k),2) + std::pow(Hxy/Ms_arr(i,j,k),2) + std::pow( Hxz/Ms_arr(i,j,k),2) + std::pow(Hyx/Ms_arr(i,j,k),2) + std::pow(Hyy/Ms_arr(i,j,k),2) + std::pow(Hyz/Ms_arr(i,j,k),2) + std::pow(Hzx/Ms_arr(i,j,k),2) + std::pow(Hzy/Ms_arr(i,j,k),2) + std::pow(Hzz/Ms_arr(i,j,k),2)};
-		
-		} else {
+
+                    return{std::pow(Hxx/Ms_arr(i,j,k),2) + std::pow(Hxy/Ms_arr(i,j,k),2) + std::pow( Hxz/Ms_arr(i,j,k),2) + std::pow(Hyx/Ms_arr(i,j,k),2) + std::pow(Hyy/Ms_arr(i,j,k),2) + std::pow(Hyz/Ms_arr(i,j,k),2) + std::pow(Hzx/Ms_arr(i,j,k),2) + std::pow(Hzy/Ms_arr(i,j,k),2) + std::pow(Hzz/Ms_arr(i,j,k),2)};
+
+                } else {
                     return{0.};
                 }
             });
@@ -271,13 +271,13 @@ Real AnisotropyEnergy(MultiFab& Ms,
                       MultiFab& Mfield_x,
                       MultiFab& Mfield_y,
                       MultiFab& Mfield_z,
-		      Real anis)
+                      Real anis)
 {
     // timer for profiling
     // BL_PROFILE_VAR("SumNormalizedM()",SumNormalizedM);
 
     ReduceOps<ReduceOpSum> reduce_op;
-    
+
     ReduceData<Real> reduce_data(reduce_op);
 
     using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -295,9 +295,9 @@ Real AnisotropyEnergy(MultiFab& Ms,
                        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
             if (Ms_arr(i,j,k) > 0.) {
-	        return {1.-(std::pow(((Mx(i,j,k)/Ms_arr(i,j,k))*anisotropy_axis[0] + (My(i,j,k)/Ms_arr(i,j,k))*anisotropy_axis[1] + (Mz(i,j,k)/Ms_arr(i,j,k))*anisotropy_axis[2]), 2))};
+                return {1.-(std::pow(((Mx(i,j,k)/Ms_arr(i,j,k))*anisotropy_axis[0] + (My(i,j,k)/Ms_arr(i,j,k))*anisotropy_axis[1] + (Mz(i,j,k)/Ms_arr(i,j,k))*anisotropy_axis[2]), 2))};
 
-    	    } else {
+            } else {
                 return {0.};
             }
         });
@@ -315,35 +315,25 @@ void ComputeTheta(MultiFab& Ms,
                   MultiFab& Mfield_z,
                   MultiFab& theta)
 {
+    [[maybe_unused]] constexpr double TWOPI = 2.*3.14159265358979323846264338327950288;
+    constexpr double PI = 3.14159265358979323846264338327950288;
     for (MFIter mfi(Ms,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         const Box& bx = mfi.tilebox();
 
-        auto const& Ms_arr = Ms.array(mfi);
+        [[maybe_unused]] auto const& Ms_arr = Ms.array(mfi);
         auto const& Mx = Mfield_x.array(mfi);
-        auto const& My = Mfield_y.array(mfi);
+        [[maybe_unused]] auto const& My = Mfield_y.array(mfi);
         auto const& Mz = Mfield_z.array(mfi);
         auto const& theta_arr = theta.array(mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
 
-            if (Mx(i,j,k) >= 0. && Mz(i,j,k) > 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k));
-            } else if (Mx(i,j,k) >= 0. && Mz(i,j,k) < 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + M_PI;
-            } else if (Mx(i,j,k) < 0. && Mz(i,j,k) < 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + M_PI;
-            } else if (Mx(i,j,k) < 0. && Mz(i,j,k) > 0) {
-                theta_arr(i,j,k) = std::atan(Mx(i,j,k)/Mz(i,j,k)) + 2.*M_PI;
-            }
+            theta_arr(i,j,k) = std::atan2(Mx(i,j,k), Mz(i,j,k));
 
-            if (Mz(i,j,k) == 0.) {
-                if (Mx(i,j,k) >= 0.) {
-                    theta_arr(i,j,k) = 0.;
-                }
-                else {
-                    theta_arr(i,j,k) = M_PI;
-                }
+            // Convert from [-π, π] to [0, 2π] range if needed
+            if (theta_arr(i,j,k) < 0.) {
+                theta_arr(i,j,k) += 2.*PI;
             }
 
         });

@@ -1,7 +1,7 @@
 #include "MagneX.H"
 
 void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
-	       	MultiFab& Ms,
+                MultiFab& Ms,
                 const Geometry& geom)
 {
     // timer for profiling
@@ -11,9 +11,9 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
     {
         const Box& bx = mfi.tilebox();
         // extract field data
-        const Array4<Real>& Mx = Mfield[0].array(mfi);         
-        const Array4<Real>& My = Mfield[1].array(mfi);         
-        const Array4<Real>& Mz = Mfield[2].array(mfi);         
+        const Array4<Real>& Mx = Mfield[0].array(mfi);
+        const Array4<Real>& My = Mfield[1].array(mfi);
+        const Array4<Real>& Mz = Mfield[2].array(mfi);
         const Array4<Real>& Ms_arr = Ms.array(mfi);
 
         amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -55,14 +55,14 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
                         My(i, j, k) /= M_magnitude_normalized;
                         Mz(i, j, k) /= M_magnitude_normalized;
                     }
-                }  
+                }
             }
-        });             
+        });
     }
 
     // fill interior and periodic ghost cells
     for (int comp = 0; comp < 3; comp++) {
         Mfield[comp].FillBoundary(geom.periodicity());
     }
-    
+
 }

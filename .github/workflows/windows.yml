@@ -1,0 +1,54 @@
+name: Windows
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.head_ref }}-windows
+  cancel-in-progress: true
+
+jobs:
+  WIN32-MSVC10:
+    name: WIN32 MSVC@19.29 - SUNDIALS ${{matrix.sundials}} - AMReX ${{matrix.amrex_mode}}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        sundials: [OFF, ON]
+        amrex_mode: [internal, external_src]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install FFTW
+      run: |
+        vcpkg install fftw3:x64-windows
+
+    - name: Configure Project and Generate Build System
+      run: |
+        if ("${{matrix.amrex_mode}}" -eq "external_src") {
+          git clone https://github.com/AMReX-Codes/amrex.git _deps/amrex-src
+          git clone https://github.com/LLNL/sundials.git _deps/sundials-src
+          cmake -S . -B build `
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install `
+            -DCMAKE_BUILD_TYPE:STRING=Debug `
+            -DMagneX_MPI:BOOL=OFF `
+            -DMagneX_COMPUTE:STRING=NOACC `
+            -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} `
+            -DMagneX_amrex_src:PATH=${{github.workspace}}/_deps/amrex-src `
+            -DMagneX_sundials_src:PATH=${{github.workspace}}/_deps/sundials-src `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+        } else {
+          cmake -S . -B build `
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/MagneX/install `
+            -DCMAKE_BUILD_TYPE:STRING=Debug `
+            -DMagneX_MPI:BOOL=OFF `
+            -DMagneX_COMPUTE:STRING=NOACC `
+            -DMagneX_SUNDIALS:BOOL=${{matrix.sundials}} `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+        }
+
+    - name: Compile and Link
+      run: |
+        cmake --build build --parallel 2 --verbose
