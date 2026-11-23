@@ -79,6 +79,8 @@ void Compute_LLG_RHS(
                    Array< MultiFab, AMREX_SPACEDIM >& H_exchangefield,
                    Array< MultiFab, AMREX_SPACEDIM >& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM >& H_anisotropyfield,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_STT_DLfield,
+                   Array< MultiFab, AMREX_SPACEDIM >& H_STT_TLfield,
                    MultiFab&   alpha,
                    MultiFab&   Ms,
                    MultiFab&   gamma)
@@ -114,6 +116,14 @@ void Compute_LLG_RHS(
         const Array4<Real>& Hx_anisotropy = H_anisotropyfield[0].array(mfi);
         const Array4<Real>& Hy_anisotropy = H_anisotropyfield[1].array(mfi);
         const Array4<Real>& Hz_anisotropy = H_anisotropyfield[2].array(mfi);
+      
+        const Array4<Real>& Hx_STT_DL = H_STT_DLfield[0].array(mfi);
+        const Array4<Real>& Hy_STT_DL = H_STT_DLfield[1].array(mfi);
+        const Array4<Real>& Hz_STT_DL = H_STT_DLfield[2].array(mfi);
+
+        const Array4<Real>& Hx_STT_TL = H_STT_TLfield[0].array(mfi);
+        const Array4<Real>& Hy_STT_TL = H_STT_TLfield[1].array(mfi);
+        const Array4<Real>& Hz_STT_TL = H_STT_TLfield[2].array(mfi);
 
         const Array4<Real>& alpha_arr = alpha.array(mfi);
         const Array4<Real>& gamma_arr = gamma.array(mfi);
@@ -151,6 +161,22 @@ void Compute_LLG_RHS(
                     Hx_eff += Hx_anisotropy(i,j,k);
                     Hy_eff += Hy_anisotropy(i,j,k);
                     Hz_eff += Hz_anisotropy(i,j,k);
+                }
+
+                // damping-like spin-transfer torque, H_STT_DL = a_J (m x p)
+                if(STT_DL_coupling == 1)
+                {
+                    Hx_eff += Hx_STT_DL(i,j,k);
+                    Hy_eff += Hy_STT_DL(i,j,k);
+                    Hz_eff += Hz_STT_DL(i,j,k);
+                }
+
+                // field-like spin-transfer torque, H_STT_TL = b_J p
+                if(STT_TL_coupling == 1)
+                {
+                    Hx_eff += Hx_STT_TL(i,j,k);
+                    Hy_eff += Hy_STT_TL(i,j,k);
+                    Hz_eff += Hz_STT_TL(i,j,k);
                 }
                 //Update M
                 // 0 = unsaturated; compute |M| locally.  1 = saturated; use M_s

@@ -40,6 +40,8 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                         Hy_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
                         Hz_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
                     }
+                } else {
+                    Hx_anisotropy(i,j,k) = Hy_anisotropy(i,j,k) = Hz_anisotropy(i,j,k) = 0.;
                 }
             });
     }

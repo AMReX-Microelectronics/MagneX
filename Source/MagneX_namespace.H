@@ -27,12 +27,14 @@ namespace MagneX {
     extern int fast_DMI;
     extern int fast_anisotropy;
     extern int fast_demag;
+    extern int fast_STT;
 
     extern int implicit_H_bias;
     extern int implicit_exchange;
     extern int implicit_DMI;
     extern int implicit_anisotropy;
     extern int implicit_demag;
+    extern int implicit_STT;
 
     extern amrex::Real iterative_tolerance;
 
@@ -44,6 +46,8 @@ namespace MagneX {
     extern int plot_DMI;
     extern int plot_anisotropy;
     extern int plot_demag;
+    extern int plot_STT_DL;
+    extern int plot_STT_TL;
     extern int plot_theta;
 
     extern int chk_int;
@@ -56,6 +60,7 @@ namespace MagneX {
 
     extern int timedependent_Hbias;
     extern int timedependent_alpha;
+    extern int timedependent_J_STT;
 
     extern int Hbias_sweep;
 
@@ -75,4 +80,12 @@ namespace MagneX {
     extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> anisotropy_axis;
     extern AMREX_GPU_MANAGED int demag_coupling;
     extern AMREX_GPU_MANAGED int FFT_solver;
+
+    extern AMREX_GPU_MANAGED int STT_DL_coupling;
+    extern AMREX_GPU_MANAGED int STT_TL_coupling;
+    extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> STT_polarization_axis;
+    extern AMREX_GPU_MANAGED amrex::Real STT_polarization;
+    extern AMREX_GPU_MANAGED amrex::Real STT_Lambda;
+    extern AMREX_GPU_MANAGED amrex::Real STT_epsilon_prime;
+    extern AMREX_GPU_MANAGED amrex::Real STT_free_layer_thickness;
 }

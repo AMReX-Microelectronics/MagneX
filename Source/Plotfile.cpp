@@ -9,6 +9,8 @@ void WritePlotfile(MultiFab& Ms,
                    Array< MultiFab, AMREX_SPACEDIM>& H_DMIfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_anisotropyfield,
                    Array< MultiFab, AMREX_SPACEDIM>& H_demagfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_STT_DLfield,
+                   Array< MultiFab, AMREX_SPACEDIM>& H_STT_TLfield,
                    MultiFab& theta,
                    const Geometry& geom,
                    const Real& time,
@@ -70,6 +72,20 @@ void WritePlotfile(MultiFab& Ms,
         var_names.push_back("Hz_demagfield");
     }
 
+    if (plot_STT_DL && STT_DL_coupling) {
+        nvar += 3;
+        var_names.push_back("Hx_STT_DL");
+        var_names.push_back("Hy_STT_DL");
+        var_names.push_back("Hz_STT_DL");
+    }
+
+    if (plot_STT_TL && STT_TL_coupling) {
+        nvar += 3;
+        var_names.push_back("Hx_STT_TL");
+        var_names.push_back("Hy_STT_TL");
+        var_names.push_back("Hz_STT_TL");
+    }
+
     if (diag_type == 5 && plot_theta) {
         nvar++;
         var_names.push_back("theta");
@@ -109,6 +125,16 @@ void WritePlotfile(MultiFab& Ms,
         MultiFab::Copy(Plt, H_demagfield[0], 0, counter++, 1, 0);
         MultiFab::Copy(Plt, H_demagfield[1], 0, counter++, 1, 0);
         MultiFab::Copy(Plt, H_demagfield[2], 0, counter++, 1, 0);
+    }
+    if (plot_STT_DL && STT_DL_coupling) {
+        MultiFab::Copy(Plt, H_STT_DLfield[0], 0, counter++, 1, 0);
+        MultiFab::Copy(Plt, H_STT_DLfield[1], 0, counter++, 1, 0);
+        MultiFab::Copy(Plt, H_STT_DLfield[2], 0, counter++, 1, 0);
+    }
+    if (plot_STT_TL && STT_TL_coupling) {
+        MultiFab::Copy(Plt, H_STT_TLfield[0], 0, counter++, 1, 0);
+        MultiFab::Copy(Plt, H_STT_TLfield[1], 0, counter++, 1, 0);
+        MultiFab::Copy(Plt, H_STT_TLfield[2], 0, counter++, 1, 0);
     }
     if (diag_type == 5 && plot_theta) {
         MultiFab::Copy(Plt, theta, 0, counter++, 1, 0);

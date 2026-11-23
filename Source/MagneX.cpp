@@ -45,6 +45,7 @@ int MagneX:: fast_exchange;
 int MagneX:: fast_DMI;
 int MagneX:: fast_anisotropy;
 int MagneX:: fast_demag;
+int MagneX:: fast_STT;
 
 // for IMEX, specify what goes into the implicit partition
 int MagneX:: implicit_H_bias;
@@ -52,6 +53,7 @@ int MagneX:: implicit_exchange;
 int MagneX:: implicit_DMI;
 int MagneX:: implicit_anisotropy;
 int MagneX:: implicit_demag;
+int MagneX:: implicit_STT;
 
 // for TimeIntegrationOption 2 and 3 options only
 // tolerance threshold (L_inf change between iterations) required for completing time step
@@ -70,6 +72,8 @@ int MagneX::plot_exchange;
 int MagneX::plot_DMI;
 int MagneX::plot_anisotropy;
 int MagneX::plot_demag;
+int MagneX::plot_STT_DL;
+int MagneX::plot_STT_TL;
 int MagneX::plot_theta;
 
 // how often to write a checkpoint
@@ -87,6 +91,7 @@ int MagneX::diag_type;
 // whether to call the parser each time step, or only at initialization
 int MagneX::timedependent_Hbias;
 int MagneX::timedependent_alpha;
+int MagneX::timedependent_J_STT;
 
 ////////////////////////////////
 // parameters for Hbias sweeping
@@ -132,6 +137,35 @@ AMREX_GPU_MANAGED int MagneX::demag_coupling;
 // 0 = FFTW (single-MPI), 1 = heFFTe (distributed)
 AMREX_GPU_MANAGED int MagneX::FFT_solver;
 
+////////////////////////////////
+// parameters for spin-transfer torque (STT); see EffectiveSTTField.cpp for the model
+
+// 0 = disable; 1 = enable the damping-like STT field, H_STT_DL = a_J (m x p)
+AMREX_GPU_MANAGED int MagneX::STT_DL_coupling;
+
+// 0 = disable; 1 = enable the field-like STT field, H_STT_TL = b_J p
+AMREX_GPU_MANAGED int MagneX::STT_TL_coupling;
+
+// the parameters below are only required if STT_DL_coupling=1 or STT_TL_coupling=1
+// (the current density is read from J_STT_parser(x,y,z,t) [A/m^2])
+
+// direction p of the fixed (reference) layer magnetization; normalized after it is read in
+AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> MagneX::STT_polarization_axis;
+
+// thickness d of the free layer [m]
+AMREX_GPU_MANAGED amrex::Real MagneX::STT_free_layer_thickness;
+
+// spin polarization P of the current (STT_DL_coupling=1 only)
+AMREX_GPU_MANAGED amrex::Real MagneX::STT_polarization;
+
+// Slonczewski asymmetry parameter Lambda (STT_DL_coupling=1 only);
+// Lambda = 1 gives a_J = hbar J P / (2 mu0 e Ms d), independent of the angle between m and p
+AMREX_GPU_MANAGED amrex::Real MagneX::STT_Lambda;
+
+// secondary spin-torque parameter epsilon' (STT_TL_coupling=1 only);
+// b_J = hbar J epsilon' / (mu0 e Ms d), i.e. b_J/a_J = 2 epsilon'/P for Lambda = 1
+AMREX_GPU_MANAGED amrex::Real MagneX::STT_epsilon_prime;
+////////////////////////////////
 // ML flag
 int MagneX::ml_enable;
 
@@ -193,6 +227,8 @@ void InitializeMagneXNamespace() {
     pp.query("fast_DMI",fast_DMI);
     pp.query("fast_anisotropy",fast_anisotropy);
     pp.query("fast_demag",fast_demag);
+    fast_STT = 0;
+    pp.query("fast_STT",fast_STT);
 
     implicit_H_bias = 0;
     implicit_exchange = 0;
@@ -204,6 +240,8 @@ void InitializeMagneXNamespace() {
     pp.query("implicit_DMI",implicit_DMI);
     pp.query("implicit_anisotropy",implicit_anisotropy);
     pp.query("implicit_demag",implicit_demag);
+    implicit_STT = 0;
+    pp.query("implicit_STT",implicit_STT);
 
     iterative_tolerance = 1.e-9;
     pp.query("iterative_tolerance",iterative_tolerance);
@@ -223,6 +261,10 @@ void InitializeMagneXNamespace() {
     pp.query("plot_anisotropy",plot_anisotropy);
     plot_demag = 1;
     pp.query("plot_demag",plot_demag);
+    plot_STT_DL = 1;
+    pp.query("plot_STT_DL",plot_STT_DL);
+    plot_STT_TL = 1;
+    pp.query("plot_STT_TL",plot_STT_TL);
     plot_theta = 1;
     pp.query("plot_theta",plot_theta);
 
@@ -278,6 +320,57 @@ void InitializeMagneXNamespace() {
         pp.get("FFT_solver",FFT_solver);
     }
 
+    // spin-transfer torque; both terms are off unless requested
+    STT_DL_coupling = 0;
+    pp.query("STT_DL_coupling", STT_DL_coupling);
+    STT_TL_coupling = 0;
+    pp.query("STT_TL_coupling", STT_TL_coupling);
+
+    // defaults, so that these are well defined when STT is off
+    timedependent_J_STT = 0;
+    STT_polarization_axis[0] = 0.;
+    STT_polarization_axis[1] = 0.;
+    STT_polarization_axis[2] = 1.;
+    STT_free_layer_thickness = 1.;
+    STT_polarization = 0.;
+    STT_Lambda = 1.;
+    STT_epsilon_prime = 0.;
+
+    if (STT_DL_coupling == 1 || STT_TL_coupling == 1) {
+
+        pp.get("timedependent_J_STT",timedependent_J_STT);
+
+        pp.getarr("STT_polarization_axis",temp,0,AMREX_SPACEDIM);
+        amrex::Real p_norm = 0.;
+        for (int i=0; i<AMREX_SPACEDIM; ++i) {
+            p_norm += temp[i]*temp[i];
+        }
+        p_norm = std::sqrt(p_norm);
+        if (p_norm <= 0.) {
+            amrex::Abort("STT_polarization_axis must be a non-zero vector");
+        }
+        for (int i=0; i<AMREX_SPACEDIM; ++i) {
+            STT_polarization_axis[i] = temp[i] / p_norm;
+        }
+
+        pp.get("STT_free_layer_thickness",STT_free_layer_thickness);
+        if (STT_free_layer_thickness <= 0.) {
+            amrex::Abort("STT_free_layer_thickness must be > 0");
+        }
+
+        if (STT_DL_coupling == 1) {
+            pp.get("STT_polarization",STT_polarization);
+            pp.query("STT_Lambda",STT_Lambda);
+            if (STT_Lambda <= 0.) {
+                amrex::Abort("STT_Lambda must be > 0");
+            }
+        }
+
+        if (STT_TL_coupling == 1) {
+            pp.get("STT_epsilon_prime",STT_epsilon_prime);
+        }
+    }
+
     // invalid parameter combination checking
     if (Hbias_sweep == 1 && timedependent_Hbias == 1) {
         amrex::Abort("Cannot have Hbias_sweep == 1 && timedependent_Hbias == 1");
@@ -287,4 +380,10 @@ void InitializeMagneXNamespace() {
         amrex::Abort("Cannot have diag_type == 2 && Hbias_sweep == 0");
     }
 
+    // the STT is a torque that is not derived from an energy, so relaxing
+    // without the M x H term (precession == 0) is not defined for it
+    if (precession == 0 && (STT_DL_coupling == 1 || STT_TL_coupling == 1)) {
+        amrex::Abort("Cannot have precession == 0 with STT_DL_coupling == 1 or STT_TL_coupling == 1");
+    }
+    
 }

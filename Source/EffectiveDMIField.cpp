@@ -45,6 +45,8 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
                         // Neumann boundary condition dM/dn = -1/xi (z x n) x M
                         amrex::Real const xi_DMI = 2.0*exchange_arr(i,j,k)/DMI_arr(i,j,k);
 
+                        // printf("xi_DMI = %g", xi_DMI);
+
                         amrex::Real Ms_lo_x = Ms_arr(i-1, j, k);
                         amrex::Real Ms_hi_x = Ms_arr(i+1, j, k);
                         amrex::Real Ms_lo_y = Ms_arr(i, j-1, k);
@@ -58,16 +60,22 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
 
                         amrex::Real dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k); // lower y BC: dMz/dy = -1/xi*My
                         amrex::Real dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k); // higher y BC: dMz/dy = 1/xi*My
+                        // amrex::Real dMzdy_BC_lo_y =  0.0; // lower y BC hacked as free boundary
+                        // amrex::Real dMzdy_BC_hi_y =  0.0; // higher y BC hacked as free boundary
                         Hy_DMI(i,j,k) = H_DMI_coeff * DMDy_Mag(Mz, Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y, i, j, k, dd); // z component at x nodality
 
                         amrex::Real dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k);  // lower x BC: dMx/dx = 1/xi*Mz
                         amrex::Real dMxdx_BC_hi_x = -1.0/xi_DMI*Mz(i,j,k); // higher x BC: dMx/dx = -1/xi*Mz
                         amrex::Real dMydy_BC_lo_y = -1.0/xi_DMI*Mz(i,j,k); // lower y BC: dMy/dy = 1/xi*Mz
                         amrex::Real dMydy_BC_hi_y = -1.0/xi_DMI*Mz(i,j,k); // higher y BC: dMy/dy = -1/xi*Mz
+                        // amrex::Real dMydy_BC_lo_y = 0.0; // lower y BC hacked as free boundary
+                        // amrex::Real dMydy_BC_hi_y = 0.0; // higher y BC hacked as free boundary
                         Hz_DMI(i,j,k) = H_DMI_coeff * (-DMDx_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd) // x component at x nodality
-                                                        -DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd)); // y component at x nodality;
+                                                       -DMDy_Mag(My, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd)); // y component at x nodality;
 
                     }
+                } else {
+                    Hx_DMI(i,j,k) = Hy_DMI(i,j,k) = Hz_DMI(i,j,k) = 0.;
                 }
             });
     }
