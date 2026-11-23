@@ -1,0 +1,31 @@
+n_cell = 128 8 8
+max_grid_size = 128
+dt = 1.0e-15
+nsteps = 10000
+plot_int = 5
+
+TimeIntegratorOption = 3
+
+integration.type = 1
+integration.rk.type = 1
+
+prob_lo = -50.0e-9 -0.5e-9 -0.5e-9
+prob_hi =  50.0e-9  0.5e-9  0.5e-9
+
+mag_lo = -50.0e-9 -0.5e-9 -0.5e-9
+mag_hi =  50.0e-9  0.5e-9  0.5e-9
+
+mu0 = 1.25663706212e-6 
+alpha_val = 0.005
+Ms_val = 0.86e6 # unit is Ampere/m
+gamma_val = -1.759e11
+exchange_val = 13.0e-12 # unit is J/m
+DMI_val = 3.0e-3 # unit is J/m^2
+anisotropy_val = 510.0e3 # unit is J/m^3
+anisotropy_axis = 0.0 0.0 1.0
+
+demag_coupling = 0
+M_normalization = 1
+exchange_coupling = 1
+DMI_coupling = 1
+anisotropy_coupling = 1
